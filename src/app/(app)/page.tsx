@@ -43,6 +43,21 @@ export default async function HomePage() {
         <ActionLink href="/journal" title="Записать мысли" hint="Личный дневник" tone="bg-sage-soft" Icon={PenIcon} />
       </section>
 
+      <Link
+        href="/play"
+        className="group mb-10 flex items-center gap-5 overflow-hidden rounded-[28px] border border-line/70 bg-gradient-to-r from-mist/80 via-paper to-sage-soft/80 p-5 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift sm:p-6"
+      >
+        <span className="relative flex h-14 w-14 shrink-0 items-center justify-center" aria-hidden>
+          <span className="absolute h-14 w-14 animate-breathe rounded-full bg-lilac-soft" />
+          <span className="absolute h-8 w-8 animate-breathe rounded-full bg-paper [animation-delay:-3s]" />
+        </span>
+        <span className="flex-1">
+          <span className="block text-[17px] font-medium text-ink">Игры и практики</span>
+          <span className="mt-0.5 block text-sm text-ink-soft">Успокоиться или узнать о себе что-то новое</span>
+        </span>
+        <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+      </Link>
+
       <section className="mb-10 rounded-[28px] border border-line/70 bg-gradient-to-br from-paper to-lilac-soft/50 p-6 shadow-soft sm:p-8">
         <p className="mb-3 text-xs uppercase tracking-[0.14em] text-lilac-deep">Вопрос дня</p>
         <p className="font-serif text-[22px] leading-snug text-ink sm:text-[26px]">{question}</p>
