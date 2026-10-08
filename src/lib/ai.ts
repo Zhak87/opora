@@ -55,9 +55,9 @@ async function streamGemini({ system, messages }: Options) {
   for (const [i, model] of queue.entries()) {
     if (i > 0) await new Promise((r) => setTimeout(r, 700));
     let res: Response;
-    // Ждём начала ответа не дольше 15 секунд; сам поток после этого не ограничиваем.
+    // Ждём начала ответа не дольше 9 секунд; сам поток после этого не ограничиваем.
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15_000);
+    const timer = setTimeout(() => controller.abort(), 9_000);
     try {
       res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
