@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-serif: var(--font-lora), Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  --color-milk: #fbf8f3;
+  --color-paper: #fffdf9;
+  --color-sand: #f2ebe0;
+  --color-sand-deep: #e6dccd;
+  --color-mist: #dfe7ef;
+  --color-sky: #8fa8bf;
+  --color-sky-deep: #5f7d98;
+  --color-sage-soft: #e3ecdf;
+  --color-sage: #9db894;
+  --color-sage-deep: #6a8a62;
+  --color-lilac-soft: #ebe6f4;
+  --color-lilac: #b9aed6;
+  --color-lilac-deep: #7f71a8;
+  --color-ink: #34373c;
+  --color-ink-soft: #6c6f75;
+  --color-ink-faint: #a3a4a8;
+  --color-line: #ebe4d8;
+
+
+  --shadow-soft: 0 1px 2px rgb(60 50 35 / 0.04), 0 8px 24px -12px rgb(60 50 35 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(60 50 35 / 0.04), 0 18px 40px -18px rgb(60 50 35 / 0.22);
+
+  --animate-breathe: breathe 8s ease-in-out infinite;
+  --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade: fade 0.6s ease both;
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(0.94); opacity: 0.85; }
+    50% { transform: scale(1.04); opacity: 1; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-milk);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Мягкий фон: едва заметные цветные облака */
+.ambient {
+  background:
+    radial-gradient(60rem 40rem at 10% -10%, rgb(223 231 239 / 0.75), transparent 60%),
+    radial-gradient(50rem 36rem at 100% 10%, rgb(235 230 244 / 0.7), transparent 60%),
+    radial-gradient(50rem 40rem at 50% 110%, rgb(227 236 223 / 0.6), transparent 60%),
+    var(--color-milk);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--color-lilac-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-sky);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+.stagger > * {
+  animation: var(--animate-rise);
+}
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(n + 7) { animation-delay: 340ms; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

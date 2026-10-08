@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Опора
 
-## Getting Started
+Спокойное цифровое пространство, где можно остановиться, выговориться, разобраться в себе и найти внутреннюю опору.
 
-First, run the development server:
+- **Поговорить** — бережный ИИ-собеседник, история разговоров сохраняется, к любому можно вернуться.
+- **Разобраться в себе** — 9 тем (тревога, одиночество, усталость, мотивация, отношения, страх будущего, неопределённость, поиск пути, вера и надежда).
+- **Дневник** — мысли, события, благодарности, цели, переживания. ИИ помогает поразмышлять над записью или над всей неделей.
+- **Надежда** — мысль дня, практика благодарности «Три хороших вещи», размышления, вопросы, разговоры о будущем и смысле.
+- **Профиль** — имя, очистка истории, удаление аккаунта.
+- Регистрация, вход, восстановление пароля по почте. Каждый видит только свои данные (Row Level Security в базе).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Всё работает на бесплатных тарифах: **Vercel** (сайт и адрес `*.vercel.app`), **Supabase** (база данных и вход), **Google Gemini** (ИИ).
+
+---
+
+## Запуск в интернете (≈10 минут)
+
+База данных Supabase уже создана: проект **opora**, адрес `https://tjvavsizvmjoaieankmy.supabase.co`, таблицы и правила доступа настроены (схема в `supabase/migrations/0001_init.sql`).
+
+### 1. Бесплатный ключ для ИИ
+
+1. Откройте https://aistudio.google.com/apikey и войдите через Google.
+2. Нажмите **Create API key** и скопируйте ключ.
+
+### 2. Публикация на Vercel
+
+1. Откройте https://vercel.com/signup и войдите через **GitHub**.
+2. **Add New → Project**, выберите репозиторий **opora**, нажмите **Import**.
+3. В разделе **Environment Variables** добавьте:
+
+   | Имя | Значение |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://tjvavsizvmjoaieankmy.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | публичный ключ (Supabase → Project Settings → API Keys → `anon` / `publishable`) |
+   | `GEMINI_API_KEY` | ключ из шага 1 |
+
+4. Нажмите **Deploy**. Через минуту сайт будет доступен по адресу вида `https://opora-xxxx.vercel.app`.
+   Адрес можно поменять в **Settings → Domains** (например, на `opora-space.vercel.app`, если он свободен).
+
+### 3. Ссылки в письмах (регистрация и восстановление пароля)
+
+1. Supabase → проект **opora** → **Authentication → URL Configuration**.
+2. **Site URL**: адрес вашего сайта, например `https://opora-space.vercel.app`.
+3. **Redirect URLs**: добавьте `https://opora-space.vercel.app/**`.
+4. По желанию в Vercel добавьте переменную `NEXT_PUBLIC_SITE_URL` с тем же адресом и сделайте **Redeploy**.
+
+Готово.
+
+### Полезно знать о бесплатных тарифах
+
+- **Supabase** приостанавливает бесплатный проект после 7 дней без активности. Данные не теряются, проект включается кнопкой **Restore** в панели Supabase.
+- Встроенная почта Supabase отправляет лишь несколько писем в час. Для большего числа пользователей подключите бесплатный SMTP (например, Resend или Brevo) в **Authentication → Emails → SMTP Settings**. Подтверждение почты при регистрации можно отключить в **Authentication → Sign In / Providers → Email → Confirm email**.
+- У **Gemini** на бесплатном ключе есть лимит запросов в минуту и в день. Для небольшого проекта его хватает.
+
+---
+
+## Другой ИИ вместо Gemini
+
+Приложение умеет работать с любым OpenAI-совместимым API (например, OpenRouter с бесплатными моделями). Задайте переменные:
+
+```
+AI_PROVIDER=openai
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_API_KEY=ваш_ключ
+OPENAI_MODEL=название_бесплатной_модели   # например meta-llama/llama-3.3-70b-instruct:free
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Характер собеседника задаётся в `src/lib/prompt.ts`: он спокойный, говорит коротко, не ставит диагнозов, не выдаёт себя за специалиста и при признаках кризиса бережно даёт телефоны помощи.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Запуск на своём компьютере
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+cp .env.example .env.local   # и заполните значения
+npm run dev                  # http://localhost:3000
+```
 
-## Learn More
+## Устройство проекта
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/app/(auth)/        вход, регистрация, восстановление и смена пароля
+src/app/(app)/         главная, «Поговорить», темы, дневник, «Надежда», профиль
+src/app/(chat)/talk/   экран разговора
+src/app/api/chat/      сервер ИИ-собеседника (потоковый ответ, сохранение истории)
+src/lib/ai.ts          адаптер ИИ (Gemini или OpenAI-совместимый)
+src/lib/prompt.ts      характер собеседника и правила безопасности
+src/lib/topics.ts      темы раздела «Разобраться в себе»
+src/lib/content.ts     вопросы дня, мысли и размышления для «Надежды»
+supabase/migrations/   схема базы данных
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Стек: Next.js 15 (App Router), TypeScript, Tailwind CSS 4, Supabase.
