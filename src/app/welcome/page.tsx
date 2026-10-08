@@ -1,5 +1,6 @@
 import { Orb } from "@/components/Orb";
 import { ButtonLink } from "@/components/ui";
+import { MusicToggle } from "@/components/Music";
 
 const FEELINGS = ["спокойствие", "безопасность", "тепло", "надежда"];
 
@@ -9,7 +10,10 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
     <div className="relative flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-6 sm:px-8">
         <span className="font-serif text-xl text-ink">Опора</span>
-        <ButtonLink href="/login" variant="ghost" className="h-10 px-4">Войти</ButtonLink>
+        <div className="flex items-center gap-2">
+          <MusicToggle withLabel className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline sm:pr-2" />
+          <ButtonLink href="/login" variant="ghost" className="h-10 px-4">Войти</ButtonLink>
+        </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-5 pb-16 text-center sm:px-8">
