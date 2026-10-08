@@ -25,10 +25,11 @@ export async function createClient() {
   );
 }
 
+// Быстрая проверка входа: подпись токена проверяется на месте, без отдельного запроса к серверу авторизации.
 export async function requireUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  const user = claims ? { id: claims.sub, email: (claims.email as string | undefined) ?? "" } : null;
   return { supabase, user };
 }

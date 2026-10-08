@@ -15,7 +15,7 @@ export default async function ProfilePage({
     supabase.from("conversations").select("id", { count: "exact", head: true }),
     supabase.from("journal_entries").select("id", { count: "exact", head: true }),
   ]);
-  const since = new Date(profile?.created_at ?? user!.created_at).toLocaleDateString("ru-RU", {
+  const since = new Date(profile?.created_at ?? Date.now()).toLocaleDateString("ru-RU", {
     month: "long",
     year: "numeric",
   });

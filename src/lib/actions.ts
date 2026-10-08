@@ -2,15 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, requireUser } from "@/lib/supabase/server";
 import { getTopic } from "@/lib/topics";
 import { JOURNAL_KINDS, type JournalKind } from "@/lib/content";
 
 async function authed() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await requireUser();
   if (!user) redirect("/welcome");
   return { supabase, user };
 }
