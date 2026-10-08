@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
+import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
 
 export const runtime = "nodejs";
@@ -11,6 +11,10 @@ const HISTORY_LIMIT = 40;
 
 const NOT_CONFIGURED =
   "Я пока не могу ответить: ИИ ещё не подключён к приложению. Но ваши слова сохранены, и вы сможете вернуться к этому разговору позже.";
+const BUSY =
+  "Сейчас со мной разговаривает очень много людей, и я не успеваю ответить. Ваши слова сохранены. Попробуйте, пожалуйста, через минуту.";
+const KEY_PROBLEM =
+  "Я не могу ответить: ключ ИИ не подходит или не настроен. Ваши слова сохранены. Владельцу сайта стоит проверить переменную GEMINI_API_KEY.";
 const FAILED =
   "Простите, мне не удалось ответить прямо сейчас. Ваши слова сохранены. Попробуйте, пожалуйста, ещё раз чуть позже.";
 
@@ -88,7 +92,9 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     console.error(e);
-    return textResponse(FAILED, 502);
+    const status = e instanceof AIError ? e.status : 0;
+    const text = status === 429 ? BUSY : status === 401 ? KEY_PROBLEM : FAILED;
+    return textResponse(text, 502);
   }
 
   let full = "";
