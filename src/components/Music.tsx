@@ -72,12 +72,21 @@ export function MusicToggle({ className = "", withLabel = false }: { className?:
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${playing ? "bg-lilac-soft" : "bg-paper/80 shadow-soft"}`}>
         <Waves playing={playing} />
       </span>
-      {withLabel && <span className="text-sm">{playing ? "Музыка играет" : "Музыка"}</span>}
+      {withLabel && <span className="text-sm">{playing ? "Музыка играет" : "Включить музыку"}</span>}
     </button>
   );
 }
 
 function Waves({ playing }: { playing: boolean }) {
+  if (!playing) {
+    return (
+      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M9 17.5V6l10-2v11.5" />
+        <circle cx="6.5" cy="17.5" r="2.5" />
+        <circle cx="16.5" cy="15.5" r="2.5" />
+      </svg>
+    );
+  }
   return (
     <span className="origin-bottom-bars flex h-4 items-end gap-[3px]" aria-hidden>
       {[0.55, 1, 0.75, 0.4].map((h, i) => (
