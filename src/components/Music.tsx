@@ -11,43 +11,49 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const engine = useRef<AmbientEngine | null>(null);
   const [playing, setPlaying] = useState(false);
 
+  const loading = useRef<Promise<AmbientEngine> | null>(null);
+
   const start = useCallback(async () => {
-    if (!engine.current) {
-      const { AmbientEngine } = await import("@/lib/ambient");
-      engine.current = new AmbientEngine();
-    }
-    await engine.current.start();
-    setPlaying(true);
+    loading.current ??= import("@/lib/ambient").then(({ AmbientEngine }) => {
+      const e = new AmbientEngine();
+      e.onstate = setPlaying;
+      engine.current = e;
+      return e;
+    });
+    const e = await loading.current;
+    await e.start();
+    setPlaying(e.audible);
   }, []);
 
   const toggle = useCallback(() => {
-    if (engine.current?.running) {
+    if (engine.current?.running && engine.current.audible) {
       engine.current.stop();
-      setPlaying(false);
       try { localStorage.setItem(KEY, "off"); } catch {}
     } else {
-      start();
+      if (engine.current?.running) engine.current.resume();
+      else start();
       try { localStorage.setItem(KEY, "on"); } catch {}
     }
   }, [start]);
 
-  // Если человек оставил музыку включённой, она продолжится после первого касания страницы
-  // (браузеры не разрешают звук без действия пользователя).
+  // Музыка включена по умолчанию. Браузеры не дают звуку играть без действия человека,
+  // поэтому она начинается сразу, если это разрешено, или с первого касания страницы.
   useEffect(() => {
-    let wanted = false;
-    try { wanted = localStorage.getItem(KEY) === "on"; } catch {}
-    if (!wanted) return;
-    const resume = () => {
-      if (!engine.current?.running) start();
-      window.removeEventListener("pointerdown", resume);
-      window.removeEventListener("keydown", resume);
-    };
-    window.addEventListener("pointerdown", resume);
-    window.addEventListener("keydown", resume);
-    return () => {
-      window.removeEventListener("pointerdown", resume);
-      window.removeEventListener("keydown", resume);
-    };
+    let off = false;
+    try { off = localStorage.getItem(KEY) === "off"; } catch {}
+    if (off) return;
+    start();
+    const events = ["pointerdown", "keydown", "touchstart"] as const;
+    const cleanup = () => events.forEach((e) => window.removeEventListener(e, unlock, true));
+    function unlock(e: Event) {
+      cleanup();
+      // Нажатие на саму кнопку музыки обработает toggle.
+      if ((e.target as Element | null)?.closest?.("[data-music-toggle]")) return;
+      if (engine.current?.running) engine.current.resume();
+      else start();
+    }
+    events.forEach((e) => window.addEventListener(e, unlock, true));
+    return cleanup;
   }, [start]);
 
   useEffect(() => () => engine.current?.stop(), []);
@@ -62,6 +68,7 @@ export function MusicToggle({ className = "", withLabel = false }: { className?:
     <button
       type="button"
       onClick={toggle}
+      data-music-toggle
       aria-pressed={playing}
       aria-label={label}
       title={label}

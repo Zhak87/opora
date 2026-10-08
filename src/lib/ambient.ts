@@ -19,8 +19,18 @@ export class AmbientEngine {
   private timers: number[] = [];
   private chordIndex = 0;
 
+  onstate?: (audible: boolean) => void;
+
   get running() {
     return this.ctx !== null;
+  }
+
+  get audible() {
+    return this.ctx?.state === "running";
+  }
+
+  resume() {
+    return this.ctx?.resume();
   }
 
   async start() {
@@ -28,7 +38,9 @@ export class AmbientEngine {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
     this.ctx = ctx;
-    await ctx.resume();
+    ctx.onstatechange = () => this.onstate?.(ctx.state === "running" && this.ctx === ctx);
+    // Без действия человека браузер держит звук на паузе; resume() снимет её при первом касании.
+    ctx.resume().catch(() => {});
 
     const master = ctx.createGain();
     master.gain.value = 0;
@@ -58,6 +70,7 @@ export class AmbientEngine {
     this.master.gain.setValueAtTime(this.master.gain.value, now);
     this.master.gain.linearRampToValueAtTime(0, now + 1.5);
     this.ctx = null;
+    this.onstate?.(false);
     setTimeout(() => ctx.close(), 1800);
   }
 
@@ -79,6 +92,11 @@ export class AmbientEngine {
   private playChord() {
     const ctx = this.ctx;
     if (!ctx || !this.master || !this.reverb) return;
+    if (ctx.state !== "running") {
+      // Пока звук на паузе, ноты не копим, чтобы после включения не прозвучали все разом.
+      this.later(() => this.playChord(), 1000);
+      return;
+    }
     const notes = CHORDS[this.chordIndex % CHORDS.length];
     this.chordIndex++;
     const t = ctx.currentTime;
@@ -120,7 +138,7 @@ export class AmbientEngine {
 
   private bell() {
     const ctx = this.ctx;
-    if (!ctx || !this.master || !this.reverb) return;
+    if (!ctx || !this.master || !this.reverb || ctx.state !== "running") return;
     const t = ctx.currentTime;
     const note = BELLS[Math.floor(Math.random() * BELLS.length)];
     const gain = ctx.createGain();
@@ -176,6 +194,10 @@ export class AmbientEngine {
   private wave(filter: BiquadFilterNode, gain: GainNode) {
     const ctx = this.ctx;
     if (!ctx) return;
+    if (ctx.state !== "running") {
+      this.later(() => this.wave(filter, gain), 1000);
+      return;
+    }
     const t = ctx.currentTime;
     const rise = 2.8 + Math.random() * 1.8;
     const fall = 4.5 + Math.random() * 3;
