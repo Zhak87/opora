@@ -56,9 +56,38 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     return cleanup;
   }, [start]);
 
+  // Если браузер не дал включить звук сам, один раз за визит показываем спокойный экран входа:
+  // нажатие на него и есть то действие, после которого браузер разрешает музыку.
+  const [gate, setGate] = useState(false);
+  useEffect(() => {
+    let off = false;
+    let seen = false;
+    try {
+      off = localStorage.getItem(KEY) === "off";
+      seen = sessionStorage.getItem(KEY + "-gate") === "1";
+    } catch {}
+    if (off || seen) return;
+    const t = setTimeout(() => {
+      if (!engine.current?.audible) setGate(true);
+    }, 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  const enter = () => {
+    if (engine.current?.running) engine.current.resume();
+    else start();
+    try { sessionStorage.setItem(KEY + "-gate", "1"); } catch {}
+    setGate(false);
+  };
+
   useEffect(() => () => engine.current?.stop(), []);
 
-  return <MusicContext.Provider value={{ playing, toggle }}>{children}</MusicContext.Provider>;
+  return (
+    <MusicContext.Provider value={{ playing, toggle }}>
+      {children}
+      {gate && <Gate onEnter={enter} />}
+    </MusicContext.Provider>
+  );
 }
 
 export function MusicToggle({ className = "", withLabel = false }: { className?: string; withLabel?: boolean }) {
@@ -108,5 +137,40 @@ function Waves({ playing }: { playing: boolean }) {
         />
       ))}
     </span>
+  );
+}
+
+function Gate({ onEnter }: { onEnter: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-label="Вход"
+      onClick={onEnter}
+      className="ambient fixed inset-0 z-[60] flex animate-fade cursor-pointer flex-col items-center justify-center px-6 text-center"
+    >
+      <div className="relative h-40 w-40" aria-hidden>
+        <div className="absolute inset-0 animate-breathe rounded-full opacity-70 blur-2xl" style={{ background: "radial-gradient(circle at 40% 40%, #ebe6f4, #c9d8e6 50%, #d6e5cf 80%)" }} />
+        <div
+          className="absolute inset-[14%] animate-breathe rounded-full"
+          style={{
+            background: "radial-gradient(circle at 35% 30%, #fffdf9 0%, #e7e1f2 35%, #bccfe0 70%, #b4cbaa 100%)",
+            boxShadow: "0 20px 50px -20px rgb(95 125 152 / 0.45)",
+          }}
+        />
+      </div>
+      <p className="mt-10 font-serif text-[30px] text-ink">Опора</p>
+      <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-ink-soft">Сделайте медленный вдох. Здесь можно никуда не спешить.</p>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEnter();
+        }}
+        className="mt-10 inline-flex h-12 items-center justify-center rounded-full bg-ink px-8 text-[15px] font-medium text-paper shadow-soft transition hover:bg-ink/90"
+      >
+        Войти в тишину
+      </button>
+      <p className="mt-5 text-xs text-ink-faint">Со звуком моря · выключить можно в любой момент</p>
+    </div>
   );
 }
