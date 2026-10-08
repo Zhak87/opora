@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Lora } from "next/font/google";
 import "./globals.css";
+import { MusicProvider } from "@/components/Music";
 
 const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "cyrillic"] });
 const lora = Lora({ variable: "--font-lora", subsets: ["latin", "cyrillic"], style: ["normal", "italic"] });
@@ -21,7 +22,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru">
-      <body className={`${manrope.variable} ${lora.variable} ambient min-h-dvh`}>{children}</body>
+      <body className={`${manrope.variable} ${lora.variable} ambient min-h-dvh`}>
+        <MusicProvider>{children}</MusicProvider>
+      </body>
     </html>
   );
 }

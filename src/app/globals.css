@@ -98,3 +98,9 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+@keyframes music-bar {
+  from { transform: scaleY(0.45); }
+  to { transform: scaleY(1); }
+}
+.origin-bottom-bars > span { transform-origin: bottom; }

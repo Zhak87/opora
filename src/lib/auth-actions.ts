@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-type State = { error?: string; ok?: string } | undefined;
+type State = { error?: string; ok?: string; unconfirmed?: string } | undefined;
 
 async function origin() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
@@ -30,8 +30,22 @@ export async function signIn(_: State, formData: FormData): Promise<State> {
     email: String(formData.get("email")).trim(),
     password: String(formData.get("password")),
   });
-  if (error) return { error: translate(error.message) };
+  if (error) {
+    const unconfirmed = error.message.toLowerCase().includes("email not confirmed");
+    return { error: translate(error.message), unconfirmed: unconfirmed ? String(formData.get("email")).trim() : undefined };
+  }
   redirect("/");
+}
+
+export async function resendConfirmation(_: State, formData: FormData): Promise<State> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: String(formData.get("email")).trim(),
+    options: { emailRedirectTo: `${await origin()}/auth/callback` },
+  });
+  if (error) return { error: translate(error.message) };
+  return { ok: "Письмо отправлено ещё раз. Проверьте почту, в том числе папку «Спам»." };
 }
 
 export async function signUp(_: State, formData: FormData): Promise<State> {

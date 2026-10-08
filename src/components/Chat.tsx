@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BackIcon, SendIcon, LeafIcon, TrashIcon } from "./icons";
 import { Orb } from "./Orb";
 import { Breathe } from "./Breathe";
+import { MusicToggle } from "./Music";
 import { deleteConversation } from "@/lib/actions";
 import { looksLikeCrisis } from "@/lib/prompt";
 
@@ -130,6 +131,7 @@ export function Chat({
             <p className="truncate text-[15px] text-ink">{title}</p>
             <p className="text-xs text-ink-faint">{label}</p>
           </div>
+          <MusicToggle className="[&>span]:h-9 [&>span]:w-9 [&>span]:shadow-none [&>span]:bg-transparent" />
           <button
             onClick={() => setBreathing(true)}
             className="flex h-10 items-center gap-2 rounded-full px-3 text-sm text-ink-soft transition hover:bg-sage-soft hover:text-sage-deep"

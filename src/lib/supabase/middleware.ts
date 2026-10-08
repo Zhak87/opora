@@ -4,6 +4,21 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/welcome", "/login", "/signup", "/forgot", "/auth"];
 
 export async function updateSession(request: NextRequest) {
+  const { searchParams, pathname } = request.nextUrl;
+
+  // Supabase мог вернуть человека на любой адрес сайта: с кодом входа или с ошибкой ссылки.
+  if (searchParams.get("code") && !pathname.startsWith("/auth")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    return NextResponse.redirect(url);
+  }
+  if ((searchParams.get("error_code") || searchParams.get("error")) && pathname !== "/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "?link=expired";
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

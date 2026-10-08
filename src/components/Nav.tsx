@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon } from "./icons";
 import { Orb } from "./Orb";
+import { MusicToggle } from "./Music";
 
 const ITEMS = [
   { href: "/", label: "Главная", Icon: HomeIcon },
@@ -48,7 +49,8 @@ export function Nav() {
             );
           })}
         </nav>
-        <p className="mt-auto hidden px-3 text-xs leading-relaxed text-ink-faint lg:block">
+        <MusicToggle withLabel className="mt-auto lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
+        <p className="mt-6 hidden px-3 text-xs leading-relaxed text-ink-faint lg:block">
           Меньше интерфейса — больше пространства для вас.
         </p>
       </aside>

@@ -13,6 +13,7 @@ export default function SignupPage() {
       <div className="text-center">
         <h1 className="mb-3 font-serif text-[26px] text-ink">Почти готово</h1>
         <p className="text-[15px] leading-relaxed text-ink-soft">{state.ok}</p>
+        <p className="mt-3 text-sm text-ink-faint">Письмо может прийти через пару минут. Загляните и в папку «Спам».</p>
         <Link href="/login" className="mt-6 inline-block text-sm text-sky-deep hover:text-ink">Вернуться ко входу</Link>
       </div>
     );
