@@ -143,3 +143,7 @@ body {
   20% { opacity: 1; }
   100% { transform: translate(calc(-50% + var(--to-x)), var(--to-y)) rotate(var(--rot)); opacity: 1; }
 }
+
+@keyframes orb-spin {
+  to { transform: rotate(360deg); }
+}

@@ -218,7 +218,7 @@ function sseToText(body: ReadableStream<Uint8Array>, extract: (data: string) => 
 
 /* ---------- Озвучка ---------- */
 
-const TTS_MODELS = (process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts,gemini-2.5-flash-preview-tts,gemini-3.8-flash-lite-tts")
+const TTS_MODELS = (process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts,gemini-3.8-flash-lite-tts")
   .split(",")
   .map((m) => m.trim())
   .filter(Boolean);
@@ -293,4 +293,59 @@ function wav(pcm: Uint8Array, rate: number) {
   v.setUint32(40, pcm.length, true);
   out.set(pcm, 44);
   return out;
+}
+
+/* ---------- Распознавание речи ---------- */
+
+const STT_MODELS = (process.env.GEMINI_STT_MODEL || "gemini-flash-lite-latest,gemini-flash-latest")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+export async function transcribe(audio: Uint8Array, mime: string): Promise<string> {
+  const body = JSON.stringify({
+    contents: [
+      {
+        parts: [
+          { inlineData: { mimeType: mime, data: Buffer.from(audio).toString("base64") } },
+          {
+            text: "Дословно запиши по-русски, что говорит человек в этой записи. Верни только сам текст, с пунктуацией, без пояснений и кавычек. Если речи нет или ничего не разобрать, верни пустую строку.",
+          },
+        ],
+      },
+    ],
+    safetySettings: SAFETY,
+    generationConfig: { temperature: 0, maxOutputTokens: 2048 },
+  });
+  let last: AIError | null = null;
+  for (const model of [...STT_MODELS, ...STT_MODELS]) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+        body,
+        signal: controller.signal,
+      });
+      const raw = await res.text();
+      if (!res.ok) {
+        last = new AIError(res.status, `STT ${model} ${res.status}: ${raw.slice(0, 200)}`);
+        console.error(last.message);
+        continue;
+      }
+      const parts = JSON.parse(raw)?.candidates?.[0]?.content?.parts ?? [];
+      return parts
+        .map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? ""))
+        .join("")
+        .trim()
+        .replace(/^["«]|["»]$/g, "");
+    } catch (e) {
+      last = new AIError(504, `STT ${model}: ${(e as Error).message}`);
+      console.error(last.message);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw last ?? new AIError(500, "STT: no models");
 }

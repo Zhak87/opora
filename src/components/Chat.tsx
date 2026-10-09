@@ -7,6 +7,7 @@ import { Orb } from "./Orb";
 import { Breathe } from "./Breathe";
 import { MusicToggle } from "./Music";
 import { SpeakButton } from "./SpeakButton";
+import { VoiceMode } from "./VoiceMode";
 import { deleteConversation, saveVoice } from "@/lib/actions";
 import { speech } from "@/lib/speech";
 import type { VoiceSettings } from "@/lib/voices";
@@ -30,6 +31,7 @@ export function Chat({
   voice: VoiceSettings;
 }) {
   const [voice, setVoice] = useState(initialVoice);
+  const [talking, setTalking] = useState(false);
   const voiceRef = useRef(voice);
   voiceRef.current = voice;
   useEffect(() => () => speech.stop(), []);
@@ -47,8 +49,9 @@ export function Chat({
   }, []);
 
   const send = useCallback(
-    async (text?: string) => {
+    async (text?: string, viaVoice = false): Promise<string | null> => {
       const content = text?.trim();
+      let reply: string | null = null;
       setBusy(true);
       const replyId = `a-${Date.now()}`;
       setMessages((prev) => [
@@ -62,7 +65,7 @@ export function Chat({
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversationId, message: content }),
+          body: JSON.stringify({ conversationId, message: content, voice: viaVoice }),
         });
         if (!res.body) throw new Error("no body");
         const reader = res.body.getReader();
@@ -75,7 +78,8 @@ export function Chat({
           setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: acc } : m)));
         }
         if (!acc.trim()) throw new Error("empty");
-        if (voiceRef.current.auto) speech.speak(replyId, acc, voiceRef.current);
+        reply = acc;
+        if (voiceRef.current.auto && !viaVoice) speech.speak(replyId, acc, voiceRef.current);
       } catch {
         setMessages((prev) =>
           prev.map((m) =>
@@ -86,11 +90,15 @@ export function Chat({
         );
       } finally {
         setBusy(false);
-        inputRef.current?.focus({ preventScroll: true });
+        if (!viaVoice) inputRef.current?.focus({ preventScroll: true });
       }
+      return reply;
     },
     [conversationId],
   );
+
+  const askVoice = useCallback((t: string) => send(t, true), [send]);
+  const closeVoice = useCallback(() => setTalking(false), []);
 
   // Если последним было сообщение человека (например, из дневника), собеседник отвечает сам.
   useEffect(() => {
@@ -274,14 +282,34 @@ export function Chat({
             placeholder="Напишите, что на душе…"
             className="max-h-[200px] min-h-[52px] flex-1 resize-none rounded-[26px] border border-line bg-paper px-5 py-[14px] text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
           />
-          <button
-            type="submit"
-            disabled={!input.trim() || busy}
-            aria-label="Отправить"
-            className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-ink/90 disabled:bg-sand-deep disabled:text-paper"
-          >
-            <SendIcon className="h-5 w-5" />
-          </button>
+          {input.trim() ? (
+            <button
+              type="submit"
+              disabled={busy}
+              aria-label="Отправить"
+              className="flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-full bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-ink/90 disabled:bg-sand-deep disabled:text-paper"
+            >
+              <SendIcon className="h-5 w-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                speech.unlock();
+                setTalking(true);
+              }}
+              aria-label="Поговорить голосом"
+              title="Поговорить голосом"
+              className="relative flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-full text-paper shadow-soft transition-all duration-300 hover:scale-105 disabled:opacity-50"
+              style={{ background: "radial-gradient(circle at 35% 30%, #c9d8e6, #7f71a8 70%)" }}
+            >
+              <span className="absolute inset-0 animate-breathe rounded-full bg-lilac/40 [animation-duration:4s]" aria-hidden />
+              <svg viewBox="0 0 24 24" className="relative h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 12h1M8 8v8M12 5v14M16 8v8M20 12h-1" />
+              </svg>
+            </button>
+          )}
         </form>
         <p className="hidden pb-3 text-center text-[11px] text-ink-faint sm:block">
           Собеседник — это ИИ. Он поддерживает, но не заменяет специалиста.
@@ -289,6 +317,7 @@ export function Chat({
       </div>
 
       {breathing && <Breathe onClose={() => setBreathing(false)} />}
+      {talking && <VoiceMode voice={voice} ask={askVoice} onClose={closeVoice} />}
     </div>
   );
 }

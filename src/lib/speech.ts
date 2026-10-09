@@ -1,4 +1,4 @@
-// Озвучка ответов: текст режется на части, первая звучит через пару секунд, следующие подгружаются заранее.
+// Озвучка ответов: длинный текст режется на крупные части, следующая подгружается, пока звучит предыдущая.
 // Если сервер не смог (например, закончился бесплатный лимит), читает встроенный голос браузера.
 
 import { SPEEDS, getVoice, type VoiceSettings } from "./voices";
@@ -59,8 +59,8 @@ export function chunks(text: string) {
   const out: string[] = [];
   let cur = "";
   for (const s of sentences) {
-    // Первая часть короткая, чтобы голос зазвучал быстрее; следующие готовятся, пока звучит предыдущая.
-    const limit = out.length === 0 ? 140 : out.length === 1 ? 320 : 600;
+    // Бесплатный лимит озвучки считается по запросам, поэтому части крупные: обычно весь ответ — один запрос.
+    const limit = 850;
     if (cur && (cur + s).length > limit) {
       out.push(cur.trim());
       cur = "";
@@ -125,7 +125,6 @@ async function speak(id: string, text: string, settings: VoiceSettings) {
   const parts = chunks(text);
   const rate = SPEEDS[settings.speed].rate;
   let next: Promise<string> | null = fetchChunk(parts[0], settings);
-  if (parts[1]) fetchChunk(parts[1], settings).catch(() => {});
   let i = 0;
   try {
     for (; i < parts.length; i++) {

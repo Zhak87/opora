@@ -18,11 +18,15 @@ const KEY_PROBLEM =
 const FAILED =
   "Простите, мне не удалось ответить прямо сейчас. Ваши слова сохранены. Попробуйте, пожалуйста, ещё раз чуть позже.";
 
+// В голосовом режиме ответ сразу звучит вслух, поэтому он короче и без списков.
+const VOICE_NOTE =
+  "\n\nСейчас вы разговариваете голосом: человек говорит вслух, а ваш ответ будет озвучен. Отвечайте как в живом разговоре: 2–4 коротких предложения, без списков, нумерации, скобок и смайликов. Если нужен совет из нескольких шагов, предложите сначала один шаг и спросите, продолжить ли. Человек говорит вслух, поэтому в его словах могут быть ошибки распознавания речи: понимайте смысл.";
+
 export async function POST(req: Request) {
   const { supabase, user } = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => null)) as { conversationId?: string; message?: string } | null;
+  const body = (await req.json().catch(() => null)) as { conversationId?: string; message?: string; voice?: boolean } | null;
   const conversationId = body?.conversationId;
   const message = body?.message?.trim().slice(0, MAX_INPUT);
   if (!conversationId) return NextResponse.json({ error: "bad request" }, { status: 400 });
@@ -84,7 +88,9 @@ export async function POST(req: Request) {
   let upstream: ReadableStream<string>;
   try {
     upstream = await streamReply({
-      system: buildSystemPrompt({ mode: conversation.mode, topic: conversation.topic, name: profile?.name }),
+      system:
+        buildSystemPrompt({ mode: conversation.mode, topic: conversation.topic, name: profile?.name }) +
+        (body?.voice ? VOICE_NOTE : ""),
       messages,
     });
   } catch (e) {
