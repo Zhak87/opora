@@ -33,6 +33,16 @@ export class AmbientEngine {
     return this.ctx?.resume();
   }
 
+  // Приглушить музыку, пока звучит голос собеседника.
+  duck(on: boolean) {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    const now = ctx.currentTime;
+    this.master.gain.cancelScheduledValues(now);
+    this.master.gain.setValueAtTime(this.master.gain.value, now);
+    this.master.gain.linearRampToValueAtTime(on ? 0.08 : 0.32, now + (on ? 0.6 : 2));
+  }
+
   async start() {
     if (this.ctx) return;
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

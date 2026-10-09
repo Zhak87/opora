@@ -215,3 +215,81 @@ function sseToText(body: ReadableStream<Uint8Array>, extract: (data: string) => 
     }),
   );
 }
+
+/* ---------- Озвучка ---------- */
+
+const TTS_MODELS = (process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts,gemini-2.5-flash-preview-tts,gemini-3.8-flash-lite-tts")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+export function ttsConfigured() {
+  return Boolean(process.env.GEMINI_API_KEY);
+}
+
+// Возвращает WAV. Некоторые модели отдают «сырой» PCM 16 бит — тогда добавляем заголовок сами.
+export async function synthesize(text: string, voice: string, style: string): Promise<Uint8Array> {
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: `${style}:\n\n${text}` }] }],
+    generationConfig: {
+      responseModalities: ["AUDIO"],
+      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+    },
+  });
+  let last: AIError | null = null;
+  for (const [i, model] of TTS_MODELS.entries()) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), i === 0 ? 15_000 : 20_000);
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+        body,
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        last = new AIError(res.status, `TTS ${model} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+        console.error(last.message);
+        continue;
+      }
+      const json = await res.json();
+      const part = (json?.candidates?.[0]?.content?.parts ?? []).find((p: { inlineData?: unknown }) => p.inlineData);
+      if (!part) {
+        last = new AIError(502, `TTS ${model}: no audio`);
+        continue;
+      }
+      const bytes = Uint8Array.from(Buffer.from(part.inlineData.data as string, "base64"));
+      const mime = String(part.inlineData.mimeType || "");
+      if (/wav/i.test(mime)) return bytes;
+      const rate = Number(/rate=(\d+)/.exec(mime)?.[1] || 24000);
+      return wav(bytes, rate);
+    } catch (e) {
+      last = new AIError(504, `TTS ${model}: ${(e as Error).message}`);
+      console.error(last.message);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw last ?? new AIError(500, "TTS: no models");
+}
+
+function wav(pcm: Uint8Array, rate: number) {
+  const out = new Uint8Array(44 + pcm.length);
+  const v = new DataView(out.buffer);
+  const str = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, "RIFF");
+  v.setUint32(4, 36 + pcm.length, true);
+  str(8, "WAVE");
+  str(12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  str(36, "data");
+  v.setUint32(40, pcm.length, true);
+  out.set(pcm, 44);
+  return out;
+}

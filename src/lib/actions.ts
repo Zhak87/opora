@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { getTopic } from "@/lib/topics";
 import { JOURNAL_KINDS, type JournalKind } from "@/lib/content";
+import { normalizeVoice } from "@/lib/voices";
 
 async function authed() {
   const { supabase, user } = await requireUser();
@@ -128,6 +129,16 @@ export async function updateProfile(_: unknown, formData: FormData) {
   if (error) return { error: "Не получилось сохранить." };
   revalidatePath("/", "layout");
   return { ok: "Сохранено" };
+}
+
+export async function saveVoice(settings: unknown) {
+  const { supabase, user } = await authed();
+  const voice = normalizeVoice(settings);
+  const { error } = await supabase.from("profiles").update({ voice }).eq("id", user.id);
+  if (error) return { error: "Не получилось сохранить." };
+  revalidatePath("/profile");
+  revalidatePath("/talk", "layout");
+  return { ok: true };
 }
 
 export async function signOut() {

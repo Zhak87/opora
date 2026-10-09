@@ -6,7 +6,10 @@ import { BackIcon, SendIcon, LeafIcon, TrashIcon } from "./icons";
 import { Orb } from "./Orb";
 import { Breathe } from "./Breathe";
 import { MusicToggle } from "./Music";
-import { deleteConversation } from "@/lib/actions";
+import { SpeakButton } from "./SpeakButton";
+import { deleteConversation, saveVoice } from "@/lib/actions";
+import { speech } from "@/lib/speech";
+import type { VoiceSettings } from "@/lib/voices";
 import { looksLikeCrisis } from "@/lib/prompt";
 
 type Message = { id: string; role: "user" | "assistant"; content: string };
@@ -18,12 +21,18 @@ export function Chat({
   title,
   label,
   initialMessages,
+  voice: initialVoice,
 }: {
   conversationId: string;
   title: string;
   label: string;
   initialMessages: Message[];
+  voice: VoiceSettings;
 }) {
+  const [voice, setVoice] = useState(initialVoice);
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
+  useEffect(() => () => speech.stop(), []);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,6 +75,7 @@ export function Chat({
           setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: acc } : m)));
         }
         if (!acc.trim()) throw new Error("empty");
+        if (voiceRef.current.auto) speech.speak(replyId, acc, voiceRef.current);
       } catch {
         setMessages((prev) =>
           prev.map((m) =>
@@ -107,6 +117,8 @@ export function Chat({
     if (!input.trim() || busy) return;
     const text = input;
     setInput("");
+    speech.stop();
+    if (voiceRef.current.auto) speech.unlock();
     send(text);
   };
 
@@ -131,6 +143,24 @@ export function Chat({
             <p className="truncate text-[15px] text-ink">{title}</p>
             <p className="text-xs text-ink-faint">{label}</p>
           </div>
+          <button
+            onClick={() => {
+              const next = { ...voice, auto: !voice.auto };
+              setVoice(next);
+              if (next.auto) speech.unlock();
+              else speech.stop();
+              saveVoice(next);
+            }}
+            aria-pressed={voice.auto}
+            title={voice.auto ? "Ответы читаются вслух. Нажмите, чтобы выключить" : "Читать ответы вслух"}
+            aria-label={voice.auto ? "Выключить чтение вслух" : "Читать ответы вслух"}
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition ${voice.auto ? "bg-lilac-soft text-lilac-deep" : "text-ink-soft hover:bg-sand hover:text-ink"}`}
+          >
+            <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 10v4h3.5L12 18V6L7.5 10z" />
+              {voice.auto ? <path d="M15.5 9.5a3.5 3.5 0 010 5M18 7a7 7 0 010 10" /> : <path d="M16 10l4 4M20 10l-4 4" />}
+            </svg>
+          </button>
           <MusicToggle className="[&>span]:h-9 [&>span]:w-9 [&>span]:shadow-none [&>span]:bg-transparent" />
           <button
             onClick={() => setBreathing(true)}
@@ -191,7 +221,12 @@ export function Chat({
                     aria-hidden
                   />
                   {m.content ? (
-                    <p className="whitespace-pre-wrap font-serif text-[17px] leading-[1.7] text-ink">{m.content}</p>
+                    <div className="min-w-0">
+                      <p className="whitespace-pre-wrap font-serif text-[17px] leading-[1.7] text-ink">{m.content}</p>
+                      {!(busy && m.id === messages[messages.length - 1]?.id) && (
+                        <SpeakButton id={m.id} text={m.content} voice={voice} className="-ml-3 mt-1.5" />
+                      )}
+                    </div>
                   ) : (
                     <p className="flex items-center gap-1.5 pt-1 text-sm text-ink-faint" aria-live="polite">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />

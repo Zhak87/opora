@@ -1,6 +1,8 @@
 import { requireUser } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions";
 import { NameForm, DangerZone } from "@/components/ProfileForms";
+import { VoicePicker } from "@/components/VoicePicker";
+import { normalizeVoice } from "@/lib/voices";
 import { Card, Notice, PageHeader, buttonStyles } from "@/components/ui";
 
 export default async function ProfilePage({
@@ -11,7 +13,7 @@ export default async function ProfilePage({
   const sp = await searchParams;
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { count: talks }, { count: notes }] = await Promise.all([
-    supabase.from("profiles").select("name, created_at").eq("id", user!.id).single(),
+    supabase.from("profiles").select("name, created_at, voice").eq("id", user!.id).single(),
     supabase.from("conversations").select("id", { count: "exact", head: true }),
     supabase.from("journal_entries").select("id", { count: "exact", head: true }),
   ]);
@@ -45,6 +47,10 @@ export default async function ProfilePage({
           <div className="mt-8">
             <NameForm name={profile?.name ?? ""} />
           </div>
+        </Card>
+
+        <Card className="p-6 sm:p-8">
+          <VoicePicker initial={normalizeVoice(profile?.voice)} />
         </Card>
 
         <Card className="p-6 sm:p-8">

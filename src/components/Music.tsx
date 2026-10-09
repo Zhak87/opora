@@ -2,9 +2,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { AmbientEngine } from "@/lib/ambient";
+import { speech } from "@/lib/speech";
 
 const KEY = "opora-music";
-const MusicContext = createContext<{ playing: boolean; toggle: () => void }>({ playing: false, toggle: () => {} });
+const MusicContext = createContext<{ playing: boolean; toggle: () => void; duck: (on: boolean) => void }>({
+  playing: false,
+  toggle: () => {},
+  duck: () => {},
+});
 
 // Музыка живёт на уровне всего приложения, поэтому не прерывается при переходах между экранами.
 export function MusicProvider({ children }: { children: React.ReactNode }) {
@@ -82,8 +87,14 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => () => engine.current?.stop(), []);
 
+  const duck = useCallback((on: boolean) => engine.current?.duck(on), []);
+  useEffect(() => {
+    speech.setDuck(duck);
+    return () => speech.setDuck(null);
+  }, [duck]);
+
   return (
-    <MusicContext.Provider value={{ playing, toggle }}>
+    <MusicContext.Provider value={{ playing, toggle, duck }}>
       {children}
       {gate && <Gate onEnter={enter} />}
     </MusicContext.Provider>
@@ -174,3 +185,5 @@ function Gate({ onEnter }: { onEnter: () => void }) {
     </div>
   );
 }
+
+export const useMusic = () => useContext(MusicContext);
