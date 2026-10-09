@@ -177,8 +177,10 @@ export function VoiceMode({
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const blocked = phase === "speaking" && s.status === "blocked";
   const tapOrb = () => {
-    if (phase === "listening") finish();
+    if (blocked) speech.resume();
+    else if (phase === "listening") finish();
     else if (phase === "speaking") {
       wasSpeaking.current = false;
       listen();
@@ -234,7 +236,7 @@ export function VoiceMode({
         </button>
 
         <p key={phase} className="mt-10 animate-fade text-center font-serif text-[22px] text-ink">
-          {phase === "error" ? "Микрофон недоступен" : LABEL[phase]}
+          {phase === "error" ? "Микрофон недоступен" : blocked ? "Нажмите на шарик, чтобы услышать" : LABEL[phase]}
           
         </p>
         <div className="mt-4 min-h-[96px] max-w-md text-center">

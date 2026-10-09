@@ -18,7 +18,7 @@ export function SpeakButton({ id, text, voice, label = "Прослушать", c
   return (
     <button
       type="button"
-      onClick={() => (active ? speech.stop() : speech.speak(id, text, voice))}
+      onClick={() => (mine && s.status === "blocked" ? speech.resume() : active ? speech.stop() : speech.speak(id, text, voice))}
       aria-label={active ? "Остановить озвучку" : label}
       className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] transition ${
         active ? "bg-lilac-soft text-ink" : "text-ink-faint hover:bg-sand/60 hover:text-ink"
@@ -41,7 +41,9 @@ export function SpeakButton({ id, text, voice, label = "Прослушать", c
           <path d="M15.5 9.5a3.5 3.5 0 010 5M18 7a7 7 0 010 10" />
         </svg>
       )}
-      <span>{active ? (s.status === "loading" ? "Готовлю голос…" : "Остановить") : label}</span>
+      <span>
+        {!active ? label : s.status === "loading" ? "Готовлю голос…" : s.status === "blocked" ? "Нажмите, чтобы услышать" : "Остановить"}
+      </span>
       {mine && s.fallback && <span className="text-[11px] text-ink-faint">· голос браузера</span>}
     </button>
   );

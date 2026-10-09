@@ -3,7 +3,8 @@
 
 import { SPEEDS, getVoice, type VoiceSettings } from "./voices";
 
-export type SpeechState = { id: string | null; status: "idle" | "loading" | "playing"; fallback: boolean };
+// blocked — браузер (чаще всего Safari на iPhone) не дал звуку начаться сам: нужно одно касание.
+export type SpeechState = { id: string | null; status: "idle" | "loading" | "playing" | "blocked"; fallback: boolean };
 
 let state: SpeechState = { id: null, status: "idle", fallback: false };
 const listeners = new Set<() => void>();
@@ -26,7 +27,27 @@ export const speech = {
   speak,
   stop,
   unlock,
+  resume,
 };
+
+let pending: (() => void) | null = null;
+
+// Продолжить озвучку после касания, если браузер её заблокировал.
+function resume() {
+  const p = pending;
+  pending = null;
+  p?.();
+}
+
+// На iPhone после микрофона звук может уйти в разговорный динамик; просим обычное воспроизведение.
+export function setAudioSession(type: "playback" | "play-and-record" | "auto") {
+  try {
+    const s = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (s) s.type = type;
+  } catch {}
+}
+
+let synthUnlocked = false;
 
 // Тихий звук, чтобы телефон разрешил воспроизведение после касания.
 const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
@@ -39,6 +60,15 @@ const cache = new Map<string, Promise<string>>();
 // Вызывается прямо в обработчике нажатия, чтобы позже ответ можно было озвучить автоматически.
 function unlock() {
   if (typeof window === "undefined") return;
+  // Голос браузера на iPhone тоже работает, только если впервые прозвучал после касания.
+  if (!synthUnlocked && window.speechSynthesis) {
+    synthUnlocked = true;
+    try {
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    } catch {}
+  }
   audio ??= new Audio();
   if (!audio.src || audio.src === SILENT || audio.paused) {
     audio.src = SILENT;
@@ -75,6 +105,7 @@ function stop() {
   run++;
   audio?.pause();
   if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+  pending = null;
   onDuck?.(false);
   set({ id: null, status: "idle", fallback: false });
 }
@@ -103,12 +134,27 @@ function fetchChunk(text: string, settings: VoiceSettings) {
 
 function playUrl(url: string, rate: number, my: number) {
   return new Promise<void>((resolve, reject) => {
-    if (!audio || my !== run) return resolve();
-    audio.src = url;
-    audio.playbackRate = rate;
-    audio.onended = () => resolve();
-    audio.onerror = () => reject(new Error("audio"));
-    audio.play().catch(reject);
+    const a = audio;
+    if (!a || my !== run) return resolve();
+    a.src = url;
+    a.playbackRate = rate;
+    a.onended = () => resolve();
+    a.onerror = () => reject(new Error("audio"));
+    const tryPlay = () =>
+      a
+        .play()
+        .then(() => my === run && set({ status: "playing" }))
+        .catch((e: Error) => {
+          if (my !== run) return resolve();
+          if (e?.name === "NotAllowedError") {
+            pending = () => {
+              a.playbackRate = rate;
+              tryPlay();
+            };
+            set({ status: "blocked" });
+          } else reject(e);
+        });
+    tryPlay();
   });
 }
 
@@ -120,6 +166,7 @@ async function speak(id: string, text: string, settings: VoiceSettings) {
   audio.src = SILENT;
   audio.play().catch(() => {});
   set({ id, status: "loading", fallback: false });
+  setAudioSession("playback");
   onDuck?.(true);
 
   const parts = chunks(text);
@@ -132,7 +179,6 @@ async function speak(id: string, text: string, settings: VoiceSettings) {
       if (my !== run) return;
       next = i + 1 < parts.length ? fetchChunk(parts[i + 1], settings) : null;
       next?.catch(() => {});
-      set({ status: "playing" });
       await playUrl(url, rate, my);
       if (my !== run) return;
     }
@@ -157,8 +203,23 @@ function browserSpeak(text: string, settings: VoiceSettings, my: number) {
   if (pick) u.voice = pick;
   u.rate = SPEEDS[settings.speed].rate * 0.95;
   u.pitch = want === "male" ? 0.9 : 1.05;
+  let started = false;
+  u.onstart = () => {
+    started = true;
+    if (my === run) set({ status: "playing" });
+  };
   u.onend = () => my === run && stop();
   u.onerror = () => my === run && stop();
-  set({ status: "playing", fallback: true });
-  synth.speak(u);
+  const go = () => {
+    synth.cancel();
+    synth.speak(u);
+  };
+  set({ status: "loading", fallback: true });
+  go();
+  // Если голос не начался сам (iPhone без касания), просим одно касание.
+  setTimeout(() => {
+    if (started || my !== run) return;
+    pending = go;
+    set({ status: "blocked" });
+  }, 2500);
 }

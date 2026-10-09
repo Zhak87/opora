@@ -1,3 +1,5 @@
+import { setAudioSession } from "./speech";
+
 // Запись голоса с микрофона в WAV 16 кГц и простое определение паузы:
 // когда человек замолкает примерно на 1,4 секунды, запись заканчивается сама.
 
@@ -23,6 +25,7 @@ export class MicRecorder {
   spoke = false;
 
   async start({ onLevel, onSilence }: Options = {}) {
+    setAudioSession("play-and-record");
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
@@ -92,6 +95,7 @@ export class MicRecorder {
     this.stream = null;
     this.ctx = null;
     this.chunks = [];
+    setAudioSession("playback");
   }
 }
 
