@@ -155,3 +155,34 @@ export async function deleteAccount(formData: FormData) {
   await supabase.auth.signOut();
   redirect("/welcome?deleted=1");
 }
+
+/* ---------- Пробный разговор ---------- */
+
+// Переносит разговор, начатый без аккаунта, в только что созданный аккаунт.
+export async function importDemo(messages: { role: string; content: string }[]): Promise<string | null> {
+  const { supabase } = await authed();
+  const clean = (Array.isArray(messages) ? messages : [])
+    .filter((m) => (m?.role === "user" || m?.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .slice(0, 40)
+    .map((m) => ({ role: m.role as "user" | "assistant", content: m.content.trim().slice(0, 4000) }));
+  const first = clean.find((m) => m.role === "user");
+  if (!first) return null;
+
+  const words = first.content.replace(/\s+/g, " ");
+  const title = words.length > 48 ? words.slice(0, 46).trimEnd() + "…" : words;
+  const { data, error } = await supabase.from("conversations").insert({ mode: "talk", title }).select("id").single();
+  if (error || !data) return null;
+
+  // Отдельное время для каждой реплики, чтобы порядок сохранился.
+  const start = Date.now() - clean.length * 1000;
+  await supabase.from("messages").insert(
+    clean.map((m, i) => ({
+      conversation_id: data.id,
+      role: m.role,
+      content: m.content,
+      created_at: new Date(start + i * 1000).toISOString(),
+    })),
+  );
+  revalidatePath("/", "layout");
+  return data.id;
+}

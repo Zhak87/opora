@@ -6,6 +6,7 @@ import { Orb } from "@/components/Orb";
 import { StartForm } from "@/components/StartForm";
 import { latestPlan } from "@/lib/plan-data";
 import { TipCheck } from "@/components/plan/TipCheck";
+import { DemoImport } from "@/components/DemoImport";
 import { TalkIcon, CompassIcon, PenIcon, ArrowIcon } from "@/components/icons";
 
 export default async function HomePage() {
@@ -21,6 +22,7 @@ export default async function HomePage() {
 
   return (
     <div className="stagger">
+      <DemoImport />
       <section className="mb-10 flex items-center gap-5 pr-10 sm:mb-14 sm:gap-7 md:pr-0">
         <Orb size={72} className="sm:hidden" />
         <Orb size={104} className="hidden sm:block" />

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { signUp } from "@/lib/auth-actions";
 import { Field, Notice } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
+import { DemoNote } from "@/components/DemoNote";
 
 export default function SignupPage() {
   const [state, action] = useActionState(signUp, undefined);
@@ -14,6 +15,7 @@ export default function SignupPage() {
         <h1 className="mb-3 font-serif text-[26px] text-ink">Почти готово</h1>
         <p className="text-[15px] leading-relaxed text-ink-soft">{state.ok}</p>
         <p className="mt-3 text-sm text-ink-faint">Письмо может прийти через пару минут. Загляните и в папку «Спам».</p>
+        <DemoNote after />
         <Link href="/login" className="mt-6 inline-block text-sm text-sky-deep hover:text-ink">Вернуться ко входу</Link>
       </div>
     );
@@ -22,6 +24,7 @@ export default function SignupPage() {
     <>
       <h1 className="mb-1 font-serif text-[26px] text-ink">Ваше место</h1>
       <p className="mb-7 text-[15px] text-ink-soft">Разговоры и записи будут видны только вам.</p>
+      <DemoNote />
       <form action={action} className="space-y-4">
         <Field label="Как к вам обращаться" name="name" autoComplete="given-name" placeholder="Можно не указывать" />
         <Field label="Почта" name="email" type="email" autoComplete="email" required />

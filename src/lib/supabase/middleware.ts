@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/welcome", "/login", "/signup", "/forgot", "/auth"];
+const PUBLIC_PATHS = ["/welcome", "/demo", "/login", "/signup", "/forgot", "/auth"];
 
 export async function updateSession(request: NextRequest) {
   const { searchParams, pathname } = request.nextUrl;
@@ -53,7 +53,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && ["/welcome", "/login", "/signup"].includes(path)) {
+  if (user && ["/welcome", "/demo", "/login", "/signup"].includes(path)) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
