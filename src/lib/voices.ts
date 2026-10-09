@@ -17,29 +17,18 @@ export const VOICES: Voice[] = [
   { id: "Algenib", name: "Глеб", gender: "male", hint: "Низкий, с хрипотцой" },
 ];
 
-export const TONES = {
-  calm: { label: "Спокойный", prompt: "Прочитай спокойно, неторопливо и мягко, как близкий человек, который рядом" },
-  warm: { label: "Тёплый", prompt: "Прочитай тепло и заботливо, с искренним участием в голосе" },
-  soft: { label: "Тихий", prompt: "Прочитай очень тихо и нежно, почти шёпотом, как перед сном" },
-  cheer: { label: "Ободряющий", prompt: "Прочитай бодро и ободряюще, с лёгкой улыбкой в голосе, но без суеты" },
-  plain: { label: "Нейтральный", prompt: "Прочитай естественно и ровно" },
-} as const;
-
-export type Tone = keyof typeof TONES;
-
 export const SPEEDS = { slow: { label: "Медленно", rate: 0.9 }, normal: { label: "Обычно", rate: 1 }, fast: { label: "Быстрее", rate: 1.12 } } as const;
 
 export type Speed = keyof typeof SPEEDS;
 
-export type VoiceSettings = { voice: string; tone: Tone; speed: Speed; auto: boolean };
+export type VoiceSettings = { voice: string; speed: Speed; auto: boolean };
 
-export const DEFAULT_VOICE: VoiceSettings = { voice: "Sulafat", tone: "calm", speed: "normal", auto: false };
+export const DEFAULT_VOICE: VoiceSettings = { voice: "Sulafat", speed: "normal", auto: false };
 
 export function normalizeVoice(raw: unknown): VoiceSettings {
   const r = (raw ?? {}) as Partial<VoiceSettings>;
   return {
     voice: VOICES.some((v) => v.id === r.voice) ? r.voice! : DEFAULT_VOICE.voice,
-    tone: r.tone && r.tone in TONES ? r.tone : DEFAULT_VOICE.tone,
     speed: r.speed && r.speed in SPEEDS ? r.speed : DEFAULT_VOICE.speed,
     auto: Boolean(r.auto),
   };

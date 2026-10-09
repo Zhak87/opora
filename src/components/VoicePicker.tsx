@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { saveVoice } from "@/lib/actions";
 import { speech } from "@/lib/speech";
-import { SPEEDS, TONES, VOICES, type Speed, type Tone, type VoiceSettings } from "@/lib/voices";
+import { SPEEDS, VOICES, type Speed, type VoiceSettings } from "@/lib/voices";
 import { SpeakButton, useSpeech } from "./SpeakButton";
 
 const SAMPLE = "Здравствуйте. Я рядом и никуда не тороплюсь. Давайте немного выдохнем, а потом вы расскажете, что у вас на душе.";
@@ -110,10 +110,7 @@ export function VoicePicker({ initial }: { initial: VoiceSettings }) {
         })}
       </div>
 
-      <p className="mb-2 mt-6 text-sm text-ink-soft">Тон</p>
-      <Chips<Tone> value={v.tone} options={Object.entries(TONES).map(([k, t]) => [k as Tone, t.label])} onChange={(tone) => update({ tone }, true)} />
-
-      <p className="mb-2 mt-5 text-sm text-ink-soft">Скорость</p>
+      <p className="mb-2 mt-6 text-sm text-ink-soft">Скорость</p>
       <Chips<Speed> value={v.speed} options={Object.entries(SPEEDS).map(([k, t]) => [k as Speed, t.label])} onChange={(speed) => update({ speed }, true)} />
 
       <label className="mt-6 flex cursor-pointer items-center justify-between gap-4 rounded-[20px] bg-sand/50 px-4 py-3.5">

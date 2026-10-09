@@ -80,13 +80,13 @@ function stop() {
 }
 
 function fetchChunk(text: string, settings: VoiceSettings) {
-  const key = `${settings.voice}|${settings.tone}|${text}`;
+  const key = `${settings.voice}|${text}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const p = fetch("/api/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice: settings.voice, tone: settings.tone }),
+    body: JSON.stringify({ text, voice: settings.voice }),
   }).then(async (res) => {
     if (!res.ok) throw new Error(String(res.status));
     return URL.createObjectURL(await res.blob());

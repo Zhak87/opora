@@ -228,9 +228,10 @@ export function ttsConfigured() {
 }
 
 // Возвращает WAV. Некоторые модели отдают «сырой» PCM 16 бит — тогда добавляем заголовок сами.
-export async function synthesize(text: string, voice: string, style: string): Promise<Uint8Array> {
+// Отправляем только сам текст: любые указания вроде «прочитай спокойно» модель может произнести вслух.
+export async function synthesize(text: string, voice: string): Promise<Uint8Array> {
   const body = JSON.stringify({
-    contents: [{ parts: [{ text: `${style}:\n\n${text}` }] }],
+    contents: [{ parts: [{ text }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
