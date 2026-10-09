@@ -46,7 +46,7 @@ async function streamGemini({ system, messages }: Options) {
       parts: [{ text: m.content }],
     })),
     safetySettings: SAFETY,
-    generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
+    generationConfig: { temperature: 0.8, maxOutputTokens: 4096 },
   });
 
   // Порядок попыток: основная модель, запасная, затем ещё по кругу.
