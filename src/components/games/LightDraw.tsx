@@ -19,14 +19,25 @@ export function LightDraw() {
   useEffect(() => {
     const c = canvas.current!;
     const ctx = c.getContext("2d")!;
+    // На телефоне размер окна меняется при прокрутке (панель браузера), поэтому рисунок сохраняем.
     const resize = () => {
       const r = c.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      c.width = r.width * dpr;
-      c.height = r.height * dpr;
+      if (c.width === Math.round(r.width * dpr) && c.height === Math.round(r.height * dpr)) return;
+      const had = c.dataset.ready === "1";
+      const copy = had ? document.createElement("canvas") : null;
+      if (copy) {
+        copy.width = c.width;
+        copy.height = c.height;
+        copy.getContext("2d")!.drawImage(c, 0, 0);
+      }
+      c.width = Math.round(r.width * dpr);
+      c.height = Math.round(r.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = "#fbf8f3";
       ctx.fillRect(0, 0, r.width, r.height);
+      if (copy) ctx.drawImage(copy, 0, 0, copy.width / dpr, copy.height / dpr);
+      c.dataset.ready = "1";
     };
     resize();
     window.addEventListener("resize", resize);

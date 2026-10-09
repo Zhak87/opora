@@ -2,13 +2,21 @@ import Link from "next/link";
 import { GAMES } from "@/lib/games";
 import { PageHeader, toneBg } from "@/components/ui";
 import { ArrowIcon, BackIcon } from "@/components/icons";
+import { requireUser } from "@/lib/supabase/server";
+import { latestPlan } from "@/lib/plan-data";
+import { GAME_KIND } from "@/lib/plan";
+import { CreatePlanButton } from "@/components/plan/CreatePlanButton";
+
+export const maxDuration = 60;
 
 const GROUPS = [
   { id: "calm", title: "Успокоиться", hint: "Несколько минут, чтобы замедлиться и выдохнуть." },
   { id: "self", title: "Найти себя", hint: "Лёгкие упражнения, чтобы лучше услышать себя." },
 ] as const;
 
-export default function PlayPage() {
+export default async function PlayPage() {
+  const { supabase } = await requireUser();
+  const stored = await latestPlan(supabase);
   return (
     <>
       <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
@@ -16,11 +24,12 @@ export default function PlayPage() {
       </Link>
       <PageHeader title="Игры и практики">Здесь нет очков и проигрышей. Только вы и немного тишины.</PageHeader>
       <div className="space-y-12">
+        <ForYou stored={stored} />
         {GROUPS.map((g) => (
           <section key={g.id}>
             <h2 className="font-serif text-[22px] text-ink">{g.title}</h2>
             <p className="mb-5 mt-1 text-[15px] text-ink-soft">{g.hint}</p>
-            <div className="stagger grid gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="stagger grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               {GAMES.filter((x) => x.group === g.id).map((x) => (
                 <Link
                   key={x.slug}
@@ -40,6 +49,51 @@ export default function PlayPage() {
         ))}
       </div>
     </>
+  );
+}
+
+function ForYou({ stored }: { stored: Awaited<ReturnType<typeof latestPlan>> }) {
+  if (!stored)
+    return (
+      <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-lilac-soft via-paper to-mist p-6 shadow-soft sm:p-8">
+        <span className="absolute -right-10 -top-10 h-40 w-40 animate-breathe rounded-full bg-paper/60" aria-hidden />
+        <p className="relative text-xs uppercase tracking-[0.16em] text-lilac-deep">Для вас</p>
+        <h2 className="relative mt-2 font-serif text-[24px] leading-snug text-ink sm:text-[28px]">Личные игры и советы</h2>
+        <p className="relative mb-6 mt-2 max-w-lg text-[15px] leading-relaxed text-ink-soft">
+          Собеседник перечитает ваши разговоры и записи в дневнике и соберёт несколько игр и советов именно под вашу ситуацию.
+          Чем больше вы рассказывали, тем точнее они получатся.
+        </p>
+        <div className="relative">
+          <CreatePlanButton goTo="/play/me" />
+        </div>
+      </section>
+    );
+  const { plan } = stored;
+  return (
+    <section>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="font-serif text-[22px] text-ink">Для вас</h2>
+        <Link href="/play/me" className="shrink-0 text-sm text-ink-faint hover:text-ink">
+          Советы и всё
+        </Link>
+      </div>
+      <p className="mb-5 mt-1 text-[15px] text-ink-soft">Игры, собранные по вашим разговорам и дневнику.</p>
+      <div className="stagger grid gap-3 sm:grid-cols-2 sm:gap-4">
+        {plan.games.map((g, i) => (
+          <Link
+            key={i}
+            href={`/play/me/${i}`}
+            className={`group flex items-center gap-4 rounded-[26px] ${toneBg[GAME_KIND[g.type].tone]} p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift sm:p-6`}
+          >
+            <span className="flex-1">
+              <span className="block text-xs uppercase tracking-[0.14em] text-ink-faint">{GAME_KIND[g.type].label}</span>
+              <span className="mt-1 block text-[16px] font-medium text-ink sm:text-[17px]">{g.title}</span>
+            </span>
+            <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -73,6 +127,51 @@ function GameGlyph({ slug }: { slug: string }) {
       <span className={base} aria-hidden>
         <span className="absolute h-7 w-5 -rotate-12 rounded-md bg-sand-deep" />
         <span className="absolute h-7 w-5 rotate-6 rounded-md border border-line bg-paper" />
+      </span>
+    );
+  if (slug === "grounding")
+    return (
+      <span className={base} aria-hidden>
+        <span className="font-serif text-[15px] tracking-tight text-sky-deep">5·4·3</span>
+      </span>
+    );
+  if (slug === "jar")
+    return (
+      <span className={base} aria-hidden>
+        <span className="relative h-7 w-6 rounded-b-lg rounded-t-md border-2 border-sand-deep">
+          <span className="absolute bottom-0.5 left-0.5 h-2 w-2 animate-breathe rounded-sm bg-[#f3d9a4]" />
+          <span className="absolute bottom-1 right-0.5 h-2 w-2 animate-breathe rounded-sm bg-lilac [animation-delay:-3s]" />
+        </span>
+      </span>
+    );
+  if (slug === "garden")
+    return (
+      <span className={base} aria-hidden>
+        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" strokeLinecap="round">
+          {[6, 10, 14, 18].map((y) => (
+            <path key={y} d={`M2 ${y} q5 -2 10 0 t10 0`} stroke="#c9b99c" strokeWidth={1.2} />
+          ))}
+          <ellipse cx="15" cy="11" rx="4" ry="3" fill="#8a8580" />
+        </svg>
+      </span>
+    );
+  if (slug === "strengths")
+    return (
+      <span className={base} aria-hidden>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 animate-breathe text-sage-deep" fill="currentColor">
+          <path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" opacity="0.8" />
+        </svg>
+      </span>
+    );
+  if (slug === "letter")
+    return (
+      <span className={base} aria-hidden>
+        <span className="relative h-5 w-7 rounded-[4px] bg-sand-deep">
+          <svg viewBox="0 0 28 20" className="absolute inset-0 h-full w-full">
+            <path d="M1 2 L14 11 L27 2" fill="none" stroke="#fffdf9" strokeWidth="1.5" />
+          </svg>
+          <span className="absolute -bottom-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-lilac-deep" />
+        </span>
       </span>
     );
   if (slug === "what-if")

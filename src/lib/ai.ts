@@ -93,6 +93,80 @@ async function streamGemini({ system, messages }: Options) {
   throw last ?? new AIError(500, "Gemini: no models configured");
 }
 
+// Разовый ответ целиком в виде JSON (для личного плана). Укладываемся примерно в 50 секунд.
+export async function generateJSON(opts: Options): Promise<unknown> {
+  const provider = process.env.AI_PROVIDER ?? "gemini";
+  const text = provider === "openai" ? await completeOpenAI(opts) : await completeGemini(opts);
+  const clean = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  return JSON.parse(start >= 0 ? clean.slice(start, end + 1) : clean);
+}
+
+async function completeGemini({ system, messages }: Options) {
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+    safetySettings: SAFETY,
+    generationConfig: { temperature: 0.9, maxOutputTokens: 8192, responseMimeType: "application/json" },
+  });
+  const deadline = Date.now() + 50_000;
+  const queue = [...GEMINI_MODELS, ...GEMINI_MODELS];
+  let last: AIError | null = null;
+  for (const [i, model] of queue.entries()) {
+    const left = deadline - Date.now();
+    if (left < 4_000) break;
+    if (i > 0) await new Promise((r) => setTimeout(r, 500));
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(left - 1_000, i === 0 ? 28_000 : 22_000));
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+        body,
+        signal: controller.signal,
+      });
+      const raw = await res.text();
+      if (res.ok) {
+        const parts = JSON.parse(raw)?.candidates?.[0]?.content?.parts ?? [];
+        const text = parts.map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? "")).join("");
+        if (text) return text;
+        last = new AIError(502, `Gemini ${model}: empty`);
+        continue;
+      }
+      last = new AIError(res.status, `Gemini ${model} ${res.status}: ${raw.slice(0, 300)}`);
+      console.error(last.message);
+      if (res.status === 401 || res.status === 403 || (res.status === 400 && /API_KEY|API key/i.test(raw))) {
+        throw new AIError(401, last.message);
+      }
+    } catch (e) {
+      if (e instanceof AIError) throw e;
+      last = new AIError(504, `Gemini ${model}: ${(e as Error).message}`);
+      console.error(last.message);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw last ?? new AIError(500, "Gemini: no models configured");
+}
+
+async function completeOpenAI({ system, messages }: Options) {
+  const base = process.env.OPENAI_BASE_URL || "https://openrouter.ai/api/v1";
+  const model = process.env.OPENAI_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
+  const res = await fetch(`${base}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({
+      model,
+      temperature: 0.9,
+      response_format: { type: "json_object" },
+      messages: [{ role: "system", content: system }, ...messages],
+    }),
+  });
+  if (!res.ok) throw new AIError(res.status, `AI ${res.status}: ${await res.text()}`);
+  return (await res.json())?.choices?.[0]?.message?.content ?? "";
+}
+
 async function streamOpenAI({ system, messages }: Options) {
   const base = process.env.OPENAI_BASE_URL || "https://openrouter.ai/api/v1";
   const model = process.env.OPENAI_MODEL || "meta-llama/llama-3.3-70b-instruct:free";

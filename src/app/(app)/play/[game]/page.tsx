@@ -7,6 +7,11 @@ import { LightDraw } from "@/components/games/LightDraw";
 import { Values } from "@/components/games/Values";
 import { WhatIf } from "@/components/games/WhatIf";
 import { Wheel } from "@/components/games/Wheel";
+import { Grounding } from "@/components/games/Grounding";
+import { GratitudeJar } from "@/components/games/GratitudeJar";
+import { ZenGarden } from "@/components/games/ZenGarden";
+import { Strengths } from "@/components/games/Strengths";
+import { Letter } from "@/components/games/Letter";
 
 const COMPONENTS: Record<string, React.ComponentType> = {
   bubbles: Bubbles,
@@ -15,6 +20,11 @@ const COMPONENTS: Record<string, React.ComponentType> = {
   values: Values,
   "what-if": WhatIf,
   wheel: Wheel,
+  grounding: Grounding,
+  jar: GratitudeJar,
+  garden: ZenGarden,
+  strengths: Strengths,
+  letter: Letter,
 };
 
 export default async function GamePage({ params }: { params: Promise<{ game: string }> }) {

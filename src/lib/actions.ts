@@ -50,6 +50,7 @@ export async function deleteAllHistory() {
   const { supabase, user } = await authed();
   await supabase.from("conversations").delete().eq("user_id", user.id);
   await supabase.from("journal_entries").delete().eq("user_id", user.id);
+  await supabase.from("personal_plans").delete().eq("user_id", user.id);
   revalidatePath("/", "layout");
   redirect("/profile?cleared=1");
 }

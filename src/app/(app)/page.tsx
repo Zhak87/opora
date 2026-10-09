@@ -4,14 +4,18 @@ import { greeting, relativeDate } from "@/lib/format";
 import { DAILY_QUESTIONS, pickForDay } from "@/lib/content";
 import { Orb } from "@/components/Orb";
 import { StartForm } from "@/components/StartForm";
+import { latestPlan } from "@/lib/plan-data";
+import { TipCheck } from "@/components/plan/TipCheck";
 import { TalkIcon, CompassIcon, PenIcon, ArrowIcon } from "@/components/icons";
 
 export default async function HomePage() {
   const { supabase, user } = await requireUser();
-  const [{ data: profile }, { data: recent }] = await Promise.all([
+  const [{ data: profile }, { data: recent }, stored] = await Promise.all([
     supabase.from("profiles").select("name").eq("id", user!.id).single(),
     supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
+    latestPlan(supabase),
   ]);
+  const tipIndex = stored ? Math.floor(Date.now() / 86_400_000) % stored.plan.tips.length : 0;
   const question = pickForDay(DAILY_QUESTIONS);
   const name = profile?.name;
 
@@ -57,6 +61,24 @@ export default async function HomePage() {
         </span>
         <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
       </Link>
+
+      {stored && (
+        <section className="mb-10 rounded-[28px] border border-line/70 bg-gradient-to-br from-paper to-sage-soft/60 p-6 shadow-soft sm:p-8">
+          <div className="mb-4 flex items-baseline justify-between gap-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-sage-deep">Совет на сегодня</p>
+            <Link href="/play/me" className="shrink-0 text-sm text-ink-faint hover:text-ink">
+              Все советы
+            </Link>
+          </div>
+          <TipCheck
+            compact
+            planId={stored.id}
+            index={tipIndex}
+            tip={stored.plan.tips[tipIndex]}
+            days={stored.progress.tips?.[tipIndex] ?? []}
+          />
+        </section>
+      )}
 
       <section className="mb-10 rounded-[28px] border border-line/70 bg-gradient-to-br from-paper to-lilac-soft/50 p-6 shadow-soft sm:p-8">
         <p className="mb-3 text-xs uppercase tracking-[0.14em] text-lilac-deep">Вопрос дня</p>
