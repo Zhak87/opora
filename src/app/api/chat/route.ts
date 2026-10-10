@@ -4,12 +4,16 @@ import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
+import { HOUR, tooMany } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_INPUT = 4000;
 const HISTORY_LIMIT = 40;
+// Больше, чем успевает живой человек даже голосом, но не даёт выжечь ключ ИИ скриптом.
+const PER_HOUR = 150;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // В голосовом режиме ответ сразу звучит вслух, поэтому он короче и без списков.
 const VOICE_NOTE =
@@ -22,10 +26,11 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { conversationId?: string; message?: string; voice?: boolean } | null;
   const conversationId = body?.conversationId;
   const message = body?.message?.trim().slice(0, MAX_INPUT);
-  if (!conversationId) return NextResponse.json({ error: "bad request" }, { status: 400 });
+  if (!conversationId || !UUID.test(conversationId)) return NextResponse.json({ error: "bad request" }, { status: 400 });
   const locale = await getLocale();
   const t = chatMessages[locale];
   const { notConfigured: NOT_CONFIGURED, busy: BUSY, keyProblem: KEY_PROBLEM, failed: FAILED } = t;
+  if (tooMany(`chat:${user.id}`, PER_HOUR, HOUR)) return textResponse(BUSY, 429);
 
   const { data: conversation } = await supabase
     .from("conversations")
@@ -38,7 +43,10 @@ export async function POST(req: Request) {
     const { error } = await supabase
       .from("messages")
       .insert({ conversation_id: conversationId, role: "user", content: message });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error(error);
+      return NextResponse.json({ error: "save failed" }, { status: 500 });
+    }
 
     const { count } = await supabase
       .from("messages")

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Orb } from "@/components/Orb";
 import { ButtonLink } from "@/components/ui";
 import { MusicToggle } from "@/components/Music";
@@ -5,11 +6,13 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getMsg } from "@/i18n/server";
 import { common } from "@/i18n/common";
 import { welcomeMessages } from "@/i18n/welcome";
+import { legalMessages } from "@/i18n/legal";
 
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
   const { deleted } = await searchParams;
   const m = await getMsg(welcomeMessages);
   const c = await getMsg(common);
+  const legal = await getMsg(legalMessages);
   return (
     <div className="relative flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
@@ -44,7 +47,13 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         </div>
       </main>
 
-      <footer className="px-5 pb-8 text-center text-xs leading-relaxed text-ink-faint">{m.footer}</footer>
+      <footer className="px-5 pb-8 text-center text-xs leading-relaxed text-ink-faint">
+        <p>{m.footer}</p>
+        <p className="mt-2 flex justify-center gap-4">
+          <Link href="/privacy" className="hover:text-ink">{legal.links.privacy}</Link>
+          <Link href="/terms" className="hover:text-ink">{legal.links.terms}</Link>
+        </p>
+      </footer>
     </div>
   );
 }

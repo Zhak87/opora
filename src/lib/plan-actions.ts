@@ -8,6 +8,7 @@ import { PLAN_SYSTEM, normalizePlan, planLanguageNote, type PlanProgress } from 
 import { getLocale } from "@/i18n/server";
 import { planMessages } from "@/i18n/plan";
 import { JOURNAL_KINDS, type JournalKind } from "@/lib/content";
+import { HOUR, tooMany } from "@/lib/rate-limit";
 
 async function authed() {
   const { supabase, user } = await requireUser();
@@ -20,6 +21,7 @@ export async function createPlan(): Promise<{ ok: true } | { error: string }> {
   const locale = await getLocale();
   const err = planMessages[locale].errors;
   if (!aiConfigured()) return { error: err.notConnected };
+  if (tooMany(`plan:${user.id}`, 10, HOUR)) return { error: err.busy };
 
   const [{ data: msgs }, { data: notes }, { data: profile }] = await Promise.all([
     supabase.from("messages").select("content, created_at").eq("role", "user").order("created_at", { ascending: false }).limit(80),
