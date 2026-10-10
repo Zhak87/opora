@@ -31,9 +31,12 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           который просто слушает.
         </p>
         <div className="mt-10 flex w-full max-w-xs animate-rise flex-col gap-3 [animation-delay:220ms] sm:max-w-none sm:flex-row sm:justify-center">
-          <ButtonLink href="/signup">Начать</ButtonLink>
-          <ButtonLink href="/login" variant="soft">У меня есть аккаунт</ButtonLink>
+          <ButtonLink href="/demo">Попробовать без регистрации</ButtonLink>
+          <ButtonLink href="/signup" variant="soft">Создать аккаунт</ButtonLink>
         </div>
+        <p className="mt-4 animate-fade text-sm text-ink-faint [animation-delay:300ms]">
+          Можно начать разговор сразу, без почты и имени.
+        </p>
 
         <div className="mt-16 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-ink-faint animate-fade [animation-delay:400ms]">
           {FEELINGS.map((f, i) => (
