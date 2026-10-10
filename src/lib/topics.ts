@@ -1,3 +1,6 @@
+import type { Locale } from "@/i18n/config";
+import { TOPIC_TEXTS } from "@/i18n/topics";
+
 export type Topic = {
   slug: string;
   title: string;
@@ -160,6 +163,18 @@ export const TOPICS: Topic[] = [
   },
 ];
 
-export function getTopic(slug: string | null | undefined) {
-  return TOPICS.find((t) => t.slug === slug);
+// Тема с названием, подсказкой и первой репликой на нужном языке. guidance — инструкция для ИИ, всегда на русском.
+function localize(topic: Topic, locale: Locale): Topic {
+  if (locale === "ru") return topic;
+  const text = TOPIC_TEXTS[locale][topic.slug];
+  return text ? { ...topic, ...text } : topic;
+}
+
+export function getTopic(slug: string | null | undefined, locale: Locale = "ru"): Topic | undefined {
+  const topic = TOPICS.find((t) => t.slug === slug);
+  return topic && localize(topic, locale);
+}
+
+export function getTopics(locale: Locale = "ru"): Topic[] {
+  return TOPICS.map((t) => localize(t, locale));
 }

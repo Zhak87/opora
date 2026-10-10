@@ -5,7 +5,7 @@ export const DEFAULT_LOCALE: Locale = "ru";
 export const LOCALE_COOKIE = "opora-lang";
 
 export const LOCALE_NAMES: Record<Locale, string> = { ru: "Русский", kk: "Қазақша", en: "English" };
-export const LOCALE_SHORT: Record<Locale, string> = { ru: "Рус", kk: "Қаз", en: "Eng" };
+export const LOCALE_SHORT: Record<Locale, string> = { ru: "РУС", kk: "ҚАЗ", en: "ENG" };
 // Для дат, чисел и голоса браузера.
 export const INTL: Record<Locale, string> = { ru: "ru-RU", kk: "kk-KZ", en: "en-US" };
 // Название языка для подсказки ИИ.

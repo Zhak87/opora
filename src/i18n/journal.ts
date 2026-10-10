@@ -1,0 +1,62 @@
+import { defineMessages } from "./config";
+
+// Дневник: страница и поле для записи.
+export const journal = defineMessages({
+  ru: {
+    title: "Дневник",
+    intro: "Место для мыслей, событий, благодарностей и целей. Только для вас.",
+    reflectWeek: "Поразмышлять над неделей",
+    reflectWeekHint: "Собеседник поможет заметить важное в ваших записях",
+    reflect: "Поразмышлять",
+    deleteEntry: "Удалить запись",
+    entry: "Запись",
+    placeholders: {
+      thought: "О чём вы думаете?",
+      event: "Что сегодня произошло?",
+      gratitude: "За что вы сегодня благодарны?",
+      goal: "Чего вам хочется достичь, даже совсем небольшого?",
+      feeling: "Что вы сейчас чувствуете?",
+    },
+    saved: "Сохранено",
+    saving: "Сохраняем…",
+    save: "Сохранить",
+  },
+  kk: {
+    title: "Күнделік",
+    intro: "Ойларға, оқиғаларға, алғыстар мен мақсаттарға арналған орын. Тек сіз үшін.",
+    reflectWeek: "Аптаны ой елегінен өткізу",
+    reflectWeekHint: "Әңгімелесуші жазбаларыңыздағы маңызды нәрсені байқауға көмектеседі",
+    reflect: "Ойлану",
+    deleteEntry: "Жазбаны жою",
+    entry: "Жазба",
+    placeholders: {
+      thought: "Не туралы ойлап жүрсіз?",
+      event: "Бүгін не болды?",
+      gratitude: "Бүгін неге алғыс айтасыз?",
+      goal: "Неге жеткіңіз келеді, тіпті кішкентай болса да?",
+      feeling: "Қазір не сезініп тұрсыз?",
+    },
+    saved: "Сақталды",
+    saving: "Сақталуда…",
+    save: "Сақтау",
+  },
+  en: {
+    title: "Journal",
+    intro: "A place for thoughts, events, gratitude and goals. Just for you.",
+    reflectWeek: "Reflect on your week",
+    reflectWeekHint: "Your companion will help you notice what matters in your entries",
+    reflect: "Reflect",
+    deleteEntry: "Delete entry",
+    entry: "Entry",
+    placeholders: {
+      thought: "What's on your mind?",
+      event: "What happened today?",
+      gratitude: "What are you grateful for today?",
+      goal: "What would you like to achieve, even something small?",
+      feeling: "What are you feeling right now?",
+    },
+    saved: "Saved",
+    saving: "Saving…",
+    save: "Save",
+  },
+});

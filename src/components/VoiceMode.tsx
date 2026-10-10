@@ -3,19 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MicRecorder } from "@/lib/recorder";
 import { speech } from "@/lib/speech";
-import { getVoice, type VoiceSettings } from "@/lib/voices";
+import { getVoice, voiceLabel, type VoiceSettings } from "@/lib/voices";
 import { useSpeech } from "./SpeakButton";
+import { useLocale } from "@/i18n/client";
+import { voiceMessages } from "@/i18n/voice";
 
 type Phase = "starting" | "listening" | "thinking" | "speaking" | "paused" | "error";
-
-const LABEL: Record<Phase, string> = {
-  starting: "Включаю микрофон…",
-  listening: "Слушаю вас…",
-  thinking: "Думаю…",
-  speaking: "Говорю",
-  paused: "Нажмите на шарик, когда захотите сказать",
-  error: "",
-};
 
 // Цвета шарика для каждого состояния.
 const PALETTE: Record<Phase, [string, string, string]> = {
@@ -46,6 +39,23 @@ export function VoiceMode({
   const alive = useRef(true);
   const finishing = useRef(false);
   const s = useSpeech();
+  const locale = useLocale();
+  const m = voiceMessages[locale].mode;
+  // Тексты нужны внутри колбэков — берём их через ref, чтобы не перезапускать микрофон.
+  const mRef = useRef(m);
+  const localeRef = useRef(locale);
+  useEffect(() => {
+    mRef.current = m;
+    localeRef.current = locale;
+  }, [m, locale]);
+  const LABEL: Record<Phase, string> = {
+    starting: m.starting,
+    listening: m.listening,
+    thinking: m.thinking,
+    speaking: m.speaking,
+    paused: m.paused,
+    error: "",
+  };
 
   const orb = useRef<HTMLDivElement>(null);
   const glow = useRef<HTMLDivElement>(null);
@@ -75,7 +85,7 @@ export function VoiceMode({
       if (!alive.current) return r.cancel();
       go("listening");
     } catch {
-      setError("Нет доступа к микрофону. Разрешите его в настройках браузера и попробуйте снова.");
+      setError(mRef.current.noMic);
       go("error");
     }
   }, []);
@@ -101,25 +111,25 @@ export function VoiceMode({
     } catch {
       if (!alive.current) return;
       setHeard("");
-      setAnswer("Не получилось расслышать. Попробуйте сказать ещё раз.");
+      setAnswer(mRef.current.notHeardError);
       return listen();
     }
     if (!alive.current) return;
     if (!text.trim()) {
       setHeard("");
-      setAnswer("Я не расслышал. Скажите, пожалуйста, ещё раз.");
+      setAnswer(mRef.current.notHeard);
       return listen();
     }
     setHeard(text);
     const reply = await ask(text);
     if (!alive.current) return;
     if (!reply) {
-      setAnswer("Связь ненадолго прервалась. Попробуйте ещё раз.");
+      setAnswer(mRef.current.connectionLost);
       return listen();
     }
     setAnswer(reply);
     go("speaking");
-    speech.speak(`voice-${Date.now()}`, reply, voice);
+    speech.speak(`voice-${Date.now()}`, reply, voice, localeRef.current);
   }, [ask, listen, voice]);
 
   useEffect(() => {
@@ -191,15 +201,15 @@ export function VoiceMode({
   };
 
   const [c1, c2, c3] = PALETTE[phase];
-  const v = getVoice(voice.voice);
+  const v = voiceLabel(getVoice(voice.voice), locale);
 
   return (
-    <div className="fixed inset-0 z-50 flex animate-fade flex-col bg-gradient-to-b from-milk via-[#f4f1f8] to-milk pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]" role="dialog" aria-label="Голосовой разговор">
+    <div className="fixed inset-0 z-50 flex animate-fade flex-col bg-gradient-to-b from-milk via-[#f4f1f8] to-milk pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]" role="dialog" aria-label={m.dialog}>
       <div className="flex items-center justify-between px-5 py-4">
         <p className="text-sm text-ink-soft">
-          Голосовой разговор · <span className="text-ink-faint">{v.name}</span>
+          {m.dialog} · <span className="text-ink-faint">{v.name}</span>
         </p>
-        <button onClick={onClose} aria-label="Закончить голосовой разговор" className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink">
+        <button onClick={onClose} aria-label={m.close} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
@@ -209,7 +219,7 @@ export function VoiceMode({
       <div className="flex flex-1 flex-col items-center justify-center px-6">
         <button
           onClick={tapOrb}
-          aria-label={phase === "listening" ? "Я договорил(а)" : phase === "speaking" ? "Перебить и сказать" : "Начать говорить"}
+          aria-label={phase === "listening" ? m.orbDone : phase === "speaking" ? m.orbInterrupt : m.orbStart}
           className="relative flex h-[260px] w-[260px] items-center justify-center outline-none sm:h-[320px] sm:w-[320px]"
         >
           <div
@@ -236,7 +246,7 @@ export function VoiceMode({
         </button>
 
         <p key={phase} className="mt-10 animate-fade text-center font-serif text-[22px] text-ink">
-          {phase === "error" ? "Микрофон недоступен" : blocked ? "Нажмите на шарик, чтобы услышать" : LABEL[phase]}
+          {phase === "error" ? m.micUnavailable : blocked ? m.tapToHear : LABEL[phase]}
           
         </p>
         <div className="mt-4 min-h-[96px] max-w-md text-center">
@@ -249,7 +259,7 @@ export function VoiceMode({
                 <p className="mt-3 line-clamp-4 animate-fade text-[15.5px] leading-relaxed text-ink-soft">{answer}</p>
               )}
               {!heard && !answer && phase === "listening" && (
-                <p className="text-[14.5px] text-ink-faint">Говорите спокойно. Когда замолчите, я отвечу. Нажмите на шарик, чтобы ответить сразу.</p>
+                <p className="text-[14.5px] text-ink-faint">{m.listeningHint}</p>
               )}
             </>
           )}
@@ -269,7 +279,7 @@ export function VoiceMode({
               listen();
             }
           }}
-          aria-label={phase === "listening" ? "Выключить микрофон" : "Включить микрофон"}
+          aria-label={phase === "listening" ? m.micOff : m.micOn}
           className={`flex h-14 w-14 items-center justify-center rounded-full shadow-soft transition ${
             phase === "listening" ? "bg-paper text-ink" : "bg-ink text-paper"
           }`}
@@ -281,10 +291,10 @@ export function VoiceMode({
           </svg>
         </button>
         <button onClick={onClose} className="h-14 rounded-full bg-paper px-7 text-[15px] text-ink shadow-soft transition hover:shadow-lift">
-          Закончить
+          {m.finish}
         </button>
       </div>
-      <p className="pb-4 text-center text-[11px] text-ink-faint">Всё сказанное сохраняется в этом разговоре текстом.</p>
+      <p className="pb-4 text-center text-[11px] text-ink-faint">{m.savedNote}</p>
     </div>
   );
 }

@@ -1,3 +1,6 @@
+import { AI_LANGUAGE, type Locale } from "@/i18n/config";
+import { planMessages } from "@/i18n/plan";
+
 // Личный план: несколько игр и советов, которые ИИ собирает по разговорам и дневнику человека.
 
 export type PlanGame =
@@ -23,6 +26,22 @@ export const GAME_KIND: Record<PlanGame["type"], { label: string; tone: "blue" |
   choice: { label: "Что бы вы сделали", tone: "beige" },
   steps: { label: "Практика", tone: "green" },
 };
+
+// Те же подписи типов игр на нужном языке.
+export function gameKind(locale: Locale): typeof GAME_KIND {
+  const k = planMessages[locale].kinds;
+  return {
+    cards: { label: k.cards, tone: GAME_KIND.cards.tone },
+    reframe: { label: k.reframe, tone: GAME_KIND.reframe.tone },
+    choice: { label: k.choice, tone: GAME_KIND.choice.tone },
+    steps: { label: k.steps, tone: GAME_KIND.steps.tone },
+  };
+}
+
+// Подсказка ИИ, на каком языке писать текст плана (добавляется к PLAN_SYSTEM).
+export function planLanguageNote(locale: Locale) {
+  return `Язык ответа: весь текст плана (summary, focus, названия игр, вступления, карточки, мысли, ситуации, варианты, шаги, советы) пиши на ${AI_LANGUAGE[locale]} языке, даже если материалы человека на другом языке. Это указание важнее слов «пиши по-русски» выше. Обращение — вежливое, на «вы». Ключи JSON и значения поля "type" оставь как в образце.`;
+}
 
 export const PLAN_SYSTEM = `Ты — бережный психолог-консультант в приложении «Опора». По сообщениям человека из разговоров и его записям в дневнике ты составляешь для него личный план: несколько коротких игр-упражнений и советов, которых ему стоит придерживаться. Всё должно опираться на то, что человек действительно рассказал: его ситуации, слова, тревоги, цели и сильные стороны. Если данных мало, сделай план мягким и общим, о заботе о себе и знакомстве с собой.
 

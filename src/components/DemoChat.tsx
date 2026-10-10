@@ -9,12 +9,13 @@ import { MusicToggle } from "./Music";
 import { ButtonLink } from "./ui";
 import { looksLikeCrisis } from "@/lib/prompt";
 import { DEMO_INVITE_AFTER, DEMO_LIMIT, DEMO_MAX_INPUT, readDemo, writeDemo, type DemoMessage } from "@/lib/demo";
+import { useMsg } from "@/i18n/client";
+import { demoMessages } from "@/i18n/demo";
 
 type Message = DemoMessage & { id: string; failed?: boolean };
 
-const STARTERS = ["Мне сейчас тревожно", "Я очень устал(а)", "Хочу просто выговориться", "Не знаю, с чего начать"];
-
 export function DemoChat() {
+  const t = useMsg(demoMessages);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [input, setInput] = useState("");
@@ -88,7 +89,7 @@ export function DemoChat() {
       } catch {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === replyId ? { ...m, failed: true, content: "Связь ненадолго прервалась. Попробуйте, пожалуйста, отправить ещё раз чуть позже." } : m,
+            m.id === replyId ? { ...m, failed: true, content: t.connectionLost } : m,
           ),
         );
       } finally {
@@ -96,7 +97,7 @@ export function DemoChat() {
         inputRef.current?.focus({ preventScroll: true });
       }
     },
-    [busy, messages, reachedLimit],
+    [busy, messages, reachedLimit, t.connectionLost],
   );
 
   const submit = (e?: React.FormEvent) => {
@@ -121,12 +122,12 @@ export function DemoChat() {
     <div className="flex h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b border-line/50 bg-milk/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-3xl items-center gap-2 px-3 sm:px-6">
-          <Link href="/welcome" aria-label="На главную" className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink">
+          <Link href="/welcome" aria-label={t.toHome} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink">
             <BackIcon className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] text-ink">Пробный разговор</p>
-            <p className="text-xs text-ink-faint">Без регистрации</p>
+            <p className="truncate text-[15px] text-ink">{t.title}</p>
+            <p className="text-xs text-ink-faint">{t.subtitle}</p>
           </div>
           <MusicToggle className="[&>span]:h-9 [&>span]:w-9 [&>span]:shadow-none [&>span]:bg-transparent" />
           <button
@@ -134,10 +135,10 @@ export function DemoChat() {
             className="flex h-10 items-center gap-2 rounded-full px-3 text-sm text-ink-soft transition hover:bg-sage-soft hover:text-sage-deep"
           >
             <LeafIcon className="h-[18px] w-[18px]" />
-            <span className="hidden sm:inline">Подышать</span>
+            <span className="hidden sm:inline">{t.breathe}</span>
           </button>
           <Link href="/login" className="flex h-10 items-center rounded-full px-3 text-sm text-ink-soft transition hover:bg-sand hover:text-ink">
-            Войти
+            {t.signIn}
           </Link>
         </div>
       </header>
@@ -147,12 +148,10 @@ export function DemoChat() {
           {empty && (
             <div className="flex animate-fade flex-col items-center pt-[8vh] text-center">
               <Orb size={140} />
-              <p className="mt-8 font-serif text-[26px] leading-snug text-ink">Я здесь и слушаю.</p>
-              <p className="mt-2 max-w-sm text-[15px] text-ink-soft">
-                Можно просто попробовать, без регистрации и без имени. Расскажите, что у вас на душе.
-              </p>
+              <p className="mt-8 font-serif text-[26px] leading-snug text-ink">{t.emptyTitle}</p>
+              <p className="mt-2 max-w-sm text-[15px] text-ink-soft">{t.emptyText}</p>
               <div className="mt-8 flex flex-wrap justify-center gap-2">
-                {STARTERS.map((s) => (
+                {t.starters.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
@@ -187,7 +186,7 @@ export function DemoChat() {
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint [animation-delay:200ms]" />
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint [animation-delay:400ms]" />
-                      <span className="sr-only">Собеседник думает</span>
+                      <span className="sr-only">{t.thinking}</span>
                     </p>
                   )}
                 </div>
@@ -197,17 +196,15 @@ export function DemoChat() {
 
           {showCrisis && (
             <aside className="mt-8 animate-rise rounded-[24px] border border-lilac/50 bg-lilac-soft/70 p-5 text-[14.5px] leading-relaxed text-ink">
-              <p className="font-medium">Вы не обязаны справляться с этим в одиночку.</p>
-              <p className="mt-1 text-ink-soft">
-                Если сейчас очень тяжело, пожалуйста, поговорите с живым человеком. Это бесплатно и анонимно:
-              </p>
+              <p className="font-medium">{t.crisisTitle}</p>
+              <p className="mt-1 text-ink-soft">{t.crisisText}</p>
               <ul className="mt-3 space-y-1">
-                <li><a href="tel:112" className="underline-offset-4 hover:underline">112</a> — экстренная помощь</li>
-                <li><a href="tel:88002000122" className="underline-offset-4 hover:underline">8-800-2000-122</a> — телефон доверия (Россия)</li>
-                <li><a href="tel:150" className="underline-offset-4 hover:underline">150</a> — телефон доверия (Казахстан)</li>
+                <li><a href="tel:112" className="underline-offset-4 hover:underline">112</a> — {t.crisisEmergency}</li>
+                <li><a href="tel:88002000122" className="underline-offset-4 hover:underline">8-800-2000-122</a> — {t.crisisRussia}</li>
+                <li><a href="tel:150" className="underline-offset-4 hover:underline">150</a> — {t.crisisKazakhstan}</li>
               </ul>
               <button onClick={() => setShowCrisis(false)} className="mt-3 text-xs text-ink-faint hover:text-ink">
-                Скрыть
+                {t.hide}
               </button>
             </aside>
           )}
@@ -216,17 +213,15 @@ export function DemoChat() {
             <aside className="mt-10 animate-rise rounded-[28px] border border-line/70 bg-gradient-to-br from-paper via-paper to-mist/70 p-6 text-center shadow-soft sm:p-7">
               <Orb size={56} className="mx-auto" />
               <p className="mt-4 font-serif text-[22px] leading-snug text-ink">
-                {reachedLimit ? "Давайте продолжим в вашем личном месте" : "Сохраним этот разговор?"}
+                {reachedLimit ? t.inviteLimitTitle : t.inviteTitle}
               </p>
               <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-ink-soft">
-                {reachedLimit
-                  ? "Пробный разговор подошёл к концу. Создайте аккаунт, и он сохранится: вы сможете продолжить с того же места."
-                  : "Создайте аккаунт, и разговор сохранится. Вы сможете вернуться к нему, вести дневник и видеть только своё."}
+                {reachedLimit ? t.inviteLimitText : t.inviteText}
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-                <ButtonLink href="/signup?from=demo">Создать аккаунт</ButtonLink>
+                <ButtonLink href="/signup?from=demo">{t.createAccount}</ButtonLink>
                 {reachedLimit ? (
-                  <ButtonLink href="/login?from=demo" variant="soft">У меня есть аккаунт</ButtonLink>
+                  <ButtonLink href="/login?from=demo" variant="soft">{t.haveAccount}</ButtonLink>
                 ) : (
                   <button
                     onClick={() => {
@@ -235,7 +230,7 @@ export function DemoChat() {
                     }}
                     className="h-12 rounded-full px-6 text-[15px] text-ink-soft transition hover:bg-sand/60 hover:text-ink"
                   >
-                    Продолжить без аккаунта
+                    {t.continueWithout}
                   </button>
                 )}
               </div>
@@ -248,7 +243,7 @@ export function DemoChat() {
       {!reachedLimit && (
         <div className="border-t border-line/40 bg-gradient-to-t from-milk via-milk to-milk/70 pb-[env(safe-area-inset-bottom)]">
           <form onSubmit={submit} className="mx-auto flex max-w-2xl items-end gap-2 px-4 py-3 sm:px-8 sm:py-5">
-            <label className="sr-only" htmlFor="demo-input">Ваше сообщение</label>
+            <label className="sr-only" htmlFor="demo-input">{t.inputLabel}</label>
             <textarea
               id="demo-input"
               ref={inputRef}
@@ -257,20 +252,20 @@ export function DemoChat() {
               maxLength={DEMO_MAX_INPUT}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Напишите, что на душе…"
+              placeholder={t.placeholder}
               className="max-h-[200px] min-h-[52px] flex-1 resize-none rounded-[26px] border border-line bg-paper px-5 py-[14px] text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
             />
             <button
               type="submit"
               disabled={busy || !input.trim()}
-              aria-label="Отправить"
+              aria-label={t.send}
               className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-ink/90 disabled:bg-sand-deep disabled:text-paper"
             >
               <SendIcon className="h-5 w-5" />
             </button>
           </form>
           <p className="hidden pb-3 text-center text-[11px] text-ink-faint sm:block">
-            Собеседник — это ИИ. Пока вы без аккаунта, разговор хранится только на этом устройстве.
+            {t.footnote}
           </p>
         </div>
       )}

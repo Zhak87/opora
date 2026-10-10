@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, generateJSON } from "@/lib/ai";
-import { PLAN_SYSTEM, normalizePlan, type PlanProgress } from "@/lib/plan";
+import { PLAN_SYSTEM, normalizePlan, planLanguageNote, type PlanProgress } from "@/lib/plan";
+import { getLocale } from "@/i18n/server";
+import { planMessages } from "@/i18n/plan";
 import { JOURNAL_KINDS, type JournalKind } from "@/lib/content";
 
 async function authed() {
@@ -15,7 +17,9 @@ async function authed() {
 
 export async function createPlan(): Promise<{ ok: true } | { error: string }> {
   const { supabase, user } = await authed();
-  if (!aiConfigured()) return { error: "Собеседник пока не подключён." };
+  const locale = await getLocale();
+  const err = planMessages[locale].errors;
+  if (!aiConfigured()) return { error: err.notConnected };
 
   const [{ data: msgs }, { data: notes }, { data: profile }] = await Promise.all([
     supabase.from("messages").select("content, created_at").eq("role", "user").order("created_at", { ascending: false }).limit(80),
@@ -42,16 +46,16 @@ export async function createPlan(): Promise<{ ok: true } | { error: string }> {
 
   let plan = null;
   try {
-    plan = normalizePlan(await generateJSON({ system: PLAN_SYSTEM, messages: [{ role: "user", content: material }] }));
+    plan = normalizePlan(await generateJSON({ system: PLAN_SYSTEM + "\n\n" + planLanguageNote(locale), messages: [{ role: "user", content: material }] }));
   } catch (e) {
     console.error("plan", e);
-    if (e instanceof AIError && e.status === 401) return { error: "Не получилось связаться с собеседником. Проверьте ключ ИИ." };
-    return { error: "Собеседник сейчас перегружен. Попробуйте ещё раз через минуту." };
+    if (e instanceof AIError && e.status === 401) return { error: err.badKey };
+    return { error: err.busy };
   }
-  if (!plan) return { error: "Не получилось собрать план. Попробуйте ещё раз." };
+  if (!plan) return { error: err.buildFailed };
 
   const { error } = await supabase.from("personal_plans").insert({ plan });
-  if (error) return { error: "Не получилось сохранить план." };
+  if (error) return { error: err.saveFailed };
   revalidatePath("/play");
   revalidatePath("/");
   return { ok: true };

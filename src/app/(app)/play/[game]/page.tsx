@@ -12,6 +12,7 @@ import { GratitudeJar } from "@/components/games/GratitudeJar";
 import { ZenGarden } from "@/components/games/ZenGarden";
 import { Strengths } from "@/components/games/Strengths";
 import { Letter } from "@/components/games/Letter";
+import { getLocale } from "@/i18n/server";
 
 const COMPONENTS: Record<string, React.ComponentType> = {
   bubbles: Bubbles,
@@ -29,7 +30,7 @@ const COMPONENTS: Record<string, React.ComponentType> = {
 
 export default async function GamePage({ params }: { params: Promise<{ game: string }> }) {
   const { game } = await params;
-  const meta = getGame(game);
+  const meta = getGame(game, await getLocale());
   const Component = COMPONENTS[game];
   if (!meta || !Component) notFound();
   return (

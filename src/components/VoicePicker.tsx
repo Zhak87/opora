@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { saveVoice } from "@/lib/actions";
 import { speech } from "@/lib/speech";
-import { SPEEDS, VOICES, type Speed, type VoiceSettings } from "@/lib/voices";
+import { SPEEDS, VOICES, getVoices, speedLabel, type Speed, type VoiceSettings } from "@/lib/voices";
 import { SpeakButton, useSpeech } from "./SpeakButton";
-
-const SAMPLE = "Здравствуйте. Я рядом и никуда не тороплюсь. Давайте немного выдохнем, а потом вы расскажете, что у вас на душе.";
+import { useLocale } from "@/i18n/client";
+import { voiceMessages } from "@/i18n/voice";
 
 function Chips<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
@@ -34,12 +34,16 @@ export function VoicePicker({ initial }: { initial: VoiceSettings }) {
   const [saved, setSaved] = useState(false);
   const [, start] = useTransition();
   const s = useSpeech();
+  const locale = useLocale();
+  const m = voiceMessages[locale].picker;
+  const SAMPLE = m.sample;
+  const voices = getVoices(locale);
 
   const update = (patch: Partial<VoiceSettings>, preview = false) => {
     const next = { ...v, ...patch };
     setV(next);
     setSaved(false);
-    if (preview) speech.speak(`preview-${next.voice}`, SAMPLE, next);
+    if (preview) speech.speak(`preview-${next.voice}`, SAMPLE, next, locale);
     else if (s.id?.startsWith("preview-")) speech.stop();
     start(async () => {
       const r = await saveVoice(next);
@@ -50,18 +54,18 @@ export function VoicePicker({ initial }: { initial: VoiceSettings }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-[15px] font-medium text-ink">Голос собеседника</h2>
-        <span className={`text-xs text-sage-deep transition-opacity duration-500 ${saved ? "opacity-100" : "opacity-0"}`}>Сохранено</span>
+        <h2 className="text-[15px] font-medium text-ink">{m.title}</h2>
+        <span className={`text-xs text-sage-deep transition-opacity duration-500 ${saved ? "opacity-100" : "opacity-0"}`}>{m.saved}</span>
       </div>
       <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-        Любой ответ в разговоре можно прослушать. Выберите голос, который вам приятен: нажмите на него, чтобы услышать.
+        {m.hint}
       </p>
 
       <div className="mt-5 inline-flex rounded-full bg-sand/70 p-1 text-sm">
         {(
           [
-            ["female", "Женский"],
-            ["male", "Мужской"],
+            ["female", m.female],
+            ["male", m.male],
           ] as const
         ).map(([g, l]) => (
           <button
@@ -77,7 +81,7 @@ export function VoicePicker({ initial }: { initial: VoiceSettings }) {
       </div>
 
       <div key={gender} className="stagger mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-        {VOICES.filter((x) => x.gender === gender).map((x) => {
+        {voices.filter((x) => x.gender === gender).map((x) => {
           const on = v.voice === x.id;
           const playing = s.id === `preview-${x.id}` && s.status !== "idle";
           return (
@@ -110,13 +114,13 @@ export function VoicePicker({ initial }: { initial: VoiceSettings }) {
         })}
       </div>
 
-      <p className="mb-2 mt-6 text-sm text-ink-soft">Скорость</p>
-      <Chips<Speed> value={v.speed} options={Object.entries(SPEEDS).map(([k, t]) => [k as Speed, t.label])} onChange={(speed) => update({ speed }, true)} />
+      <p className="mb-2 mt-6 text-sm text-ink-soft">{m.speed}</p>
+      <Chips<Speed> value={v.speed} options={Object.keys(SPEEDS).map((k) => [k as Speed, speedLabel(k as Speed, locale)])} onChange={(speed) => update({ speed }, true)} />
 
       <label className="mt-6 flex cursor-pointer items-center justify-between gap-4 rounded-[20px] bg-sand/50 px-4 py-3.5">
         <span>
-          <span className="block text-[15px] text-ink">Читать ответы вслух сразу</span>
-          <span className="block text-xs text-ink-soft">Собеседник будет говорить, как только ответит</span>
+          <span className="block text-[15px] text-ink">{m.autoTitle}</span>
+          <span className="block text-xs text-ink-soft">{m.autoHint}</span>
         </span>
         <input
           type="checkbox"
@@ -131,7 +135,7 @@ export function VoicePicker({ initial }: { initial: VoiceSettings }) {
       </label>
 
       <div className="mt-5">
-        <SpeakButton id={`preview-${v.voice}`} text={SAMPLE} voice={v} label="Послушать, как это звучит" className="-ml-3" />
+        <SpeakButton id={`preview-${v.voice}`} text={SAMPLE} voice={v} label={m.preview} className="-ml-3" />
       </div>
     </div>
   );

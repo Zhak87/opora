@@ -2,17 +2,11 @@
 
 import { useState } from "react";
 import { ResultActions } from "./ResultActions";
+import { useMsg } from "@/i18n/client";
+import { wheelMessages } from "@/i18n/game-wheel";
 
-const AREAS = [
-  { name: "Здоровье", color: "#9db894" },
-  { name: "Отношения", color: "#b9aed6" },
-  { name: "Семья", color: "#d8b98f" },
-  { name: "Работа и дело", color: "#8fa8bf" },
-  { name: "Отдых", color: "#a9c7c0" },
-  { name: "Развитие", color: "#c6b0d8" },
-  { name: "Финансы", color: "#c9bfa3" },
-  { name: "Внутренний покой", color: "#9fb4cf" },
-];
+// Цвета сфер; названия — в src/i18n/game-wheel.ts в том же порядке.
+const AREAS = ["#9db894", "#b9aed6", "#d8b98f", "#8fa8bf", "#a9c7c0", "#c6b0d8", "#c9bfa3", "#9fb4cf"].map((color) => ({ color }));
 
 const C = 160;
 const R = 140;
@@ -27,23 +21,24 @@ function wedge(i: number, value: number) {
 }
 
 export function Wheel() {
+  const m = useMsg(wheelMessages);
   const [values, setValues] = useState(() => AREAS.map(() => 5));
   const [done, setDone] = useState(false);
 
-  const sorted = AREAS.map((a, i) => ({ ...a, v: values[i] })).sort((a, b) => a.v - b.v);
+  const sorted = AREAS.map((a, i) => ({ ...a, name: m.areas[i], v: values[i] })).sort((a, b) => a.v - b.v);
   const low = sorted[0];
   const high = sorted[sorted.length - 1];
-  const summary = AREAS.map((a, i) => `${a.name}: ${values[i]}`).join(", ");
+  const summary = AREAS.map((_, i) => `${m.areas[i]}: ${values[i]}`).join(", ");
 
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_1fr] md:items-start">
       <div className="mx-auto w-full max-w-[340px]">
-        <svg viewBox="0 0 320 320" className="w-full" role="img" aria-label="Колесо жизни">
+        <svg viewBox="0 0 320 320" className="w-full" role="img" aria-label={m.aria}>
           {[2, 4, 6, 8, 10].map((r) => (
             <circle key={r} cx={C} cy={C} r={(R * r) / 10} fill="none" stroke="#ebe4d8" strokeWidth={1} />
           ))}
           {AREAS.map((a, i) => (
-            <path key={a.name} d={wedge(i, values[i])} fill={a.color} fillOpacity={0.75} style={{ transition: "d 0.5s cubic-bezier(0.2,0.7,0.2,1)" }} />
+            <path key={i} d={wedge(i, values[i])} fill={a.color} fillOpacity={0.75} style={{ transition: "d 0.5s cubic-bezier(0.2,0.7,0.2,1)" }} />
           ))}
           <circle cx={C} cy={C} r={4} fill="#fffdf9" />
         </svg>
@@ -54,11 +49,11 @@ export function Wheel() {
           <>
             <div className="space-y-4">
               {AREAS.map((a, i) => (
-                <label key={a.name} className="block">
+                <label key={i} className="block">
                   <span className="mb-1.5 flex items-center justify-between text-[15px] text-ink">
                     <span className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: a.color }} />
-                      {a.name}
+                      {m.areas[i]}
                     </span>
                     <span className="font-serif text-ink-soft">{values[i]}</span>
                   </span>
@@ -75,27 +70,26 @@ export function Wheel() {
               ))}
             </div>
             <button onClick={() => setDone(true)} className="mt-6 h-12 rounded-full bg-ink px-7 text-[15px] text-paper shadow-soft transition hover:bg-ink/90">
-              Посмотреть итог
+              {m.see}
             </button>
           </>
         ) : (
           <div className="animate-rise">
             <p className="font-serif text-[22px] leading-snug text-ink">
-              Больше всего опоры сейчас в сфере «{high.name}».
+              {m.high(high.name)}
             </p>
             <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
-              Меньше всего сил получает «{low.name}». Это не оценка вас — просто подсказка, куда можно направить немного
-              внимания. Какой самый маленький шаг мог бы добавить туда один балл?
+              {m.low(low.name)}
             </p>
             <div className="mt-6">
               <ResultActions
-                prompt={`Я заполнил(а) «Колесо жизни». Мои оценки: ${summary}. Меньше всего — «${low.name}». Помоги мне подумать, какой небольшой шаг я могу сделать.`}
-                journal={`Колесо жизни. ${summary}.`}
+                prompt={m.prompt(summary, low.name)}
+                journal={m.journal(summary)}
                 kind="goal"
               />
             </div>
             <button onClick={() => setDone(false)} className="mt-6 text-sm text-ink-faint hover:text-ink">
-              Изменить оценки
+              {m.edit}
             </button>
           </div>
         )}

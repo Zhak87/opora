@@ -3,6 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { speech, type SpeechState } from "@/lib/speech";
 import type { VoiceSettings } from "@/lib/voices";
+import { useLocale } from "@/i18n/client";
+import { voiceMessages } from "@/i18n/voice";
 
 const IDLE: SpeechState = { id: null, status: "idle", fallback: false };
 
@@ -10,16 +12,19 @@ export function useSpeech() {
   return useSyncExternalStore(speech.subscribe, speech.get, () => IDLE);
 }
 
-export function SpeakButton({ id, text, voice, label = "Прослушать", className = "" }: { id: string; text: string; voice: VoiceSettings; label?: string; className?: string }) {
+export function SpeakButton({ id, text, voice, label, className = "" }: { id: string; text: string; voice: VoiceSettings; label?: string; className?: string }) {
   const s = useSpeech();
+  const locale = useLocale();
+  const m = voiceMessages[locale].speak;
+  label ??= m.listen;
   const mine = s.id === id;
   const active = mine && s.status !== "idle";
 
   return (
     <button
       type="button"
-      onClick={() => (mine && s.status === "blocked" ? speech.resume() : active ? speech.stop() : speech.speak(id, text, voice))}
-      aria-label={active ? "Остановить озвучку" : label}
+      onClick={() => (mine && s.status === "blocked" ? speech.resume() : active ? speech.stop() : speech.speak(id, text, voice, locale))}
+      aria-label={active ? m.stopAria : label}
       className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] transition ${
         active ? "bg-lilac-soft text-ink" : "text-ink-faint hover:bg-sand/60 hover:text-ink"
       } ${className}`}
@@ -42,9 +47,9 @@ export function SpeakButton({ id, text, voice, label = "Прослушать", c
         </svg>
       )}
       <span>
-        {!active ? label : s.status === "loading" ? "Готовлю голос…" : s.status === "blocked" ? "Нажмите, чтобы услышать" : "Остановить"}
+        {!active ? label : s.status === "loading" ? m.loading : s.status === "blocked" ? m.blocked : m.stop}
       </span>
-      {mine && s.fallback && <span className="text-[11px] text-ink-faint">· голос браузера</span>}
+      {mine && s.fallback && <span className="text-[11px] text-ink-faint">{m.browserVoice}</span>}
     </button>
   );
 }

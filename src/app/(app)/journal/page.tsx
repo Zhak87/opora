@@ -1,6 +1,9 @@
 import { requireUser } from "@/lib/supabase/server";
 import { deleteJournalEntry, reflectOnJournal } from "@/lib/actions";
-import { JOURNAL_KINDS, type JournalKind } from "@/lib/content";
+import { journalKinds, type JournalKind } from "@/lib/content";
+import { INTL } from "@/i18n/config";
+import { getLocale } from "@/i18n/server";
+import { journal } from "@/i18n/journal";
 import { JournalComposer } from "@/components/JournalComposer";
 import { PageHeader, toneBg } from "@/components/ui";
 import { SparkIcon, TrashIcon } from "@/components/icons";
@@ -8,6 +11,9 @@ import { SparkIcon, TrashIcon } from "@/components/icons";
 export default async function JournalPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
   const { supabase } = await requireUser();
+  const locale = await getLocale();
+  const m = journal[locale];
+  const kinds = journalKinds(locale);
   const { data: entries } = await supabase
     .from("journal_entries")
     .select("id, kind, content, created_at")
@@ -16,7 +22,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
 
   const groups = new Map<string, NonNullable<typeof entries>>();
   for (const e of entries ?? []) {
-    const key = new Date(e.created_at).toLocaleDateString("ru-RU", {
+    const key = new Date(e.created_at).toLocaleDateString(INTL[locale], {
       day: "numeric",
       month: "long",
       weekday: "long",
@@ -27,7 +33,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title="Дневник">Место для мыслей, событий, благодарностей и целей. Только для вас.</PageHeader>
+      <PageHeader title={m.title}>{m.intro}</PageHeader>
 
       <JournalComposer key={q ?? ""} question={q} />
 
@@ -39,8 +45,8 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
           >
             <SparkIcon className="h-5 w-5 shrink-0 text-lilac-deep" />
             <span>
-              <span className="block text-[15px] text-ink">Поразмышлять над неделей</span>
-              <span className="block text-sm text-ink-soft">Собеседник поможет заметить важное в ваших записях</span>
+              <span className="block text-[15px] text-ink">{m.reflectWeek}</span>
+              <span className="block text-sm text-ink-soft">{m.reflectWeekHint}</span>
             </span>
           </button>
         </form>
@@ -52,13 +58,13 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
             <h2 className="mb-3 px-1 text-sm first-letter:uppercase text-ink-faint">{date}</h2>
             <ul className="stagger space-y-3">
               {items.map((e) => {
-                const kind = JOURNAL_KINDS[e.kind as JournalKind] ?? JOURNAL_KINDS.thought;
+                const kind = kinds[e.kind as JournalKind] ?? kinds.thought;
                 return (
                   <li key={e.id} className="group rounded-[24px] border border-line/70 bg-paper/75 p-5 sm:p-6">
                     <div className="mb-3 flex items-center gap-2">
                       <span className={`rounded-full px-3 py-1 text-xs text-ink ${toneBg[kind.tone]}`}>{kind.label}</span>
                       <span className="text-xs text-ink-faint">
-                        {new Date(e.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" })}
+                        {new Date(e.created_at).toLocaleTimeString(INTL[locale], { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" })}
                       </span>
                     </div>
                     <p className="whitespace-pre-wrap font-serif text-[16.5px] leading-[1.7] text-ink">{e.content}</p>
@@ -66,12 +72,12 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                       <form action={reflectOnJournal}>
                         <input type="hidden" name="id" value={e.id} />
                         <button className="flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-soft transition hover:bg-lilac-soft hover:text-ink">
-                          <SparkIcon className="h-4 w-4" /> Поразмышлять
+                          <SparkIcon className="h-4 w-4" /> {m.reflect}
                         </button>
                       </form>
                       <form action={deleteJournalEntry} className="ml-auto">
                         <input type="hidden" name="id" value={e.id} />
-                        <button aria-label="Удалить запись" className="flex h-9 w-9 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">
+                        <button aria-label={m.deleteEntry} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">
                           <TrashIcon className="h-4 w-4" />
                         </button>
                       </form>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
 import { getLocale } from "@/i18n/server";
+import { demoMessages } from "@/i18n/demo";
 import { DEMO_LIMIT, DEMO_MAX_INPUT } from "@/lib/demo";
 
 export const runtime = "nodejs";
@@ -9,9 +10,6 @@ export const maxDuration = 60;
 
 const DEMO_NOTE =
   "\n\nЭто пробный разговор: человек ещё не создал аккаунт и только знакомится с «Опорой». Говорите так же тепло и по существу, как всегда. Не упоминайте аккаунт, регистрацию и ограничения: об этом приложение скажет само.";
-
-const FAILED = "Простите, мне не удалось ответить прямо сейчас. Попробуйте, пожалуйста, ещё раз чуть позже.";
-const BUSY = "Сейчас со мной разговаривает очень много людей. Попробуйте, пожалуйста, через минуту.";
 
 // Простая защита от злоупотреблений: не больше 30 ответов в час с одного адреса на один сервер.
 const WINDOW = 60 * 60 * 1000;
@@ -29,6 +27,8 @@ function limited(ip: string) {
 }
 
 export async function POST(req: Request) {
+  const locale = await getLocale();
+  const { replyFailed: FAILED, replyBusy: BUSY, greeting } = demoMessages[locale];
   const body = (await req.json().catch(() => null)) as { messages?: unknown } | null;
   const raw = Array.isArray(body?.messages) ? body.messages : [];
   const messages: ChatMessage[] = [];
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     if (last?.role === role) last.content += "\n\n" + content;
     else messages.push({ role, content });
   }
-  if (messages[0]?.role === "assistant") messages.unshift({ role: "user", content: "Здравствуйте." });
+  if (messages[0]?.role === "assistant") messages.unshift({ role: "user", content: greeting });
 
   const userCount = messages.filter((m) => m.role === "user").length;
   if (!userCount || messages[messages.length - 1].role !== "user") {
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
   let upstream: ReadableStream<string>;
   try {
-    upstream = await streamReply({ system: buildSystemPrompt({ mode: "talk", locale: await getLocale() }) + DEMO_NOTE, messages });
+    upstream = await streamReply({ system: buildSystemPrompt({ mode: "talk", locale }) + DEMO_NOTE, messages });
   } catch (e) {
     console.error(e);
     return textResponse(e instanceof AIError && e.status === 429 ? BUSY : FAILED, 502);

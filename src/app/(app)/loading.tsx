@@ -1,7 +1,11 @@
+import { getMsg } from "@/i18n/server";
+import { welcomeMessages } from "@/i18n/welcome";
+
 // Мгновенный отклик при переходе: мягкий «скелет» страницы, пока загружаются данные.
-export default function Loading() {
+export default async function Loading() {
+  const m = await getMsg(welcomeMessages);
   return (
-    <div className="animate-fade" aria-busy="true" aria-label="Загрузка">
+    <div className="animate-fade" aria-busy="true" aria-label={m.loading}>
       <div className="mb-3 h-4 w-28 animate-pulse rounded-full bg-sand/80" />
       <div className="mb-10 h-10 w-64 animate-pulse rounded-full bg-sand/70" />
       <div className="space-y-3">

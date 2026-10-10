@@ -4,16 +4,15 @@ import { useState } from "react";
 import { chime } from "@/lib/chime";
 import { ResultActions } from "./ResultActions";
 import { buttonStyles } from "../ui";
-
-const PROMPTS = [
-  "Что сейчас происходит в вашей жизни?",
-  "Чего вы боитесь и на что надеетесь?",
-  "Что вы хотите пожелать себе через год?",
-  "За что вы можете поблагодарить себя уже сейчас?",
-];
+import { useLocale, useMsg } from "@/i18n/client";
+import { INTL } from "@/i18n/config";
+import { letterMessages } from "@/i18n/game-letter";
 
 // Письмо себе через год: написать, «запечатать» в конверт и сохранить в дневник.
 export function Letter() {
+  const m = useMsg(letterMessages);
+  const locale = useLocale();
+  const PROMPTS = m.prompts;
   const [text, setText] = useState("");
   const [sealed, setSealed] = useState(false);
   const [hint, setHint] = useState(0);
@@ -31,22 +30,22 @@ export function Letter() {
             className="absolute left-1/2 top-[104px] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-lilac-deep font-serif text-lg text-paper shadow-lift"
             style={{ animation: "card-in 0.5s 0.5s cubic-bezier(0.3,1.6,0.5,1) both" }}
           >
-            О
+            {m.sealMark}
           </span>
         </div>
-        <p className="mt-8 font-serif text-[24px] text-ink">Письмо запечатано</p>
+        <p className="mt-8 font-serif text-[24px] text-ink">{m.sealed}</p>
         <p className="mt-2 max-w-md text-center text-[15px] leading-relaxed text-ink-soft">
-          Сохраните его в дневник. Через год, а может и раньше, перечитайте и посмотрите, какой путь вы прошли.
+          {m.sealedBody}
         </p>
         <div className="mt-6">
           <ResultActions
-            journal={`Письмо себе через год (написано ${new Date().toLocaleDateString("ru-RU")}):\n\n${text}`}
-            prompt={`Я написал(а) письмо себе через год:\n\n${text}\n\nХочу поговорить о том, что я в нём заметил(а).`}
+            journal={m.journal(new Date().toLocaleDateString(INTL[locale]), text)}
+            prompt={m.prompt(text)}
             kind="goal"
           />
         </div>
         <button onClick={() => setSealed(false)} className="mt-6 text-sm text-ink-faint hover:text-ink">
-          Вернуться к письму
+          {m.back}
         </button>
       </div>
     );
@@ -54,14 +53,14 @@ export function Letter() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="relative rounded-[28px] border border-line/70 bg-paper px-6 py-7 shadow-soft sm:px-9 sm:py-9">
-        <p className="font-serif text-[20px] text-ink">Дорогой(ая) я через год,</p>
+        <p className="font-serif text-[20px] text-ink">{m.greeting}</p>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={10}
-          placeholder="Пишите как другу. Никто, кроме вас, это не прочитает."
+          placeholder={m.placeholder}
           className="mt-3 w-full resize-none bg-[repeating-linear-gradient(transparent,transparent_31px,#ebe4d8_32px)] bg-local font-serif text-[17px] leading-[32px] text-ink outline-none placeholder:text-ink-faint"
-          aria-label="Текст письма"
+          aria-label={m.aria}
         />
       </div>
       <button
@@ -69,7 +68,7 @@ export function Letter() {
         className="mt-4 block w-full animate-fade rounded-[20px] bg-lilac-soft/70 px-5 py-3 text-left text-[14.5px] text-ink-soft transition hover:text-ink"
         key={hint}
       >
-        Подсказка: {PROMPTS[hint]} <span className="text-ink-faint">· другая</span>
+        {m.hint} {PROMPTS[hint]} <span className="text-ink-faint">· {m.another}</span>
       </button>
       <button
         disabled={text.trim().length < 10}
@@ -80,7 +79,7 @@ export function Letter() {
         }}
         className={`${buttonStyles.primary} mt-6`}
       >
-        Запечатать письмо
+        {m.seal}
       </button>
     </div>
   );

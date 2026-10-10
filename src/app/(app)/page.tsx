@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
 import { greeting, relativeDate } from "@/lib/format";
-import { DAILY_QUESTIONS, pickForDay } from "@/lib/content";
+import { dailyQuestions, pickForDay } from "@/lib/content";
+import { getLocale } from "@/i18n/server";
+import { home } from "@/i18n/home";
 import { Orb } from "@/components/Orb";
 import { StartForm } from "@/components/StartForm";
 import { latestPlan } from "@/lib/plan-data";
@@ -11,13 +13,15 @@ import { TalkIcon, CompassIcon, PenIcon, ArrowIcon } from "@/components/icons";
 
 export default async function HomePage() {
   const { supabase, user } = await requireUser();
+  const locale = await getLocale();
+  const m = home[locale];
   const [{ data: profile }, { data: recent }, stored] = await Promise.all([
     supabase.from("profiles").select("name").eq("id", user!.id).single(),
     supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
     latestPlan(supabase),
   ]);
   const tipIndex = stored ? Math.floor(Date.now() / 86_400_000) % stored.plan.tips.length : 0;
-  const question = pickForDay(DAILY_QUESTIONS);
+  const question = pickForDay(dailyQuestions(locale));
   const name = profile?.name;
 
   return (
@@ -28,10 +32,10 @@ export default async function HomePage() {
         <Orb size={104} className="hidden sm:block" />
         <div>
           <p className="text-[15px] text-ink-soft">
-            {greeting()}
+            {greeting(new Date(), locale)}
             {name ? `, ${name}` : ""}
           </p>
-          <h1 className="mt-1 font-serif text-[28px] leading-tight text-ink sm:text-[38px]">Как вы сегодня?</h1>
+          <h1 className="mt-1 font-serif text-[28px] leading-tight text-ink sm:text-[38px]">{m.howAreYou}</h1>
         </div>
       </section>
 
@@ -41,12 +45,12 @@ export default async function HomePage() {
             <TalkIcon className="h-6 w-6" />
           </span>
           <span className="flex-1">
-            <span className="block text-[17px] font-medium">Поговорить</span>
-            <span className="mt-0.5 block text-sm text-paper/60">Просто рассказать, что на душе</span>
+            <span className="block text-[17px] font-medium">{m.talk}</span>
+            <span className="mt-0.5 block text-sm text-paper/60">{m.talkHint}</span>
           </span>
         </StartForm>
-        <ActionLink href="/explore" title="Разобраться в себе" hint="Выбрать, что тревожит" tone="bg-mist" Icon={CompassIcon} />
-        <ActionLink href="/journal" title="Записать мысли" hint="Личный дневник" tone="bg-sage-soft" Icon={PenIcon} />
+        <ActionLink href="/explore" title={m.explore} hint={m.exploreHint} tone="bg-mist" Icon={CompassIcon} />
+        <ActionLink href="/journal" title={m.journal} hint={m.journalHint} tone="bg-sage-soft" Icon={PenIcon} />
       </section>
 
       <Link
@@ -58,8 +62,8 @@ export default async function HomePage() {
           <span className="absolute h-8 w-8 animate-breathe rounded-full bg-paper [animation-delay:-3s]" />
         </span>
         <span className="flex-1">
-          <span className="block text-[17px] font-medium text-ink">Игры и практики</span>
-          <span className="mt-0.5 block text-sm text-ink-soft">Успокоиться или узнать о себе что-то новое</span>
+          <span className="block text-[17px] font-medium text-ink">{m.play}</span>
+          <span className="mt-0.5 block text-sm text-ink-soft">{m.playHint}</span>
         </span>
         <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
       </Link>
@@ -67,9 +71,9 @@ export default async function HomePage() {
       {stored && (
         <section className="mb-10 rounded-[28px] border border-line/70 bg-gradient-to-br from-paper to-sage-soft/60 p-6 shadow-soft sm:p-8">
           <div className="mb-4 flex items-baseline justify-between gap-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-sage-deep">Совет на сегодня</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-sage-deep">{m.tipToday}</p>
             <Link href="/play/me" className="shrink-0 text-sm text-ink-faint hover:text-ink">
-              Все советы
+              {m.allTips}
             </Link>
           </div>
           <TipCheck
@@ -83,20 +87,20 @@ export default async function HomePage() {
       )}
 
       <section className="mb-10 rounded-[28px] border border-line/70 bg-gradient-to-br from-paper to-lilac-soft/50 p-6 shadow-soft sm:p-8">
-        <p className="mb-3 text-xs uppercase tracking-[0.14em] text-lilac-deep">Вопрос дня</p>
+        <p className="mb-3 text-xs uppercase tracking-[0.14em] text-lilac-deep">{m.questionOfDay}</p>
         <p className="font-serif text-[22px] leading-snug text-ink sm:text-[26px]">{question}</p>
         <div className="mt-6 flex flex-wrap gap-2">
           <Link
             href={`/journal?q=${encodeURIComponent(question)}`}
             className="rounded-full bg-paper px-4 py-2 text-sm text-ink shadow-soft transition hover:shadow-lift"
           >
-            Ответить в дневнике
+            {m.answerInJournal}
           </Link>
           <StartForm
-            prompt={`Вопрос дня: «${question}». Хочу об этом подумать.`}
+            prompt={m.discussPrompt(question)}
             className="rounded-full px-4 py-2 text-sm text-ink-soft transition hover:bg-paper/70 hover:text-ink"
           >
-            Обсудить
+            {m.discuss}
           </StartForm>
         </div>
       </section>
@@ -104,8 +108,8 @@ export default async function HomePage() {
       {recent && recent.length > 0 && (
         <section>
           <div className="mb-3 flex items-baseline justify-between px-1">
-            <h2 className="text-[15px] text-ink-soft">Продолжить разговор</h2>
-            <Link href="/talk" className="text-sm text-ink-faint hover:text-ink">Все</Link>
+            <h2 className="text-[15px] text-ink-soft">{m.continueTalk}</h2>
+            <Link href="/talk" className="text-sm text-ink-faint hover:text-ink">{m.all}</Link>
           </div>
           <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-line/70 bg-paper/70">
             {recent.map((c) => (
@@ -113,7 +117,7 @@ export default async function HomePage() {
                 <Link href={`/talk/${c.id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] text-ink">{c.title}</span>
-                    <span className="text-xs text-ink-faint">{relativeDate(c.updated_at)}</span>
+                    <span className="text-xs text-ink-faint">{relativeDate(c.updated_at, locale)}</span>
                   </span>
                   <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
                 </Link>

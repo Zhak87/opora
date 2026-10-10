@@ -4,8 +4,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { getTopic } from "@/lib/topics";
-import { JOURNAL_KINDS, type JournalKind } from "@/lib/content";
+import { JOURNAL_KINDS, journalKinds, type JournalKind } from "@/lib/content";
 import { normalizeVoice } from "@/lib/voices";
+import { INTL } from "@/i18n/config";
+import { getLocale } from "@/i18n/server";
+import { chatMessages } from "@/i18n/chat";
+import { profileMessages } from "@/i18n/profile";
 
 async function authed() {
   const { supabase, user } = await requireUser();
@@ -17,19 +21,21 @@ async function authed() {
 
 export async function startConversation(formData: FormData) {
   const { supabase } = await authed();
+  const locale = await getLocale();
+  const t = chatMessages[locale];
   const mode = String(formData.get("mode") || "talk");
-  const topic = getTopic(String(formData.get("topic") || ""));
+  const topic = getTopic(String(formData.get("topic") || ""), locale);
   const prompt = String(formData.get("prompt") || "").trim();
 
   const title =
-    topic?.title ?? (mode === "hope" ? String(formData.get("title") || "Надежда") : "Новый разговор");
+    topic?.title ?? (mode === "hope" ? String(formData.get("title") || t.hopeTitle) : t.newConversation);
 
   const { data, error } = await supabase
     .from("conversations")
     .insert({ mode: topic ? "topic" : mode, topic: topic?.slug ?? null, title })
     .select("id")
     .single();
-  if (error || !data) throw new Error(error?.message ?? "Не удалось начать разговор");
+  if (error || !data) throw new Error(error?.message ?? t.startFailed);
 
   if (topic) {
     await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: topic.opener });
@@ -60,12 +66,13 @@ export async function deleteAllHistory() {
 
 export async function addJournalEntry(_: unknown, formData: FormData) {
   const { supabase } = await authed();
+  const t = chatMessages[await getLocale()];
   const content = String(formData.get("content") || "").trim();
   const kind = String(formData.get("kind") || "thought") as JournalKind;
-  if (!content) return { error: "Запись пока пустая." };
-  if (!(kind in JOURNAL_KINDS)) return { error: "Неизвестный тип записи." };
+  if (!content) return { error: t.journalEmpty };
+  if (!(kind in JOURNAL_KINDS)) return { error: t.journalUnknownKind };
   const { error } = await supabase.from("journal_entries").insert({ kind, content: content.slice(0, 10000) });
-  if (error) return { error: "Не получилось сохранить. Попробуйте ещё раз." };
+  if (error) return { error: t.journalSaveFailed };
   revalidatePath("/journal");
   return { ok: Date.now() };
 }
@@ -78,6 +85,9 @@ export async function deleteJournalEntry(formData: FormData) {
 
 export async function reflectOnJournal(formData: FormData) {
   const { supabase } = await authed();
+  const locale = await getLocale();
+  const t = chatMessages[locale];
+  const kinds = journalKinds(locale);
   const id = formData.get("id");
 
   let entries: { kind: string; content: string; created_at: string }[] = [];
@@ -98,22 +108,20 @@ export async function reflectOnJournal(formData: FormData) {
 
   const text = entries
     .map((e) => {
-      const date = new Date(e.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-      const label = JOURNAL_KINDS[e.kind as JournalKind]?.label ?? "Запись";
+      const date = new Date(e.created_at).toLocaleDateString(INTL[locale], { day: "numeric", month: "long" });
+      const label = kinds[e.kind as JournalKind]?.label ?? t.entry;
       return `${date} · ${label}\n${e.content}`;
     })
     .join("\n\n");
 
-  const intro = id
-    ? "Хочу поразмышлять над этой записью из дневника:"
-    : "Вот мои записи в дневнике за последнюю неделю. Помоги мне заметить, что в них важного:";
+  const intro = id ? t.reflectOneIntro : t.reflectWeekIntro;
 
   const { data, error } = await supabase
     .from("conversations")
-    .insert({ mode: "journal", title: id ? "Размышление над записью" : "Моя неделя в дневнике" })
+    .insert({ mode: "journal", title: id ? t.reflectOneTitle : t.reflectWeekTitle })
     .select("id")
     .single();
-  if (error || !data) throw new Error("Не удалось начать разговор");
+  if (error || !data) throw new Error(t.startFailed);
   await supabase
     .from("messages")
     .insert({ conversation_id: data.id, role: "user", content: `${intro}\n\n${text}`.slice(0, 12000) });
@@ -124,18 +132,19 @@ export async function reflectOnJournal(formData: FormData) {
 
 export async function updateProfile(_: unknown, formData: FormData) {
   const { supabase, user } = await authed();
+  const t = chatMessages[await getLocale()];
   const name = String(formData.get("name") || "").trim().slice(0, 60);
   const { error } = await supabase.from("profiles").upsert({ id: user.id, name: name || null });
-  if (error) return { error: "Не получилось сохранить." };
+  if (error) return { error: t.saveFailed };
   revalidatePath("/", "layout");
-  return { ok: "Сохранено" };
+  return { ok: t.saved };
 }
 
 export async function saveVoice(settings: unknown) {
   const { supabase, user } = await authed();
   const voice = normalizeVoice(settings);
   const { error } = await supabase.from("profiles").update({ voice }).eq("id", user.id);
-  if (error) return { error: "Не получилось сохранить." };
+  if (error) return { error: chatMessages[await getLocale()].saveFailed };
   revalidatePath("/profile");
   revalidatePath("/talk", "layout");
   return { ok: true };
@@ -148,7 +157,9 @@ export async function signOut() {
 }
 
 export async function deleteAccount(formData: FormData) {
-  if (formData.get("confirm") !== "удалить") redirect("/profile?confirm=1");
+  // Слово подтверждения принимаем на любом из языков: язык могли сменить, пока форма была открыта.
+  const word = String(formData.get("confirm") ?? "").trim().toLowerCase();
+  if (!Object.values(profileMessages).some((m) => m.confirmWord === word)) redirect("/profile?confirm=1");
   const { supabase } = await authed();
   const { error } = await supabase.rpc("delete_own_account");
   if (error) redirect("/profile?error=1");

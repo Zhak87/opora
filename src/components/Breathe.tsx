@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMsg } from "@/i18n/client";
+import { hopeBreathe } from "@/i18n/hope";
 
 const PHASES = [
-  { label: "Вдох", seconds: 4, scale: 1 },
-  { label: "Задержка", seconds: 4, scale: 1 },
-  { label: "Выдох", seconds: 6, scale: 0.6 },
-];
+  { key: "inhale", seconds: 4, scale: 1 },
+  { key: "hold", seconds: 4, scale: 1 },
+  { key: "exhale", seconds: 6, scale: 0.6 },
+] as const;
 
 // Небольшая пауза на дыхание: вдох 4 — задержка 4 — выдох 6.
 export function Breathe({ onClose }: { onClose: () => void }) {
+  const m = useMsg(hopeBreathe);
   const [phase, setPhase] = useState(0);
   const [cycles, setCycles] = useState(0);
   const [started, setStarted] = useState(false);
@@ -40,7 +43,7 @@ export function Breathe({ onClose }: { onClose: () => void }) {
   return (
     <div
       role="dialog"
-      aria-label="Дыхательная пауза"
+      aria-label={m.label}
       className="fixed inset-0 z-50 flex animate-fade flex-col items-center justify-center bg-milk/95 px-6 backdrop-blur-xl"
     >
       <div className="relative flex h-64 w-64 items-center justify-center">
@@ -54,14 +57,14 @@ export function Breathe({ onClose }: { onClose: () => void }) {
           }}
         />
         <span className="relative font-serif text-2xl text-ink" aria-live="polite">
-          {current.label}
+          {m[current.key]}
         </span>
       </div>
       <p className="mt-10 text-center text-[15px] text-ink-soft">
-        {cycles < 3 ? "Просто следуйте за кругом." : "Хорошо. Можно вернуться к разговору, когда будете готовы."}
+        {cycles < 3 ? m.follow : m.done}
       </p>
       <button onClick={onClose} className="mt-8 rounded-full px-6 py-3 text-sm text-ink-soft transition hover:bg-sand hover:text-ink">
-        Вернуться
+        {m.back}
       </button>
     </div>
   );

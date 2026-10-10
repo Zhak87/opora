@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { chime, PENTATONIC } from "@/lib/chime";
 import { ResultActions } from "./ResultActions";
+import { useMsg } from "@/i18n/client";
+import { jarMessages } from "@/i18n/game-jar";
 
 const COLORS = ["#f3d9a4", "#cfe0c8", "#d9d1ee", "#cddcea", "#f1cfc4"];
 
@@ -13,6 +15,7 @@ export function GratitudeJar() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [text, setText] = useState("");
   const [falling, setFalling] = useState<Note | null>(null);
+  const m = useMsg(jarMessages);
 
   const add = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,26 +80,26 @@ export function GratitudeJar() {
           />
         )}
         <p className="absolute inset-x-0 -bottom-8 text-center text-sm text-ink-faint">
-          {notes.length ? `В банке: ${notes.length}` : "Банка пока пуста"}
+          {notes.length ? m.count(notes.length) : m.empty}
         </p>
       </div>
 
       <div>
         <form onSubmit={add} className="flex gap-2">
-          <label className="sr-only" htmlFor="jar-input">Что хорошего было</label>
+          <label className="sr-only" htmlFor="jar-input">{m.label}</label>
           <input
             id="jar-input"
             value={text}
             onChange={(e) => setText(e.target.value)}
             maxLength={140}
-            placeholder="Что хорошего было сегодня?"
+            placeholder={m.placeholder}
             className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
           />
           <button disabled={!text.trim() || !!falling} className="h-12 shrink-0 rounded-full bg-ink px-5 text-[15px] text-paper shadow-soft transition hover:bg-ink/90 disabled:opacity-40">
-            В банку
+            {m.button}
           </button>
         </form>
-        <p className="mt-3 px-2 text-sm text-ink-faint">Подойдёт любая мелочь: вкусный чай, чья-то улыбка, минута тишины.</p>
+        <p className="mt-3 px-2 text-sm text-ink-faint">{m.note}</p>
         {notes.length > 0 && (
           <ul className="mt-5 space-y-2">
             {notes.map((n) => (
@@ -111,8 +114,8 @@ export function GratitudeJar() {
           <div className="mt-6 animate-rise">
             <ResultActions
               kind="gratitude"
-              journal={`Банка хорошего:\n${list}`}
-              prompt={`Я собрал(а) банку хорошего:\n${list}\nПомоги мне заметить, что это говорит обо мне и что меня поддерживает.`}
+              journal={m.journal(list)}
+              prompt={m.prompt(list)}
             />
           </div>
         )}

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { chime, PENTATONIC } from "@/lib/chime";
+import { useMsg } from "@/i18n/client";
+import { bubblesMessages } from "@/i18n/game-bubbles";
 
 type Bubble = { id: number; x: number; size: number; dur: number; hue: number; text?: string; popped?: boolean };
 
@@ -19,6 +21,7 @@ export function Bubbles() {
   const [released, setReleased] = useState(0);
   const [text, setText] = useState("");
   const area = useRef<HTMLDivElement>(null);
+  const m = useMsg(bubblesMessages);
 
   useEffect(() => {
     const spawn = () =>
@@ -86,7 +89,7 @@ export function Bubbles() {
             <div style={{ animation: `bubble-sway ${4 + (b.id % 3)}s ease-in-out infinite` }} className="h-full w-full">
               <button
                 type="button"
-                aria-label={b.text ? `Отпустить мысль: ${b.text}` : "Лопнуть пузырёк"}
+                aria-label={b.text ? m.releaseAria(b.text) : m.popAria}
                 onPointerDown={() => !b.popped && pop(b.id)}
                 className="flex h-full w-full items-center justify-center rounded-full p-3 text-center font-serif text-[13px] leading-snug text-ink/80"
                 style={{
@@ -102,7 +105,7 @@ export function Bubbles() {
           </div>
         ))}
         <p className="pointer-events-none absolute inset-x-0 top-5 text-center text-sm text-ink-faint">
-          {released === 0 ? "Коснитесь пузырька" : `Отпущено: ${released}`}
+          {released === 0 ? m.tap : m.released(released)}
         </p>
       </div>
 
@@ -111,13 +114,13 @@ export function Bubbles() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={80}
-          placeholder="Напишите мысль, которую хотите отпустить"
+          placeholder={m.placeholder}
           className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
         />
-        <button className="h-12 shrink-0 rounded-full bg-ink px-5 text-[15px] text-paper transition hover:bg-ink/90">Отпустить</button>
+        <button className="h-12 shrink-0 rounded-full bg-ink px-5 text-[15px] text-paper transition hover:bg-ink/90">{m.button}</button>
       </form>
       <p className="mt-3 px-2 text-sm leading-relaxed text-ink-faint">
-        Мысль превратится в пузырёк. Когда будете готовы, коснитесь его и отпустите.
+        {m.note}
       </p>
     </div>
   );

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { chime } from "@/lib/chime";
+import { useMsg } from "@/i18n/client";
+import { gardenMessages } from "@/i18n/game-garden";
 
 const SAND = "#efe6d6";
 
@@ -10,6 +12,7 @@ export function ZenGarden() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [tool, setTool] = useState<"rake" | "stone">("rake");
   const last = useRef<{ x: number; y: number } | null>(null);
+  const m = useMsg(gardenMessages);
 
   const paintSand = () => {
     const c = canvas.current!;
@@ -129,14 +132,14 @@ export function ZenGarden() {
         }}
         onPointerUp={() => (last.current = null)}
         onPointerCancel={() => (last.current = null)}
-        aria-label="Песок сада камней"
+        aria-label={m.canvas}
       />
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex rounded-full bg-sand/70 p-1 text-sm">
           {(
             [
-              ["rake", "Грабли"],
-              ["stone", "Камни"],
+              ["rake", m.rake],
+              ["stone", m.stone],
             ] as const
           ).map(([v, l]) => (
             <button
@@ -150,10 +153,10 @@ export function ZenGarden() {
           ))}
         </div>
         <button onClick={paintSand} className="rounded-full px-4 py-2 text-sm text-ink-soft transition hover:bg-sand hover:text-ink">
-          Разгладить песок
+          {m.smooth}
         </button>
       </div>
-      <p className="mt-3 px-2 text-sm text-ink-faint">Ведите медленно, как будто дышите вместе с линией. Ровно не обязательно.</p>
+      <p className="mt-3 px-2 text-sm text-ink-faint">{m.note}</p>
     </div>
   );
 }

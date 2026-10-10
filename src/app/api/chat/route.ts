@@ -3,21 +3,13 @@ import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
 import { getLocale } from "@/i18n/server";
+import { chatMessages } from "@/i18n/chat";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_INPUT = 4000;
 const HISTORY_LIMIT = 40;
-
-const NOT_CONFIGURED =
-  "Я пока не могу ответить: ИИ ещё не подключён к приложению. Но ваши слова сохранены, и вы сможете вернуться к этому разговору позже.";
-const BUSY =
-  "Сейчас со мной разговаривает очень много людей, и я не успеваю ответить. Ваши слова сохранены. Попробуйте, пожалуйста, через минуту.";
-const KEY_PROBLEM =
-  "Я не могу ответить: ключ ИИ не подходит или не настроен. Ваши слова сохранены. Владельцу сайта стоит проверить переменную GEMINI_API_KEY.";
-const FAILED =
-  "Простите, мне не удалось ответить прямо сейчас. Ваши слова сохранены. Попробуйте, пожалуйста, ещё раз чуть позже.";
 
 // В голосовом режиме ответ сразу звучит вслух, поэтому он короче и без списков.
 const VOICE_NOTE =
@@ -31,6 +23,9 @@ export async function POST(req: Request) {
   const conversationId = body?.conversationId;
   const message = body?.message?.trim().slice(0, MAX_INPUT);
   if (!conversationId) return NextResponse.json({ error: "bad request" }, { status: 400 });
+  const locale = await getLocale();
+  const t = chatMessages[locale];
+  const { notConfigured: NOT_CONFIGURED, busy: BUSY, keyProblem: KEY_PROBLEM, failed: FAILED } = t;
 
   const { data: conversation } = await supabase
     .from("conversations")
@@ -90,7 +85,7 @@ export async function POST(req: Request) {
   try {
     upstream = await streamReply({
       system:
-        buildSystemPrompt({ mode: conversation.mode, topic: conversation.topic, name: profile?.name, locale: await getLocale() }) +
+        buildSystemPrompt({ mode: conversation.mode, topic: conversation.topic, name: profile?.name, locale }) +
         (body?.voice ? VOICE_NOTE : ""),
       messages,
     });

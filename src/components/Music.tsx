@@ -3,6 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { AmbientEngine } from "@/lib/ambient";
 import { speech } from "@/lib/speech";
+import { useMsg } from "@/i18n/client";
+import { common } from "@/i18n/common";
+import { voiceMessages } from "@/i18n/voice";
 
 const KEY = "opora-music";
 const MusicContext = createContext<{ playing: boolean; toggle: () => void; duck: (on: boolean) => void }>({
@@ -103,7 +106,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
 export function MusicToggle({ className = "", withLabel = false }: { className?: string; withLabel?: boolean }) {
   const { playing, toggle } = useContext(MusicContext);
-  const label = playing ? "Выключить музыку" : "Включить спокойную музыку";
+  const m = useMsg(voiceMessages).music;
+  const label = playing ? m.turnOff : m.turnOn;
   return (
     <button
       type="button"
@@ -119,7 +123,7 @@ export function MusicToggle({ className = "", withLabel = false }: { className?:
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${playing ? "bg-lilac-soft" : "bg-paper/80 shadow-soft"}`}>
         <Waves playing={playing} />
       </span>
-      {withLabel && <span className="text-sm">{playing ? "Музыка играет" : "Включить музыку"}</span>}
+      {withLabel && <span className="text-sm">{playing ? m.playing : m.enable}</span>}
     </button>
   );
 }
@@ -152,10 +156,12 @@ function Waves({ playing }: { playing: boolean }) {
 }
 
 function Gate({ onEnter }: { onEnter: () => void }) {
+  const m = useMsg(voiceMessages).music;
+  const brand = useMsg(common).brand;
   return (
     <div
       role="dialog"
-      aria-label="Вход"
+      aria-label={m.enter}
       onClick={onEnter}
       className="ambient fixed inset-0 z-[60] flex animate-fade cursor-pointer flex-col items-center justify-center px-6 text-center"
     >
@@ -169,8 +175,8 @@ function Gate({ onEnter }: { onEnter: () => void }) {
           }}
         />
       </div>
-      <p className="mt-10 font-serif text-[30px] text-ink">Опора</p>
-      <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-ink-soft">Сделайте медленный вдох. Здесь можно никуда не спешить.</p>
+      <p className="mt-10 font-serif text-[30px] text-ink">{brand}</p>
+      <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-ink-soft">{m.intro}</p>
       <button
         type="button"
         onClick={(e) => {
@@ -179,9 +185,9 @@ function Gate({ onEnter }: { onEnter: () => void }) {
         }}
         className="mt-10 inline-flex h-12 items-center justify-center rounded-full bg-ink px-8 text-[15px] font-medium text-paper shadow-soft transition hover:bg-ink/90"
       >
-        Войти в тишину
+        {m.enterButton}
       </button>
-      <p className="mt-5 text-xs text-ink-faint">Со звуком моря · выключить можно в любой момент</p>
+      <p className="mt-5 text-xs text-ink-faint">{m.note}</p>
     </div>
   );
 }

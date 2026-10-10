@@ -4,27 +4,23 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPlan } from "@/lib/plan-actions";
 import { buttonStyles } from "../ui";
+import { useMsg } from "@/i18n/client";
+import { planMessages } from "@/i18n/plan";
 
-const STAGES = [
-  "Перечитываем ваши разговоры…",
-  "Смотрим записи в дневнике…",
-  "Подбираем игры именно для вас…",
-  "Формулируем советы…",
-  "Почти готово…",
-];
-
-export function CreatePlanButton({ label = "Собрать мои игры", goTo, variant = "primary" }: { label?: string; goTo?: string; variant?: "primary" | "soft" }) {
+export function CreatePlanButton({ label, goTo, variant = "primary" }: { label?: string; goTo?: string; variant?: "primary" | "soft" }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const [stage, setStage] = useState(0);
   const router = useRouter();
+  const m = useMsg(planMessages).create;
+  const STAGES = m.stages;
 
   useEffect(() => {
     if (!pending) return;
     setStage(0);
     const id = setInterval(() => setStage((s) => Math.min(s + 1, STAGES.length - 1)), 6000);
     return () => clearInterval(id);
-  }, [pending]);
+  }, [pending, STAGES.length]);
 
   const run = () =>
     start(async () => {
@@ -51,7 +47,7 @@ export function CreatePlanButton({ label = "Собрать мои игры", goT
   return (
     <div>
       <button onClick={run} className={`${buttonStyles[variant]} w-full sm:w-auto`}>
-        {label}
+        {label ?? m.label}
       </button>
       {error && <p className="mt-3 text-sm text-[#94594a]">{error}</p>}
     </div>

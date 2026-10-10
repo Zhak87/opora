@@ -4,24 +4,19 @@ import { useEffect, useState, useTransition } from "react";
 import { toggleTip } from "@/lib/plan-actions";
 import { streak, type PlanTip } from "@/lib/plan";
 import { chime } from "@/lib/chime";
+import { useMsg } from "@/i18n/client";
+import { planMessages } from "@/i18n/plan";
 
 function localDay() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function plural(n: number) {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return "день";
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return "дня";
-  return "дней";
-}
-
 export function TipCheck({ planId, index, tip, days, compact = false }: { planId: string; index: number; tip: PlanTip; days: string[]; compact?: boolean }) {
   const [today, setToday] = useState<string | null>(null);
   const [list, setList] = useState(days);
   const [, start] = useTransition();
+  const m = useMsg(planMessages).tip;
 
   useEffect(() => setToday(localDay()), []);
   useEffect(() => setList(days), [days]);
@@ -42,7 +37,7 @@ export function TipCheck({ planId, index, tip, days, compact = false }: { planId
       <button
         onClick={toggle}
         aria-pressed={done}
-        aria-label={done ? "Отменить отметку" : "Отметить, что сделано сегодня"}
+        aria-label={done ? m.unmark : m.mark}
         className={`relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all duration-500 ${
           done ? "scale-105 border-sage-deep bg-sage-deep text-paper shadow-soft" : "border-line bg-paper text-transparent hover:border-sage-deep"
         }`}
@@ -56,13 +51,13 @@ export function TipCheck({ planId, index, tip, days, compact = false }: { planId
         <p className="text-[16px] font-medium text-ink">{tip.title}</p>
         {!compact && tip.why && <p className="mt-1 text-[14.5px] leading-relaxed text-ink-soft">{tip.why}</p>}
         <p className="mt-2 text-[14.5px] leading-relaxed text-ink">
-          <span className="text-ink-faint">Сегодня: </span>
+          <span className="text-ink-faint">{m.today}</span>
           {tip.action}
         </p>
         {count > 0 && (
           <p className="mt-2 text-xs text-sage-deep">
-            {done ? "Сделано сегодня · " : ""}
-            {count} {plural(count)} подряд
+            {done ? m.doneToday : ""}
+            {m.streak(count)}
           </p>
         )}
       </div>

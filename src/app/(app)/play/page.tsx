@@ -1,36 +1,40 @@
 import Link from "next/link";
-import { GAMES } from "@/lib/games";
+import { getGames } from "@/lib/games";
 import { PageHeader, toneBg } from "@/components/ui";
 import { ArrowIcon, BackIcon } from "@/components/icons";
 import { requireUser } from "@/lib/supabase/server";
 import { latestPlan } from "@/lib/plan-data";
-import { GAME_KIND } from "@/lib/plan";
+import { gameKind } from "@/lib/plan";
 import { CreatePlanButton } from "@/components/plan/CreatePlanButton";
+import { getLocale } from "@/i18n/server";
+import { gamesMessages } from "@/i18n/games";
+import { common } from "@/i18n/common";
+import type { Locale } from "@/i18n/config";
 
 export const maxDuration = 60;
 
-const GROUPS = [
-  { id: "calm", title: "Успокоиться", hint: "Несколько минут, чтобы замедлиться и выдохнуть." },
-  { id: "self", title: "Найти себя", hint: "Лёгкие упражнения, чтобы лучше услышать себя." },
-] as const;
+const GROUPS = ["calm", "self"] as const;
 
 export default async function PlayPage() {
   const { supabase } = await requireUser();
   const stored = await latestPlan(supabase);
+  const locale = await getLocale();
+  const m = gamesMessages[locale].page;
+  const games = getGames(locale);
   return (
     <>
       <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
-        <BackIcon className="h-4 w-4" /> Главная
+        <BackIcon className="h-4 w-4" /> {common[locale].nav.home}
       </Link>
-      <PageHeader title="Игры и практики">Здесь нет очков и проигрышей. Только вы и немного тишины.</PageHeader>
+      <PageHeader title={m.title}>{m.intro}</PageHeader>
       <div className="space-y-12">
-        <ForYou stored={stored} />
-        {GROUPS.map((g) => (
-          <section key={g.id}>
-            <h2 className="font-serif text-[22px] text-ink">{g.title}</h2>
-            <p className="mb-5 mt-1 text-[15px] text-ink-soft">{g.hint}</p>
+        <ForYou stored={stored} locale={locale} />
+        {GROUPS.map((id) => (
+          <section key={id}>
+            <h2 className="font-serif text-[22px] text-ink">{m.groups[id].title}</h2>
+            <p className="mb-5 mt-1 text-[15px] text-ink-soft">{m.groups[id].hint}</p>
             <div className="stagger grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-              {GAMES.filter((x) => x.group === g.id).map((x) => (
+              {games.filter((x) => x.group === id).map((x) => (
                 <Link
                   key={x.slug}
                   href={`/play/${x.slug}`}
@@ -52,16 +56,16 @@ export default async function PlayPage() {
   );
 }
 
-function ForYou({ stored }: { stored: Awaited<ReturnType<typeof latestPlan>> }) {
+function ForYou({ stored, locale }: { stored: Awaited<ReturnType<typeof latestPlan>>; locale: Locale }) {
+  const m = gamesMessages[locale].page.forYou;
   if (!stored)
     return (
       <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-lilac-soft via-paper to-mist p-6 shadow-soft sm:p-8">
         <span className="absolute -right-10 -top-10 h-40 w-40 animate-breathe rounded-full bg-paper/60" aria-hidden />
-        <p className="relative text-xs uppercase tracking-[0.16em] text-lilac-deep">Для вас</p>
-        <h2 className="relative mt-2 font-serif text-[24px] leading-snug text-ink sm:text-[28px]">Личные игры и советы</h2>
+        <p className="relative text-xs uppercase tracking-[0.16em] text-lilac-deep">{m.eyebrow}</p>
+        <h2 className="relative mt-2 font-serif text-[24px] leading-snug text-ink sm:text-[28px]">{m.title}</h2>
         <p className="relative mb-6 mt-2 max-w-lg text-[15px] leading-relaxed text-ink-soft">
-          Собеседник перечитает ваши разговоры и записи в дневнике и соберёт несколько игр и советов именно под вашу ситуацию.
-          Чем больше вы рассказывали, тем точнее они получатся.
+          {m.body1} {m.body2}
         </p>
         <div className="relative">
           <CreatePlanButton goTo="/play/me" />
@@ -69,24 +73,25 @@ function ForYou({ stored }: { stored: Awaited<ReturnType<typeof latestPlan>> }) 
       </section>
     );
   const { plan } = stored;
+  const kinds = gameKind(locale);
   return (
     <section>
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-serif text-[22px] text-ink">Для вас</h2>
+        <h2 className="font-serif text-[22px] text-ink">{m.heading}</h2>
         <Link href="/play/me" className="shrink-0 text-sm text-ink-faint hover:text-ink">
-          Советы и всё
+          {m.all}
         </Link>
       </div>
-      <p className="mb-5 mt-1 text-[15px] text-ink-soft">Игры, собранные по вашим разговорам и дневнику.</p>
+      <p className="mb-5 mt-1 text-[15px] text-ink-soft">{m.sub}</p>
       <div className="stagger grid gap-3 sm:grid-cols-2 sm:gap-4">
         {plan.games.map((g, i) => (
           <Link
             key={i}
             href={`/play/me/${i}`}
-            className={`group flex items-center gap-4 rounded-[26px] ${toneBg[GAME_KIND[g.type].tone]} p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift sm:p-6`}
+            className={`group flex items-center gap-4 rounded-[26px] ${toneBg[kinds[g.type].tone]} p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift sm:p-6`}
           >
             <span className="flex-1">
-              <span className="block text-xs uppercase tracking-[0.14em] text-ink-faint">{GAME_KIND[g.type].label}</span>
+              <span className="block text-xs uppercase tracking-[0.14em] text-ink-faint">{kinds[g.type].label}</span>
               <span className="mt-1 block text-[16px] font-medium text-ink sm:text-[17px]">{g.title}</span>
             </span>
             <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />

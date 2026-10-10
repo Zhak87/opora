@@ -3,8 +3,8 @@ import { requireUser } from "@/lib/supabase/server";
 import { getTopic } from "@/lib/topics";
 import { Chat } from "@/components/Chat";
 import { normalizeVoice } from "@/lib/voices";
-
-const MODE_LABEL: Record<string, string> = { talk: "Разговор", hope: "Надежда", journal: "Дневник" };
+import { getLocale } from "@/i18n/server";
+import { chatMessages } from "@/i18n/chat";
 
 export default async function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,13 +15,15 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
     supabase.from("profiles").select("voice").eq("id", user!.id).maybeSingle(),
   ]);
   if (!conversation) notFound();
+  const locale = await getLocale();
+  const t = chatMessages[locale];
 
   return (
     <Chat
       key={conversation.id}
       conversationId={conversation.id}
       title={conversation.title}
-      label={getTopic(conversation.topic)?.title ?? MODE_LABEL[conversation.mode] ?? "Разговор"}
+      label={getTopic(conversation.topic, locale)?.title ?? t.modeLabel[conversation.mode] ?? t.defaultLabel}
       voice={normalizeVoice(profile?.voice)}
       initialMessages={(messages ?? []) as { id: string; role: "user" | "assistant"; content: string }[]}
     />

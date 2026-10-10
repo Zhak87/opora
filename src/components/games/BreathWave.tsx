@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { chime } from "@/lib/chime";
+import { useMsg } from "@/i18n/client";
+import { breathMessages } from "@/i18n/game-breath";
 
 const IN_MS = 4000;
 const OUT_MS = 6000;
@@ -15,6 +17,7 @@ export function BreathWave() {
   const levelRef = useRef(0);
   const holdingRef = useRef(false);
   const peaked = useRef(false);
+  const m = useMsg(breathMessages);
 
   useEffect(() => {
     let raf = 0;
@@ -51,13 +54,13 @@ export function BreathWave() {
 
   const label = holding
     ? level >= 1
-      ? "Можно отпускать"
-      : "Вдох…"
+      ? m.ready
+      : m.inhale
     : level > 0.05
-      ? "Выдох…"
+      ? m.exhale
       : breaths === 0
-        ? "Нажмите и держите"
-        : "Снова вдох";
+        ? m.start
+        : m.again;
 
   const size = 140 + level * 170;
   const done = breaths >= GOAL;
@@ -67,7 +70,7 @@ export function BreathWave() {
       <div
         role="button"
         tabIndex={0}
-        aria-label="Держите для вдоха, отпустите для выдоха"
+        aria-label={m.aria}
         onPointerDown={(e) => {
           (e.target as Element).setPointerCapture?.(e.pointerId);
           set(true);
@@ -92,13 +95,13 @@ export function BreathWave() {
         />
         <span className="relative font-serif text-[22px] text-ink">{label}</span>
       </div>
-      <div className="mt-6 flex items-center gap-2" aria-label={`Вдохов: ${breaths}`}>
+      <div className="mt-6 flex items-center gap-2" aria-label={m.count(breaths)}>
         {Array.from({ length: GOAL }).map((_, i) => (
           <span key={i} className={`h-2.5 w-2.5 rounded-full transition-all duration-500 ${i < breaths ? "scale-110 bg-sage-deep" : "bg-sand-deep"}`} />
         ))}
       </div>
       <p className="mt-4 text-center text-[15px] text-ink-soft">
-        {done ? "Хорошо. Заметьте, как вы чувствуете себя сейчас." : "Вдох около 4 секунд, выдох чуть дольше. Без спешки."}
+        {done ? m.done : m.tip}
       </p>
     </div>
   );

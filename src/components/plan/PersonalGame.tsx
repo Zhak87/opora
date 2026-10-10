@@ -7,6 +7,10 @@ import { markGamePlayed } from "@/lib/plan-actions";
 import { chime, PENTATONIC } from "@/lib/chime";
 import { ResultActions } from "../games/ResultActions";
 import { buttonStyles } from "../ui";
+import { useMsg } from "@/i18n/client";
+import { planMessages } from "@/i18n/plan";
+
+const useGameMsg = () => useMsg(planMessages).game;
 
 type Props = { planId: string; index: number; game: PlanGame };
 
@@ -32,8 +36,9 @@ export function PersonalGame(props: Props) {
 }
 
 function Progress({ at, total }: { at: number; total: number }) {
+  const m = useGameMsg();
   return (
-    <div className="mb-6 flex items-center justify-center gap-1.5" aria-label={`${at + 1} из ${total}`}>
+    <div className="mb-6 flex items-center justify-center gap-1.5" aria-label={m.progress(at + 1, total)}>
       {Array.from({ length: total }, (_, i) => (
         <span
           key={i}
@@ -49,6 +54,7 @@ function Progress({ at, total }: { at: number; total: number }) {
 function Cards({ game, onDone }: { game: Extract<PlanGame, { type: "cards" }>; onDone: () => void }) {
   const [i, setI] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const m = useGameMsg();
   const card = game.cards[i];
   const last = i === game.cards.length - 1;
 
@@ -69,16 +75,16 @@ function Cards({ game, onDone }: { game: Extract<PlanGame, { type: "cards" }>; o
         }}
         data-flipped={flipped}
         className="flip-card h-[320px] w-full max-w-sm animate-[card-in_0.5s_cubic-bezier(0.2,0.7,0.2,1)_both] text-left"
-        aria-label={flipped ? "Перевернуть обратно" : "Перевернуть карточку"}
+        aria-label={flipped ? m.flipBack : m.flip}
       >
         <span className="flip-inner relative block h-full w-full">
           <span className="flip-face absolute inset-0 flex flex-col items-center justify-center rounded-[32px] border border-line/70 bg-paper px-8 text-center shadow-lift">
-            <span className="text-xs uppercase tracking-[0.16em] text-ink-faint">Когда кажется, что…</span>
+            <span className="text-xs uppercase tracking-[0.16em] text-ink-faint">{m.whenItSeems}</span>
             <span className="mt-4 font-serif text-[23px] leading-snug text-ink">{card.front}</span>
-            <span className="mt-8 text-sm text-ink-faint">Нажмите, чтобы перевернуть</span>
+            <span className="mt-8 text-sm text-ink-faint">{m.tapToFlip}</span>
           </span>
           <span className="flip-face flip-back absolute inset-0 flex flex-col items-center justify-center rounded-[32px] bg-gradient-to-br from-lilac-soft via-paper to-mist px-8 text-center shadow-lift">
-            <span className="text-xs uppercase tracking-[0.16em] text-lilac-deep">Напомните себе</span>
+            <span className="text-xs uppercase tracking-[0.16em] text-lilac-deep">{m.remind}</span>
             <span className="mt-4 text-[17px] leading-relaxed text-ink">{card.back}</span>
           </span>
         </span>
@@ -86,7 +92,7 @@ function Cards({ game, onDone }: { game: Extract<PlanGame, { type: "cards" }>; o
       <div className="mt-8 h-12">
         {flipped && (
           <button onClick={next} className={`${buttonStyles.primary} animate-fade`}>
-            {last ? "Завершить" : "Следующая"}
+            {last ? m.finish : m.nextCard}
           </button>
         )}
       </div>
@@ -101,6 +107,7 @@ function Reframe({ game, onDone }: { game: Extract<PlanGame, { type: "reframe" }
   const [text, setText] = useState("");
   const [shown, setShown] = useState(false);
   const answers = useRef<string[]>([]);
+  const m = useGameMsg();
   const item = game.items[i];
   const last = i === game.items.length - 1;
 
@@ -117,22 +124,22 @@ function Reframe({ game, onDone }: { game: Extract<PlanGame, { type: "reframe" }
       <Progress at={i} total={game.items.length} />
       <div key={i} className="animate-rise">
         <div className="rounded-[28px] bg-mist px-6 py-7 shadow-soft">
-          <p className="text-xs uppercase tracking-[0.16em] text-sky-deep">Тяжёлая мысль</p>
-          <p className="mt-3 font-serif text-[22px] leading-snug text-ink">«{item.thought}»</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-sky-deep">{m.heavyThought}</p>
+          <p className="mt-3 font-serif text-[22px] leading-snug text-ink">{m.quote(item.thought)}</p>
         </div>
         <label className="mt-5 block">
-          <span className="mb-2 block px-1 text-[15px] text-ink-soft">Как бы вы ответили на неё другу? Напишите своими словами.</span>
+          <span className="mb-2 block px-1 text-[15px] text-ink-soft">{m.reframeAsk}</span>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={3}
-            placeholder="Например: это неправда, потому что…"
+            placeholder={m.reframePlaceholder}
             className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
           />
         </label>
         {shown ? (
           <div className="mt-4 animate-rise rounded-[24px] border border-sage/40 bg-sage-soft/70 px-5 py-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-sage-deep">Можно посмотреть и так</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-sage-deep">{m.anotherView}</p>
             <p className="mt-2 text-[15.5px] leading-relaxed text-ink">{item.example}</p>
           </div>
         ) : null}
@@ -145,12 +152,12 @@ function Reframe({ game, onDone }: { game: Extract<PlanGame, { type: "reframe" }
               }}
               className={buttonStyles.soft}
             >
-              Показать другой взгляд
+              {m.showView}
             </button>
           )}
           {(shown || text.trim()) && (
             <button onClick={next} className={`${buttonStyles.primary} animate-fade`}>
-              {last ? "Завершить" : "Дальше"}
+              {last ? m.finish : m.next}
             </button>
           )}
         </div>
@@ -164,6 +171,7 @@ function Reframe({ game, onDone }: { game: Extract<PlanGame, { type: "reframe" }
 function Choice({ game, onDone }: { game: Extract<PlanGame, { type: "choice" }>; onDone: () => void }) {
   const [i, setI] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
+  const m = useGameMsg();
   const s = game.scenarios[i];
   const last = i === game.scenarios.length - 1;
 
@@ -194,7 +202,7 @@ function Choice({ game, onDone }: { game: Extract<PlanGame, { type: "choice" }>;
           })}
         </div>
         {picked !== null && (
-          <p className="mt-3 px-1 text-sm text-ink-faint">Можно нажать и на другие варианты, чтобы сравнить.</p>
+          <p className="mt-3 px-1 text-sm text-ink-faint">{m.compare}</p>
         )}
         <div className="mt-6 h-12">
           {picked !== null && (
@@ -206,7 +214,7 @@ function Choice({ game, onDone }: { game: Extract<PlanGame, { type: "choice" }>;
               }}
               className={`${buttonStyles.primary} animate-fade`}
             >
-              {last ? "Завершить" : "Следующая ситуация"}
+              {last ? m.finish : m.nextSituation}
             </button>
           )}
         </div>
@@ -221,6 +229,7 @@ function Steps({ game, onDone }: { game: Extract<PlanGame, { type: "steps" }>; o
   const [i, setI] = useState(0);
   const step = game.steps[i];
   const [left, setLeft] = useState(step.seconds);
+  const m = useGameMsg();
   const last = i === game.steps.length - 1;
 
   useEffect(() => {
@@ -273,7 +282,7 @@ function Steps({ game, onDone }: { game: Extract<PlanGame, { type: "steps" }>; o
       </p>
       <div className="mt-8 flex gap-3">
         <button onClick={() => (last ? onDone() : setI(i + 1))} className={step.seconds && left > 0 ? buttonStyles.soft : buttonStyles.primary}>
-          {last ? "Завершить" : step.seconds && left > 0 ? "Дальше, не дожидаясь" : "Дальше"}
+          {last ? m.finish : step.seconds && left > 0 ? m.skipWait : m.next}
         </button>
       </div>
     </div>
@@ -283,6 +292,7 @@ function Steps({ game, onDone }: { game: Extract<PlanGame, { type: "steps" }>; o
 /* ---------- Финал ---------- */
 
 function Finish({ game, onAgain }: { game: PlanGame; onAgain: () => void }) {
+  const m = useGameMsg();
   return (
     <div className="animate-rise">
       <div className="rounded-[32px] bg-gradient-to-br from-sage-soft via-paper to-lilac-soft px-7 py-10 text-center shadow-soft">
@@ -290,24 +300,23 @@ function Finish({ game, onAgain }: { game: PlanGame; onAgain: () => void }) {
           <span className="absolute h-16 w-16 animate-breathe rounded-full bg-paper" />
           <span className="absolute h-8 w-8 animate-breathe rounded-full bg-sage/60 [animation-delay:-3s]" />
         </span>
-        <p className="mt-5 font-serif text-[26px] text-ink">Вы прошли «{game.title}»</p>
+        <p className="mt-5 font-serif text-[26px] text-ink">{m.doneTitle(game.title)}</p>
         <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink-soft">
-          Спасибо, что уделили себе это время. Возвращайтесь к этой игре, когда снова станет непросто: с каждым разом новые мысли
-          приходят легче.
+          {m.doneText}
         </p>
       </div>
       <div className="mt-6">
         <ResultActions
-          prompt={`Я прошёл(а) личную игру «${game.title}» в разделе «Для вас». Хочу поговорить о том, что почувствовал(а).`}
-          journal={`Прошёл(а) игру «${game.title}». Что я заметил(а): `}
+          prompt={m.talkPrompt(game.title)}
+          journal={m.journalPrompt(game.title)}
         />
       </div>
       <div className="mt-6 flex flex-wrap gap-4 text-sm">
         <button onClick={onAgain} className="text-ink-faint hover:text-ink">
-          Пройти ещё раз
+          {m.again}
         </button>
         <Link href="/play/me" className="text-ink-faint hover:text-ink">
-          Все мои игры и советы
+          {m.all}
         </Link>
       </div>
     </div>

@@ -1,10 +1,17 @@
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
+import { fromAcceptLanguage } from "@/i18n/config";
+import { common } from "@/i18n/common";
+import { welcomeMessages } from "@/i18n/welcome";
 
-export default function manifest(): MetadataRoute.Manifest {
+// Манифест запрашивается браузером без учёта выбора в приложении, поэтому язык берём из Accept-Language.
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const locale = fromAcceptLanguage((await headers()).get("accept-language"));
   return {
-    name: "Опора",
-    short_name: "Опора",
-    description: "Спокойное пространство, чтобы выговориться и разобраться в себе.",
+    name: common[locale].brand,
+    short_name: common[locale].brand,
+    description: welcomeMessages[locale].manifestDescription,
+    lang: locale,
     start_url: "/",
     display: "standalone",
     background_color: "#fbf8f3",

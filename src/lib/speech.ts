@@ -2,6 +2,7 @@
 // Если сервер не смог (например, закончился бесплатный лимит), читает встроенный голос браузера.
 
 import { SPEEDS, getVoice, type VoiceSettings } from "./voices";
+import { INTL, type Locale } from "@/i18n/config";
 
 // blocked — браузер (чаще всего Safari на iPhone) не дал звуку начаться сам: нужно одно касание.
 export type SpeechState = { id: string | null; status: "idle" | "loading" | "playing" | "blocked"; fallback: boolean };
@@ -158,7 +159,14 @@ function playUrl(url: string, rate: number, my: number) {
   });
 }
 
-async function speak(id: string, text: string, settings: VoiceSettings) {
+// Язык интерфейса — для встроенного голоса браузера. Можно передать в speak() или задать заранее.
+let currentLocale: Locale = "ru";
+export function setSpeechLocale(locale: Locale) {
+  currentLocale = locale;
+}
+
+async function speak(id: string, text: string, settings: VoiceSettings, locale?: Locale) {
+  if (locale) currentLocale = locale;
   stop();
   const my = run;
   // Создаём и «разблокируем» плеер прямо в обработчике нажатия.
@@ -186,20 +194,28 @@ async function speak(id: string, text: string, settings: VoiceSettings) {
   } catch {
     if (my !== run) return;
     // Голос сервера недоступен — читаем оставшееся голосом браузера.
-    browserSpeak(parts.slice(i).join(" "), settings, my);
+    browserSpeak(parts.slice(i).join(" "), settings, my, currentLocale);
   }
 }
 
-function browserSpeak(text: string, settings: VoiceSettings, my: number) {
+function browserSpeak(text: string, settings: VoiceSettings, my: number, locale: Locale) {
   const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
   if (!synth) return stop();
   const want = getVoice(settings.voice).gender;
-  const ru = synth.getVoices().filter((v) => v.lang?.toLowerCase().startsWith("ru"));
-  const female = /milena|irina|svetlana|katya|alena|anna|daria|female|жен/i;
-  const male = /yuri|dmitr|pavel|maxim|aleksandr|male|муж/i;
-  const pick = ru.find((v) => (want === "female" ? female : male).test(v.name) && !(want === "female" ? male : female).test(v.name)) ?? ru[0];
+  const all = synth.getVoices();
+  const byLang = (code: string) => all.filter((v) => v.lang?.toLowerCase().replace("_", "-").startsWith(code));
+  // Казахского голоса на большинстве телефонов нет — тогда читаем русским, он понятнее всего.
+  let lang = INTL[locale];
+  let voices = byLang(locale);
+  if (!voices.length && locale === "kk") {
+    voices = byLang("ru");
+    if (voices.length) lang = INTL.ru;
+  }
+  const female = /milena|irina|svetlana|katya|alena|anna|daria|samantha|karen|zira|female|жен/i;
+  const male = /yuri|dmitr|pavel|maxim|aleksandr|daniel|alex|david|fred|\bmale|муж/i;
+  const pick = voices.find((v) => (want === "female" ? female : male).test(v.name) && !(want === "female" ? male : female).test(v.name)) ?? voices[0];
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = "ru-RU";
+  u.lang = lang;
   if (pick) u.voice = pick;
   u.rate = SPEEDS[settings.speed].rate * 0.95;
   u.pitch = want === "male" ? 0.9 : 1.05;

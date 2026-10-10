@@ -3,28 +3,31 @@
 import { useState } from "react";
 import { chime, PENTATONIC } from "@/lib/chime";
 import { buttonStyles } from "../ui";
+import { useMsg } from "@/i18n/client";
+import { groundingMessages } from "@/i18n/game-grounding";
 
 const SENSES = [
-  { n: 5, what: "вещей, которые вы видите", hint: "Например: чашка, окно, свет на стене…", color: "bg-mist", dot: "bg-sky" },
-  { n: 4, what: "вещи, которые можно потрогать", hint: "Ткань одежды, поверхность стола, свои ладони…", color: "bg-sage-soft", dot: "bg-sage" },
-  { n: 3, what: "звука, которые вы слышите", hint: "Шум за окном, своё дыхание, гул техники…", color: "bg-lilac-soft", dot: "bg-lilac" },
-  { n: 2, what: "запаха, которые замечаете", hint: "Если не чувствуете — вспомните любимые.", color: "bg-sand", dot: "bg-sand-deep" },
-  { n: 1, what: "вкус, который ощущаете", hint: "Или сделайте глоток воды и прислушайтесь.", color: "bg-mist", dot: "bg-sky-deep" },
+  { n: 5, color: "bg-mist", dot: "bg-sky" },
+  { n: 4, color: "bg-sage-soft", dot: "bg-sage" },
+  { n: 3, color: "bg-lilac-soft", dot: "bg-lilac" },
+  { n: 2, color: "bg-sand", dot: "bg-sand-deep" },
+  { n: 1, color: "bg-mist", dot: "bg-sky-deep" },
 ];
 
 // Заземление «5-4-3-2-1»: возвращает внимание в «здесь и сейчас» через пять чувств.
 export function Grounding() {
   const [step, setStep] = useState(0);
   const [count, setCount] = useState(0);
+  const m = useMsg(groundingMessages);
   const done = step >= SENSES.length;
 
   if (done)
     return (
       <div className="animate-rise rounded-[32px] bg-gradient-to-br from-sage-soft via-paper to-mist px-7 py-12 text-center shadow-soft">
         <span className="mx-auto block h-16 w-16 animate-breathe rounded-full bg-sage/50" aria-hidden />
-        <p className="mt-6 font-serif text-[26px] text-ink">Вы здесь. Сейчас.</p>
+        <p className="mt-6 font-serif text-[26px] text-ink">{m.doneTitle}</p>
         <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink-soft">
-          Заметьте, как вы себя чувствуете. Даже если тревога не ушла совсем, у вас есть опора: то, что вокруг, и ваше тело.
+          {m.doneBody}
         </p>
         <button
           onClick={() => {
@@ -33,12 +36,13 @@ export function Grounding() {
           }}
           className={`${buttonStyles.soft} mt-8`}
         >
-          Ещё раз
+          {m.again}
         </button>
       </div>
     );
 
   const s = SENSES[step];
+  const text = m.senses[step];
   const tap = () => {
     chime(PENTATONIC[(count + step) % PENTATONIC.length], 0.05);
     if (count + 1 >= s.n) {
@@ -53,8 +57,8 @@ export function Grounding() {
   return (
     <div key={step} className={`animate-rise rounded-[32px] ${s.color} px-6 py-10 text-center shadow-soft transition-colors duration-700`}>
       <p className="font-serif text-[64px] leading-none text-ink">{s.n}</p>
-      <p className="mt-3 font-serif text-[22px] text-ink">{s.what}</p>
-      <p className="mx-auto mt-2 max-w-sm text-[14.5px] text-ink-soft">{s.hint}</p>
+      <p className="mt-3 font-serif text-[22px] text-ink">{text.what}</p>
+      <p className="mx-auto mt-2 max-w-sm text-[14.5px] text-ink-soft">{text.hint}</p>
       <div className="mt-8 flex justify-center gap-3">
         {Array.from({ length: s.n }, (_, i) => (
           <span
@@ -68,9 +72,9 @@ export function Grounding() {
         disabled={count >= s.n}
         className="mx-auto mt-8 flex h-24 w-24 items-center justify-center rounded-full bg-paper text-[15px] text-ink shadow-lift transition active:scale-95 disabled:opacity-60"
       >
-        Заметил(а)
+        {m.noticed}
       </button>
-      <p className="mt-5 text-sm text-ink-faint">Найдите взглядом или ощущением и нажмите, не торопясь.</p>
+      <p className="mt-5 text-sm text-ink-faint">{m.tip}</p>
     </div>
   );
 }

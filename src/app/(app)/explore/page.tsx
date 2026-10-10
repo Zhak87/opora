@@ -1,20 +1,24 @@
 import Link from "next/link";
-import { TOPICS } from "@/lib/topics";
+import { getTopics } from "@/lib/topics";
+import { getLocale } from "@/i18n/server";
+import { topicsPage } from "@/i18n/topics";
 import { StartForm } from "@/components/StartForm";
 import { PageHeader, toneBg, toneText } from "@/components/ui";
 import { BackIcon } from "@/components/icons";
 
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  const locale = await getLocale();
+  const m = topicsPage[locale];
   return (
     <>
       <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
-        <BackIcon className="h-4 w-4" /> Главная
+        <BackIcon className="h-4 w-4" /> {m.home}
       </Link>
-      <PageHeader title="Разобраться в себе">
-        Выберите то, что ближе всего к вашему состоянию. Мы начнём мягко и будем двигаться в вашем темпе.
+      <PageHeader title={m.title}>
+        {m.intro}
       </PageHeader>
       <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-        {TOPICS.map((t) => (
+        {getTopics(locale).map((t) => (
           <StartForm
             key={t.slug}
             topic={t.slug}
@@ -29,8 +33,8 @@ export default function ExplorePage() {
         ))}
       </div>
       <div className="mt-10 text-center text-sm text-ink-faint">
-        Не нашли своё?{" "}
-        <StartForm className="text-sky-deep underline-offset-4 hover:underline">Просто начните разговор</StartForm>
+        {m.notFound}{" "}
+        <StartForm className="text-sky-deep underline-offset-4 hover:underline">{m.justStart}</StartForm>
       </div>
     </>
   );

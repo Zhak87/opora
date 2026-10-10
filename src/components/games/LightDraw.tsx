@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useMsg } from "@/i18n/client";
+import { lightMessages } from "@/i18n/game-light";
 
 const COLORS = ["#8fa8bf", "#b9aed6", "#9db894", "#d8b98f", "#7f71a8"];
 
@@ -11,6 +13,7 @@ export function LightDraw() {
   const mandalaRef = useRef(true);
   const last = useRef<{ x: number; y: number } | null>(null);
   const hue = useRef(0);
+  const m = useMsg(lightMessages);
 
   useEffect(() => {
     mandalaRef.current = mandala;
@@ -116,17 +119,19 @@ export function LightDraw() {
         }}
         onPointerUp={() => (last.current = null)}
         onPointerCancel={() => (last.current = null)}
-        aria-label="Холст для рисования"
+        aria-label={m.canvas}
       />
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex rounded-full bg-sand/70 p-1 text-sm">
-          {[
-            [true, "Мандала"],
-            [false, "Свободно"],
-          ].map(([v, l]) => (
+          {(
+            [
+              [true, m.mandala],
+              [false, m.free],
+            ] as const
+          ).map(([v, l]) => (
             <button
               key={String(l)}
-              onClick={() => setMandala(v as boolean)}
+              onClick={() => setMandala(v)}
               aria-pressed={mandala === v}
               className={`rounded-full px-4 py-2 transition ${mandala === v ? "bg-paper text-ink shadow-soft" : "text-ink-soft"}`}
             >
@@ -135,10 +140,10 @@ export function LightDraw() {
           ))}
         </div>
         <button onClick={clear} className="rounded-full px-4 py-2 text-sm text-ink-soft transition hover:bg-sand hover:text-ink">
-          Очистить
+          {m.clear}
         </button>
       </div>
-      <p className="mt-3 px-2 text-sm text-ink-faint">Линии растворяются сами. Ничего не нужно сохранять или делать красиво.</p>
+      <p className="mt-3 px-2 text-sm text-ink-faint">{m.note}</p>
     </div>
   );
 }
