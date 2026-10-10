@@ -4,6 +4,7 @@ import { buildSystemPrompt } from "@/lib/prompt";
 import { getLocale } from "@/i18n/server";
 import { demoMessages } from "@/i18n/demo";
 import { DEMO_LIMIT, DEMO_MAX_INPUT } from "@/lib/demo";
+import { HOUR, clientIp, tooMany } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,19 +13,7 @@ const DEMO_NOTE =
   "\n\nЭто пробный разговор: человек ещё не создал аккаунт и только знакомится с «Опорой». Говорите так же тепло и по существу, как всегда. Не упоминайте аккаунт, регистрацию и ограничения: об этом приложение скажет само.";
 
 // Простая защита от злоупотреблений: не больше 30 ответов в час с одного адреса на один сервер.
-const WINDOW = 60 * 60 * 1000;
-const PER_WINDOW = 30;
-const hits = new Map<string, number[]>();
-
-function limited(ip: string) {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW);
-  if (recent.length >= PER_WINDOW) return true;
-  recent.push(now);
-  hits.set(ip, recent);
-  if (hits.size > 5000) hits.clear();
-  return false;
-}
+const PER_HOUR = 30;
 
 export async function POST(req: Request) {
   const locale = await getLocale();
@@ -48,8 +37,7 @@ export async function POST(req: Request) {
   }
   if (userCount > DEMO_LIMIT) return NextResponse.json({ error: "limit" }, { status: 403 });
 
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-  if (limited(ip)) return textResponse(BUSY, 429);
+  if (tooMany(`demo:${clientIp(req)}`, PER_HOUR, HOUR)) return textResponse(BUSY, 429);
   if (!aiConfigured()) return textResponse(FAILED, 503);
 
   let upstream: ReadableStream<string>;

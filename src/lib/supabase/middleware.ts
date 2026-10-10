@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasConsent } from "@/lib/consent";
 
-const PUBLIC_PATHS = ["/welcome", "/demo", "/login", "/signup", "/forgot", "/auth"];
+const PUBLIC_PATHS = ["/welcome", "/demo", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms"];
 
 export async function updateSession(request: NextRequest) {
   const { searchParams, pathname } = request.nextUrl;
@@ -60,5 +61,23 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Кто зарегистрировался до появления согласия (или до новой версии политики), подтверждает его один раз.
+  if (user && !isPublic && !hasConsent(user)) {
+    if (path.startsWith("/api")) {
+      if (path !== "/api/demo") return withCookies(NextResponse.json({ error: "consent required" }, { status: 403 }), response);
+    } else if (path !== "/consent" && path !== "/reset") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/consent";
+      url.search = "";
+      return withCookies(NextResponse.redirect(url), response);
+    }
+  }
+
   return response;
+}
+
+// Обновлённые куки входа переносятся в ответ-перенаправление, иначе сессия потеряется.
+function withCookies(target: NextResponse, source: NextResponse) {
+  source.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
+  return target;
 }
