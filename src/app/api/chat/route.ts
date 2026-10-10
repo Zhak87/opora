@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
+import { getLocale } from "@/i18n/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
   try {
     upstream = await streamReply({
       system:
-        buildSystemPrompt({ mode: conversation.mode, topic: conversation.topic, name: profile?.name }) +
+        buildSystemPrompt({ mode: conversation.mode, topic: conversation.topic, name: profile?.name, locale: await getLocale() }) +
         (body?.voice ? VOICE_NOTE : ""),
       messages,
     });

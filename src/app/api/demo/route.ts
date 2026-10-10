@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
+import { getLocale } from "@/i18n/server";
 import { DEMO_LIMIT, DEMO_MAX_INPUT } from "@/lib/demo";
 
 export const runtime = "nodejs";
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
 
   let upstream: ReadableStream<string>;
   try {
-    upstream = await streamReply({ system: buildSystemPrompt({ mode: "talk" }) + DEMO_NOTE, messages });
+    upstream = await streamReply({ system: buildSystemPrompt({ mode: "talk", locale: await getLocale() }) + DEMO_NOTE, messages });
   } catch (e) {
     console.error(e);
     return textResponse(e instanceof AIError && e.status === 429 ? BUSY : FAILED, 502);
