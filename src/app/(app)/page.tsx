@@ -7,6 +7,9 @@ import { home } from "@/i18n/home";
 import { Orb } from "@/components/Orb";
 import { StartForm } from "@/components/StartForm";
 import { latestPlan } from "@/lib/plan-data";
+import { currentCourse } from "@/lib/course-data";
+import { courseState } from "@/lib/course";
+import { courseMessages } from "@/i18n/course";
 import { TipCheck } from "@/components/plan/TipCheck";
 import { DemoImport } from "@/components/DemoImport";
 import { TalkIcon, CompassIcon, PenIcon, ArrowIcon } from "@/components/icons";
@@ -15,10 +18,11 @@ export default async function HomePage() {
   const { supabase, user } = await requireUser();
   const locale = await getLocale();
   const m = home[locale];
-  const [{ data: profile }, { data: recent }, stored] = await Promise.all([
+  const [{ data: profile }, { data: recent }, stored, course] = await Promise.all([
     supabase.from("profiles").select("name").eq("id", user!.id).single(),
     supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
     latestPlan(supabase),
+    currentCourse(supabase),
   ]);
   const tipIndex = stored ? Math.floor(Date.now() / 86_400_000) % stored.plan.tips.length : 0;
   const question = pickForDay(dailyQuestions(locale));
@@ -52,6 +56,8 @@ export default async function HomePage() {
         <ActionLink href="/explore" title={m.explore} hint={m.exploreHint} tone="bg-mist" Icon={CompassIcon} />
         <ActionLink href="/journal" title={m.journal} hint={m.journalHint} tone="bg-sage-soft" Icon={PenIcon} />
       </section>
+
+      <CourseCard course={course} c={courseMessages[locale].home} />
 
       <Link
         href="/play"
@@ -127,6 +133,64 @@ export default async function HomePage() {
         </section>
       )}
     </div>
+  );
+}
+
+// Курс «Мой путь»: если идёт — день и прогресс, иначе приглашение собрать курс.
+function CourseCard({
+  course,
+  c,
+}: {
+  course: Awaited<ReturnType<typeof currentCourse>>;
+  c: (typeof courseMessages)["ru"]["home"];
+}) {
+  const active = course && course.course.status === "active" ? course : null;
+  if (!active)
+    return (
+      <Link
+        href="/course/new"
+        className="group mb-4 flex items-center gap-5 overflow-hidden rounded-[28px] border border-line/70 bg-gradient-to-r from-lilac-soft/80 via-paper to-mist/80 p-5 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift sm:p-6"
+      >
+        <span className="flex h-14 w-14 shrink-0 items-end justify-center gap-1 pb-3" aria-hidden>
+          {[10, 18, 26].map((h) => (
+            <span key={h} className="w-2.5 rounded-full bg-gradient-to-t from-lilac to-sage" style={{ height: h }} />
+          ))}
+        </span>
+        <span className="flex-1">
+          <span className="block text-[17px] font-medium text-ink">{c.ctaTitle}</span>
+          <span className="mt-0.5 block text-sm text-ink-soft">{c.ctaHint}</span>
+        </span>
+        <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+      </Link>
+    );
+  const { course: k, days } = active;
+  const state = courseState(k, days);
+  const n = Math.min(state.current, k.length);
+  const r = 24;
+  const len = 2 * Math.PI * r;
+  return (
+    <Link
+      href={state.lockedUntilTomorrow ? "/course" : `/course/day/${n}`}
+      className="group mb-4 flex items-center gap-5 overflow-hidden rounded-[28px] bg-ink p-5 text-paper shadow-lift transition-all duration-300 hover:-translate-y-0.5 sm:p-6"
+    >
+      <span className="relative flex h-14 w-14 shrink-0 items-center justify-center">
+        <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90" aria-hidden>
+          <circle cx="28" cy="28" r={r} fill="none" stroke="rgb(255 253 249 / 0.15)" strokeWidth="3" />
+          <circle cx="28" cy="28" r={r} fill="none" stroke="var(--color-sage)" strokeWidth="3" strokeLinecap="round" strokeDasharray={len} strokeDashoffset={len * (1 - state.done / k.length)} />
+        </svg>
+        <span className="font-serif text-[18px]">{n}</span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs uppercase tracking-[0.14em] text-paper/55">
+          {c.eyebrow} · {c.dayOf(n, k.length)}
+        </span>
+        <span className="mt-1 block truncate text-[17px] font-medium">{k.plan.days[n - 1]?.title}</span>
+        <span className="mt-0.5 block text-sm text-paper/60">{state.lockedUntilTomorrow ? c.doneToday : k.plan.title}</span>
+      </span>
+      {!state.lockedUntilTomorrow && (
+        <span className="hidden shrink-0 rounded-full bg-paper px-4 py-2 text-sm font-medium text-ink sm:inline">{c.go}</span>
+      )}
+    </Link>
   );
 }
 
