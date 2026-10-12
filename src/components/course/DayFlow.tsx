@@ -83,6 +83,9 @@ export function DayFlow(props: {
   nextTitle: string | null;
   streak: number;
   firstMood: number | null;
+  // Уже пройденный день: показываем его для перечитывания. Компонент тот же, поэтому сразу после
+  // завершения дня, когда страница обновится с сервера, праздничный экран не пропадёт.
+  review?: React.ReactNode;
 }) {
   const t = useMsg(courseMessages);
   const m = t.day;
@@ -116,6 +119,7 @@ export function DayFlow(props: {
     });
 
   if (result) return <DayDone {...props} crisis={result.crisis} moodAfter={moodAfter} reflection={reflection} />;
+  if (props.review) return <>{props.review}</>;
 
   return (
     <div ref={topRef} className="scroll-mt-6">

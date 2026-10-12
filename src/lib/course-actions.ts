@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, generateJSON } from "@/lib/ai";
 import { looksLikeCrisis } from "@/lib/prompt";
+import { HOUR, tooMany } from "@/lib/rate-limit";
 import { getTopic } from "@/lib/topics";
 import {
   COURSE_LENGTHS,
@@ -45,6 +46,8 @@ export async function createCourse(input: { topic?: string; goal?: string; lengt
   // Если человеку сейчас опасно, курс подождёт: сначала живая помощь.
   if (looksLikeCrisis(goal)) return { crisis: true };
   if (!aiConfigured()) return { error: err.notConnected };
+  // Сборка курса — самый дорогой запрос к ИИ: не чаще нескольких раз в час.
+  if (tooMany(`course:${user.id}`, 4, HOUR)) return { error: err.busy };
   const length = COURSE_LENGTHS.find((l) => l === Number(input.length)) ?? 30;
   const topic = getTopic(input.topic, "ru");
 
@@ -130,6 +133,7 @@ export async function prepareDay(courseId: string, day: number, basic = false): 
   let content = basic ? fallbackDay(plan, t.day.basicQuestion) : null;
   if (!content) {
     if (!aiConfigured()) return { error: t.errors.notConnected };
+    if (tooMany(`course-day:${loaded.user.id}`, 10, HOUR)) return { error: t.errors.busy };
     const prev = days.find((d) => d.day === day - 1);
     const week = course.plan.weeks[weekOf(day, course.length)];
     const topic = getTopic(course.topic, "ru");
@@ -198,8 +202,7 @@ export async function completeDay(
     .from("courses")
     .update({ updated_at: new Date().toISOString(), ...(day >= course.length ? { status: "done" } : {}) })
     .eq("id", courseId);
-  // Без revalidatePath: иначе страница сразу перерисуется в режим «перечитать» и праздничный экран исчезнет.
-  // Главная и страница курса динамические и при переходе всё равно покажут свежие данные.
+  refresh();
   return { ok: true, crisis: looksLikeCrisis(reflection) };
 }
 

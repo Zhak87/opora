@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { currentCourse } from "@/lib/course-data";
-import { courseState, todayIn, weekOf } from "@/lib/course";
+import { courseState, fallbackDay, todayIn, weekOf } from "@/lib/course";
 import { getLocale } from "@/i18n/server";
 import { courseMessages } from "@/i18n/course";
 import { ButtonLink } from "@/components/ui";
@@ -31,12 +31,31 @@ export default async function CourseDayPage({ params }: { params: Promise<{ n: s
     </Link>
   );
 
+  const week = weekOf(n, course.length);
+  const weekEnd = n < course.length && weekOf(n + 1, course.length) !== week;
+  const today = todayIn(course.tz);
+  // Серия дней с учётом сегодняшнего: вчера пройден → сегодня станет +1.
+  const yesterday = new Date(`${today}T12:00:00Z`);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const continues = days.some((d) => d.completed_on === yesterday.toISOString().slice(0, 10));
+  const flow = {
+    courseId: course.id,
+    day: n,
+    length: course.length,
+    title: plan.title,
+    minutes: plan.minutes,
+    weekEndTitle: weekEnd ? course.plan.weeks[week]?.title ?? null : null,
+    nextTitle: course.plan.days[n]?.title ?? null,
+    // Если день уже пройден сегодня, серия его уже учитывает.
+    streak: row?.completed_on === today ? state.streak : continues ? state.streak + 1 : 1,
+    firstMood: days.find((d) => d.day === 1)?.mood_before ?? null,
+  };
+
   // Пройденный день можно перечитать.
   if (row?.completed_on) {
     const c = row.content;
-    return (
+    const review = (
       <>
-        {back}
         <p className="mb-2 text-xs uppercase tracking-[0.14em] text-sage-deep">
           ✓ {m.label(n)} · {m.reviewTitle}
         </p>
@@ -80,6 +99,12 @@ export default async function CourseDayPage({ params }: { params: Promise<{ n: s
         </div>
       </>
     );
+    return (
+      <>
+        {back}
+        <DayFlow {...flow} content={c ?? fallbackDay(plan, m.basicQuestion)} review={review} />
+      </>
+    );
   }
 
   if (course.status !== "active" || n !== state.current || state.lockedUntilTomorrow)
@@ -105,29 +130,10 @@ export default async function CourseDayPage({ params }: { params: Promise<{ n: s
       </>
     );
 
-  const week = weekOf(n, course.length);
-  const weekEnd = n < course.length && weekOf(n + 1, course.length) !== week;
-  const today = todayIn(course.tz);
-  // Серия дней с учётом сегодняшнего: вчера пройден → сегодня станет +1.
-  const yesterday = new Date(`${today}T12:00:00Z`);
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  const continues = days.some((d) => d.completed_on === yesterday.toISOString().slice(0, 10));
-
   return (
     <>
       {back}
-      <DayFlow
-        courseId={course.id}
-        day={n}
-        length={course.length}
-        title={plan.title}
-        minutes={plan.minutes}
-        content={row.content}
-        weekEndTitle={weekEnd ? course.plan.weeks[week]?.title ?? null : null}
-        nextTitle={course.plan.days[n]?.title ?? null}
-        streak={continues ? state.streak + 1 : 1}
-        firstMood={days.find((d) => d.day === 1)?.mood_before ?? null}
-      />
+      <DayFlow {...flow} content={row.content} />
     </>
   );
 }
