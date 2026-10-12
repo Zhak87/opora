@@ -6,6 +6,7 @@ import { signUp } from "@/lib/auth-actions";
 import { Field, Notice } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
 import { DemoNote } from "@/components/DemoNote";
+import { ConsentChecks } from "@/components/ConsentChecks";
 import { useMsg } from "@/i18n/client";
 import { authMessages } from "@/i18n/auth";
 
@@ -32,6 +33,7 @@ export default function SignupPage() {
         <Field label={m.signup.name} name="name" autoComplete="given-name" placeholder={m.signup.namePlaceholder} />
         <Field label={m.email} name="email" type="email" autoComplete="email" required />
         <Field label={m.password} name="password" type="password" autoComplete="new-password" minLength={8} placeholder={m.signup.passwordPlaceholder} required />
+        <ConsentChecks />
         {state?.error && <Notice tone="error">{state.error}</Notice>}
         <SubmitButton className="w-full" pendingText={m.signup.submitting}>{m.signup.submit}</SubmitButton>
       </form>
