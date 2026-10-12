@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions";
 import { NameForm, DangerZone } from "@/components/ProfileForms";
@@ -8,6 +9,10 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { INTL } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
 import { profileMessages } from "@/i18n/profile";
+import { legalMessages } from "@/i18n/legal";
+import { aboutMessages } from "@/i18n/about";
+import { PhoneIcon, WhatsAppIcon } from "@/components/icons";
+import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
 export default async function ProfilePage({
   searchParams,
@@ -17,6 +22,8 @@ export default async function ProfilePage({
   const sp = await searchParams;
   const locale = await getLocale();
   const m = profileMessages[locale];
+  const legal = legalMessages[locale];
+  const a = aboutMessages[locale];
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { count: talks }, { count: notes }] = await Promise.all([
     supabase.from("profiles").select("name, created_at, voice").eq("id", user!.id).single(),
@@ -70,6 +77,28 @@ export default async function ProfilePage({
           <p className="text-sm leading-relaxed text-ink-soft">
             {m.privacyText}
           </p>
+          <p className="mt-3 flex gap-4 text-sm">
+            <Link href="/privacy" className="text-sky-deep hover:text-ink">{legal.privacyTitle}</Link>
+            <Link href="/terms" className="text-sky-deep hover:text-ink">{legal.termsTitle}</Link>
+          </p>
+        </Card>
+
+        <Card className="p-6 sm:p-8">
+          <h2 className="mb-2 text-[15px] font-medium text-ink">{a.title}</h2>
+          <p className="text-sm leading-relaxed text-ink-soft">
+            {a.madeBy} <span className="text-ink">{a.author}</span>
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-ink-soft">{a.contactHint}</p>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <a href={AUTHOR_TEL_HREF} className={buttonStyles.soft} aria-label={`${a.call}: ${AUTHOR_PHONE_DISPLAY}`}>
+              <PhoneIcon className="h-[18px] w-[18px]" />
+              {AUTHOR_PHONE_DISPLAY}
+            </a>
+            <a href={AUTHOR_WHATSAPP_HREF} target="_blank" rel="noopener noreferrer" className={buttonStyles.soft}>
+              <WhatsAppIcon className="h-[18px] w-[18px]" />
+              {a.whatsapp}
+            </a>
+          </div>
         </Card>
 
         <Card className="p-6 sm:p-8">
