@@ -17,7 +17,7 @@ const ITEMS = [
 ] as const;
 
 function isActive(path: string, href: string) {
-  if (href === "/") return path === "/" || path.startsWith("/explore") || path.startsWith("/play");
+  if (href === "/") return path === "/" || path.startsWith("/explore") || path.startsWith("/play") || path.startsWith("/course");
   return path === href || path.startsWith(href + "/");
 }
 

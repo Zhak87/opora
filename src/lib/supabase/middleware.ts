@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasConsent } from "@/lib/consent";
 
-const PUBLIC_PATHS = ["/welcome", "/demo", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms"];
+const PUBLIC_PATHS = ["/welcome", "/demo", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email"];
 
 export async function updateSession(request: NextRequest) {
   const { searchParams, pathname } = request.nextUrl;

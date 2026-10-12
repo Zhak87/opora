@@ -4,7 +4,7 @@
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
-type Options = { system: string; messages: ChatMessage[] };
+type Options = { system: string; messages: ChatMessage[]; maxTokens?: number };
 
 export function aiConfigured() {
   const provider = process.env.AI_PROVIDER ?? "gemini";
@@ -103,12 +103,12 @@ export async function generateJSON(opts: Options): Promise<unknown> {
   return JSON.parse(start >= 0 ? clean.slice(start, end + 1) : clean);
 }
 
-async function completeGemini({ system, messages }: Options) {
+async function completeGemini({ system, messages, maxTokens = 8192 }: Options) {
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },
     contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
     safetySettings: SAFETY,
-    generationConfig: { temperature: 0.9, maxOutputTokens: 8192, responseMimeType: "application/json" },
+    generationConfig: { temperature: 0.9, maxOutputTokens: maxTokens, responseMimeType: "application/json" },
   });
   const deadline = Date.now() + 50_000;
   const queue = [...GEMINI_MODELS, ...GEMINI_MODELS];
