@@ -56,3 +56,6 @@ export const PhoneIcon = ({ className }: P) => (
 export const WhatsAppIcon = ({ className }: P) => (
   <svg {...base} className={className}><path d="M4.5 19.5l1.2-3.6A8 8 0 1 1 8.4 18.6Z" /><path d="M9.3 8.8c-.3 2.6 2.4 5.6 5.4 5.9l1-1.2-1.8-.9-.8.8a4.5 4.5 0 0 1-2.3-2.3l.8-.8-.9-1.8Z" /></svg>
 );
+export const BellIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5h-14Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
+);

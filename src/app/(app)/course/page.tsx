@@ -6,12 +6,12 @@ import { courseState } from "@/lib/course";
 import { getLocale } from "@/i18n/server";
 import { courseMessages } from "@/i18n/course";
 import { ButtonLink } from "@/components/ui";
-import { BackIcon } from "@/components/icons";
+import { BackIcon, BellIcon } from "@/components/icons";
 import { MoodSpark, PathMap } from "@/components/course/PathMap";
-import { EmailToggle, StopCourse } from "@/components/course/CourseControls";
+import { StopCourse } from "@/components/course/CourseControls";
 
 export default async function CoursePage() {
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
   const locale = await getLocale();
   const t = courseMessages[locale];
   const m = t.overview;
@@ -108,7 +108,18 @@ export default async function CoursePage() {
           <PathMap plan={plan} length={length} state={state} weekLabel={m.week} />
         </section>
 
-        {course.status === "active" && user?.email && <EmailToggle courseId={course.id} on={course.email_daily} email={user.email} />}
+        <Link
+          href="/notifications"
+          className="flex items-center gap-4 rounded-[26px] border border-line/70 bg-gradient-to-br from-paper to-sand/60 p-5 transition hover:shadow-soft sm:p-6"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-paper text-ink shadow-soft" aria-hidden>
+            <BellIcon className="h-5 w-5" />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm leading-relaxed text-ink-soft">{m.emailSoon}</span>
+            <span className="mt-1 block text-sm text-sky-deep">{m.openNotifications}</span>
+          </span>
+        </Link>
 
         {course.status === "active" && (
           <div className="pt-2 text-center">
