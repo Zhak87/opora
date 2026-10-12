@@ -154,3 +154,13 @@ body {
   30% { opacity: 1; }
   100% { opacity: 0; translate: 0 -18px; }
 }
+
+/* Колокольчик: один мягкий покачивающийся звон, когда есть новое */
+@keyframes ring {
+  0%, 60%, 100% { transform: rotate(0); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-12deg); }
+  30% { transform: rotate(8deg); }
+  40% { transform: rotate(-5deg); }
+  50% { transform: rotate(2deg); }
+}

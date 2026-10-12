@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCourse } from "@/lib/course-actions";
@@ -8,15 +9,15 @@ import { useMsg } from "@/i18n/client";
 import { courseMessages } from "@/i18n/course";
 import { buttonStyles } from "../ui";
 import { CrisisHelp } from "./CrisisHelp";
+import { BellIcon } from "../icons";
 
-export function CourseIntake({ topics, email, initialTopic }: { topics: { slug: string; title: string }[]; email: string; initialTopic?: string }) {
+export function CourseIntake({ topics, initialTopic }: { topics: { slug: string; title: string }[]; initialTopic?: string }) {
   const m = useMsg(courseMessages).intake;
   const router = useRouter();
   const [topic, setTopic] = useState(initialTopic ?? "");
   const [goal, setGoal] = useState("");
   const [length, setLength] = useState<CourseLength>(30);
-  const [mail, setMail] = useState(false);
-  const [error, setError] = useState("");
+    const [error, setError] = useState("");
   const [crisis, setCrisis] = useState(false);
   const [stage, setStage] = useState(0);
   const [pending, start] = useTransition();
@@ -33,7 +34,7 @@ export function CourseIntake({ topics, email, initialTopic }: { topics: { slug: 
     start(async () => {
       setError("");
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const r = await createCourse({ topic, goal, length, email: mail, tz });
+      const r = await createCourse({ topic, goal, length, email: false, tz });
       if ("crisis" in r) setCrisis(true);
       else if ("error" in r) setError(r.error);
       else {
@@ -130,21 +131,15 @@ export function CourseIntake({ topics, email, initialTopic }: { topics: { slug: 
         </div>
       </fieldset>
 
-      {email && (
-        <label className="flex cursor-pointer items-start gap-4 rounded-[24px] border border-line/70 bg-gradient-to-br from-paper to-sand/60 p-5">
-          <input type="checkbox" checked={mail} onChange={(e) => setMail(e.target.checked)} className="peer sr-only" />
-          <span
-            aria-hidden
-            className="mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full bg-line p-1 transition peer-checked:bg-sage peer-focus-visible:ring-4 peer-focus-visible:ring-mist [&>span]:transition peer-checked:[&>span]:translate-x-5"
-          >
-            <span className="h-5 w-5 rounded-full bg-paper shadow-soft" />
-          </span>
-          <span>
-            <span className="block text-[15px] font-medium text-ink">{m.emailLabel}</span>
-            <span className="mt-1 block text-sm leading-relaxed text-ink-soft">{m.emailHint(email)}</span>
-          </span>
-        </label>
-      )}
+      <Link
+        href="/notifications"
+        className="flex items-start gap-4 rounded-[24px] border border-line/70 bg-gradient-to-br from-paper to-sand/60 p-5 transition hover:shadow-soft"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-paper text-ink shadow-soft" aria-hidden>
+          <BellIcon className="h-5 w-5" />
+        </span>
+        <span className="text-sm leading-relaxed text-ink-soft">{m.emailSoon}</span>
+      </Link>
 
       <div>
         <button className={`${buttonStyles.primary} h-14 w-full text-[16px] sm:w-auto sm:px-10`}>{m.submit}</button>

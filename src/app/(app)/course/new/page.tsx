@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/supabase/server";
 import { getTopics } from "@/lib/topics";
 import { getLocale } from "@/i18n/server";
 import { courseMessages } from "@/i18n/course";
@@ -10,7 +9,6 @@ import { CourseIntake } from "@/components/course/CourseIntake";
 export const maxDuration = 60;
 
 export default async function NewCoursePage({ searchParams }: { searchParams: Promise<{ topic?: string }> }) {
-  const { user } = await requireUser();
   const locale = await getLocale();
   const t = courseMessages[locale];
   const { topic } = await searchParams;
@@ -24,7 +22,6 @@ export default async function NewCoursePage({ searchParams }: { searchParams: Pr
       </PageHeader>
       <CourseIntake
         topics={getTopics(locale).map((x) => ({ slug: x.slug, title: x.title }))}
-        email={user?.email ?? ""}
         initialTopic={topic}
       />
     </>

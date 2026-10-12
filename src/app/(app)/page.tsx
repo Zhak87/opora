@@ -31,7 +31,7 @@ export default async function HomePage() {
   return (
     <div className="stagger">
       <DemoImport />
-      <section className="mb-10 flex items-center gap-5 pr-10 sm:mb-14 sm:gap-7 md:pr-0">
+      <section className="mb-10 flex items-center gap-5 pr-24 sm:mb-14 sm:gap-7 md:pr-0">
         <Orb size={72} className="sm:hidden" />
         <Orb size={104} className="hidden sm:block" />
         <div>

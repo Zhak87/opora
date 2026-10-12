@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon } from "./icons";
 import { Orb } from "./Orb";
 import { MusicToggle } from "./Music";
+import { Bell } from "./Bell";
 import { useMsg } from "@/i18n/client";
 import { common } from "@/i18n/common";
 
@@ -21,7 +22,7 @@ function isActive(path: string, href: string) {
   return path === href || path.startsWith(href + "/");
 }
 
-export function Nav() {
+export function Nav({ unread = 0 }: { unread?: number }) {
   const path = usePathname();
   const inChat = /^\/talk\/.+/.test(path);
   const m = useMsg(common);
@@ -53,6 +54,7 @@ export function Nav() {
             );
           })}
         </nav>
+        <Bell unread={unread} withLabel className="mt-4 lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
         <MusicToggle withLabel className="mt-auto lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
         <p className="mt-6 hidden px-3 text-xs leading-relaxed text-ink-faint lg:block">
           {m.navTagline}

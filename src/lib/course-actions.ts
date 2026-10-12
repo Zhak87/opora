@@ -206,12 +206,6 @@ export async function completeDay(
   return { ok: true, crisis: looksLikeCrisis(reflection) };
 }
 
-export async function setCourseEmail(courseId: string, on: boolean) {
-  const { supabase } = await authed();
-  await supabase.from("courses").update({ email_daily: on }).eq("id", courseId);
-  refresh();
-}
-
 export async function stopCourse(formData: FormData) {
   const { supabase } = await authed();
   await supabase.from("courses").update({ status: "stopped" }).eq("id", String(formData.get("id")));
