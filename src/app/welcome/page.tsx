@@ -7,12 +7,15 @@ import { getMsg } from "@/i18n/server";
 import { common } from "@/i18n/common";
 import { welcomeMessages } from "@/i18n/welcome";
 import { legalMessages } from "@/i18n/legal";
+import { aboutMessages } from "@/i18n/about";
+import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
   const { deleted } = await searchParams;
   const m = await getMsg(welcomeMessages);
   const c = await getMsg(common);
   const legal = await getMsg(legalMessages);
+  const a = await getMsg(aboutMessages);
   return (
     <div className="relative flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
@@ -49,6 +52,17 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
 
       <footer className="px-5 pb-8 text-center text-xs leading-relaxed text-ink-faint">
         <p>{m.footer}</p>
+        <p className="mt-2">
+          {a.footer}
+          <span className="mx-2 text-line">·</span>
+          <a href={AUTHOR_TEL_HREF} className="whitespace-nowrap underline-offset-4 transition-colors hover:text-ink-soft hover:underline">
+            {AUTHOR_PHONE_DISPLAY}
+          </a>
+          <span className="mx-2 text-line">·</span>
+          <a href={AUTHOR_WHATSAPP_HREF} target="_blank" rel="noopener noreferrer" className="underline-offset-4 transition-colors hover:text-ink-soft hover:underline">
+            {a.whatsapp}
+          </a>
+        </p>
         <p className="mt-2 flex justify-center gap-4">
           <Link href="/privacy" className="hover:text-ink">{legal.links.privacy}</Link>
           <Link href="/terms" className="hover:text-ink">{legal.links.terms}</Link>
