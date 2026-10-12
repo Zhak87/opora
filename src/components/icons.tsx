@@ -50,3 +50,9 @@ export const SparkIcon = ({ className }: P) => (
 export const LeafIcon = ({ className }: P) => (
   <svg {...base} className={className}><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14Z" /><path d="M5 19 13 11" /></svg>
 );
+export const PhoneIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M6.5 4.5h3l1.5 4-2 1.3a10 10 0 0 0 5.2 5.2l1.3-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A15 15 0 0 1 5 6.1a1.5 1.5 0 0 1 1.5-1.6Z" /></svg>
+);
+export const WhatsAppIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M4.5 19.5l1.2-3.6A8 8 0 1 1 8.4 18.6Z" /><path d="M9.3 8.8c-.3 2.6 2.4 5.6 5.4 5.9l1-1.2-1.8-.9-.8.8a4.5 4.5 0 0 1-2.3-2.3l.8-.8-.9-1.8Z" /></svg>
+);
