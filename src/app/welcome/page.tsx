@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Orb } from "@/components/Orb";
 import { ButtonLink } from "@/components/ui";
 import { MusicToggle } from "@/components/Music";
@@ -5,6 +6,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getMsg } from "@/i18n/server";
 import { common } from "@/i18n/common";
 import { welcomeMessages } from "@/i18n/welcome";
+import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
@@ -12,6 +14,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const { deleted } = await searchParams;
   const m = await getMsg(welcomeMessages);
   const c = await getMsg(common);
+  const legal = await getMsg(legalMessages);
   const a = await getMsg(aboutMessages);
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -59,6 +62,10 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           <a href={AUTHOR_WHATSAPP_HREF} target="_blank" rel="noopener noreferrer" className="underline-offset-4 transition-colors hover:text-ink-soft hover:underline">
             {a.whatsapp}
           </a>
+        </p>
+        <p className="mt-2 flex justify-center gap-4">
+          <Link href="/privacy" className="hover:text-ink">{legal.links.privacy}</Link>
+          <Link href="/terms" className="hover:text-ink">{legal.links.terms}</Link>
         </p>
       </footer>
     </div>

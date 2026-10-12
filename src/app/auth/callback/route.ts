@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const nextParam = searchParams.get("next") ?? "/";
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+  const next = safeNext(searchParams.get("next"));
 
   const supabase = await createClient();
   let ok = false;
@@ -20,4 +19,10 @@ export async function GET(request: NextRequest) {
 
   const target = ok ? (type === "recovery" ? "/reset" : next) : "/login?link=expired";
   return NextResponse.redirect(new URL(target, origin));
+}
+
+// Только адрес внутри сайта: «//evil.com» и «/\evil.com» браузер понял бы как другой сайт.
+function safeNext(value: string | null) {
+  if (!value || !/^\/(?![\/\\])/.test(value) || /[\u0000-\u001f]/.test(value)) return "/";
+  return value;
 }

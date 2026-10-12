@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions";
 import { NameForm, DangerZone } from "@/components/ProfileForms";
@@ -8,6 +9,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { INTL } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
 import { profileMessages } from "@/i18n/profile";
+import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
 import { PhoneIcon, WhatsAppIcon } from "@/components/icons";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
@@ -20,6 +22,7 @@ export default async function ProfilePage({
   const sp = await searchParams;
   const locale = await getLocale();
   const m = profileMessages[locale];
+  const legal = legalMessages[locale];
   const a = aboutMessages[locale];
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { count: talks }, { count: notes }] = await Promise.all([
@@ -73,6 +76,10 @@ export default async function ProfilePage({
           <h2 className="mb-2 text-[15px] font-medium text-ink">{m.privacyTitle}</h2>
           <p className="text-sm leading-relaxed text-ink-soft">
             {m.privacyText}
+          </p>
+          <p className="mt-3 flex gap-4 text-sm">
+            <Link href="/privacy" className="text-sky-deep hover:text-ink">{legal.privacyTitle}</Link>
+            <Link href="/terms" className="text-sky-deep hover:text-ink">{legal.termsTitle}</Link>
           </p>
         </Card>
 

@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/supabase/server";
 import { aiConfigured, transcribe } from "@/lib/ai";
+import { HOUR, tooMany } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
@@ -7,6 +8,7 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const { user } = await requireUser();
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  if (tooMany(`stt:${user.id}`, 300, HOUR)) return Response.json({ error: "busy" }, { status: 429 });
   if (!aiConfigured()) return Response.json({ error: "not configured" }, { status: 503 });
 
   const buf = new Uint8Array(await req.arrayBuffer());

@@ -11,11 +11,13 @@ import { looksLikeCrisis } from "@/lib/prompt";
 import { DEMO_INVITE_AFTER, DEMO_LIMIT, DEMO_MAX_INPUT, readDemo, writeDemo, type DemoMessage } from "@/lib/demo";
 import { useMsg } from "@/i18n/client";
 import { demoMessages } from "@/i18n/demo";
+import { legalMessages } from "@/i18n/legal";
 
 type Message = DemoMessage & { id: string; failed?: boolean };
 
 export function DemoChat() {
   const t = useMsg(demoMessages);
+  const legal = useMsg(legalMessages);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [input, setInput] = useState("");
@@ -264,8 +266,15 @@ export function DemoChat() {
               <SendIcon className="h-5 w-5" />
             </button>
           </form>
-          <p className="hidden pb-3 text-center text-[11px] text-ink-faint sm:block">
+          <p className="hidden text-center text-[11px] text-ink-faint sm:block">
             {t.footnote}
+          </p>
+          <p className="mx-auto max-w-2xl px-5 pb-3 text-center text-[11px] leading-snug text-ink-faint sm:px-8">
+            {legal.demoNote[0]}
+            <Link href="/privacy" target="_blank" className="underline underline-offset-2 hover:text-ink">
+              {legal.demoNote[1]}
+            </Link>
+            {legal.demoNote[2]}
           </p>
         </div>
       )}
