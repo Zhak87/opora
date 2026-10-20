@@ -12,6 +12,7 @@ const TONE: Record<Notice["kind"], { dot: string; bg: string }> = {
   milestone: { dot: "bg-sage-deep", bg: "from-sage-soft/80" },
   tip: { dot: "bg-sky-deep", bg: "from-mist/80" },
   question: { dot: "bg-[#9a8466]", bg: "from-sand/80" },
+  care: { dot: "bg-lilac-deep", bg: "from-lilac-soft/80" },
 };
 
 export default async function NotificationsPage() {
@@ -46,7 +47,7 @@ export default async function NotificationsPage() {
                         <span className="text-[16px] font-medium text-ink">{n.title}</span>
                         {fresh && <span className="text-[11px] uppercase tracking-[0.12em] text-lilac-deep">{m.newLabel}</span>}
                       </span>
-                      <span className="mt-1 block text-[14.5px] leading-relaxed text-ink-soft">{n.text}</span>
+                      {n.text && <span className="mt-1 block text-[14.5px] leading-relaxed text-ink-soft">{n.text}</span>}
                     </span>
                     <ArrowIcon className="mt-1.5 h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
                   </Link>

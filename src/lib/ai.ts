@@ -4,7 +4,7 @@
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
-type Options = { system: string; messages: ChatMessage[]; maxTokens?: number };
+type Options = { system: string; messages: ChatMessage[]; maxTokens?: number; temperature?: number };
 
 export function aiConfigured() {
   const provider = process.env.AI_PROVIDER ?? "gemini";
@@ -103,12 +103,12 @@ export async function generateJSON(opts: Options): Promise<unknown> {
   return JSON.parse(start >= 0 ? clean.slice(start, end + 1) : clean);
 }
 
-async function completeGemini({ system, messages, maxTokens = 8192 }: Options) {
+async function completeGemini({ system, messages, maxTokens = 8192, temperature = 0.9 }: Options) {
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },
     contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
     safetySettings: SAFETY,
-    generationConfig: { temperature: 0.9, maxOutputTokens: maxTokens, responseMimeType: "application/json" },
+    generationConfig: { temperature, maxOutputTokens: maxTokens, responseMimeType: "application/json" },
   });
   const deadline = Date.now() + 50_000;
   const queue = [...GEMINI_MODELS, ...GEMINI_MODELS];
@@ -150,7 +150,7 @@ async function completeGemini({ system, messages, maxTokens = 8192 }: Options) {
   throw last ?? new AIError(500, "Gemini: no models configured");
 }
 
-async function completeOpenAI({ system, messages }: Options) {
+async function completeOpenAI({ system, messages, temperature = 0.9 }: Options) {
   const base = process.env.OPENAI_BASE_URL || "https://openrouter.ai/api/v1";
   const model = process.env.OPENAI_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
   const res = await fetch(`${base}/chat/completions`, {
@@ -158,7 +158,7 @@ async function completeOpenAI({ system, messages }: Options) {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     body: JSON.stringify({
       model,
-      temperature: 0.9,
+      temperature,
       response_format: { type: "json_object" },
       messages: [{ role: "system", content: system }, ...messages],
     }),

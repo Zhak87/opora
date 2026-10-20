@@ -59,3 +59,30 @@ export const WhatsAppIcon = ({ className }: P) => (
 export const BellIcon = ({ className }: P) => (
   <svg {...base} className={className}><path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5h-14Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
 );
+export const GridIcon = ({ className }: P) => (
+  <svg {...base} className={className}><rect x="4.5" y="4.5" width="6" height="6" rx="1.8" /><rect x="13.5" y="4.5" width="6" height="6" rx="1.8" /><rect x="4.5" y="13.5" width="6" height="6" rx="1.8" /><rect x="13.5" y="13.5" width="6" height="6" rx="1.8" /></svg>
+);
+export const UsersIcon = ({ className }: P) => (
+  <svg {...base} className={className}><circle cx="9.5" cy="9" r="3" /><path d="M4 18.5c.9-2.6 3-4 5.5-4s4.6 1.4 5.5 4" /><path d="M15.5 6.3a3 3 0 0 1 0 5.4M17.5 14.8c1.2.6 2 1.8 2.5 3.7" /></svg>
+);
+export const LinkIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1" /><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1" /></svg>
+);
+export const IdIcon = ({ className }: P) => (
+  <svg {...base} className={className}><rect x="3.5" y="5.5" width="17" height="13" rx="2.5" /><circle cx="9" cy="11" r="2" /><path d="M6 15.5c.6-1.3 1.7-2 3-2s2.4.7 3 2M14.5 10h3M14.5 13h2.5" /></svg>
+);
+export const ShieldIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M12 3.5 5.5 6v5.5c0 4 2.8 7.4 6.5 8.5 3.7-1.1 6.5-4.5 6.5-8.5V6Z" /><path d="m9.3 12 1.9 1.9 3.6-3.8" /></svg>
+);
+export const HeartHandIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M12 8.2c-1-1.7-3.6-2-4.8-.4-1 1.3-.6 3 .6 4.1L12 15.5l4.2-3.6c1.2-1.1 1.6-2.8.6-4.1-1.2-1.6-3.8-1.3-4.8.4Z" /><path d="M4 19.5h4l3 1 5.5-2" /></svg>
+);
+export const CheckIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="m5.5 12.5 4 4 9-9.5" /></svg>
+);
+export const CopyIcon = ({ className }: P) => (
+  <svg {...base} className={className}><rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" /></svg>
+);
+export const CalendarIcon = ({ className }: P) => (
+  <svg {...base} className={className}><rect x="4.5" y="5.5" width="15" height="14" rx="3" /><path d="M8.5 3.5v4M15.5 3.5v4M4.5 10h15" /></svg>
+);

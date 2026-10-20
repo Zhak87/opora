@@ -2,28 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon } from "./icons";
+import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon } from "./icons";
 import { Orb } from "./Orb";
 import { MusicToggle } from "./Music";
 import { Bell } from "./Bell";
 import { useMsg } from "@/i18n/client";
 import { common } from "@/i18n/common";
 
-const ITEMS = [
+const BASE = [
   { href: "/", key: "home", Icon: HomeIcon },
   { href: "/talk", key: "talk", Icon: TalkIcon },
   { href: "/journal", key: "journal", Icon: JournalIcon },
   { href: "/hope", key: "hope", Icon: HopeIcon },
   { href: "/profile", key: "profile", Icon: ProfileIcon },
 ] as const;
+// Пункт «Психолог» появляется, только когда человек работает со специалистом.
+const CARE = { href: "/care", key: "care", Icon: HeartHandIcon } as const;
 
 function isActive(path: string, href: string) {
   if (href === "/") return path === "/" || path.startsWith("/explore") || path.startsWith("/play") || path.startsWith("/course");
   return path === href || path.startsWith(href + "/");
 }
 
-export function Nav({ unread = 0 }: { unread?: number }) {
+export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: { unread?: number; care?: boolean; pro?: boolean; careUnread?: number }) {
   const path = usePathname();
+  const ITEMS = care ? [...BASE.slice(0, 4), CARE, BASE[4]] : BASE;
   const inChat = /^\/talk\/.+/.test(path);
   const m = useMsg(common);
 
@@ -48,13 +51,26 @@ export function Nav({ unread = 0 }: { unread?: number }) {
                   active ? "bg-sand/80 text-ink" : "text-ink-soft hover:bg-sand/40 hover:text-ink"
                 }`}
               >
-                <Icon className="h-[22px] w-[22px] shrink-0" />
+                <span className="relative">
+                  <Icon className="h-[22px] w-[22px] shrink-0" />
+                  {key === "care" && careUnread > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
+                </span>
                 <span className="hidden text-[15px] lg:inline">{label}</span>
               </Link>
             );
           })}
         </nav>
         <Bell unread={unread} withLabel className="mt-4 lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
+        {pro && (
+          <Link
+            href="/pro"
+            title={m.nav.pro}
+            className="mt-1.5 flex h-12 items-center gap-3 rounded-2xl px-3 text-lilac-deep transition hover:bg-lilac-soft/70 lg:px-3.5"
+          >
+            <GridIcon className="h-[22px] w-[22px] shrink-0" />
+            <span className="hidden text-[15px] lg:inline">{m.nav.pro}</span>
+          </Link>
+        )}
         <MusicToggle withLabel className="mt-auto lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
         <p className="mt-6 hidden px-3 text-xs leading-relaxed text-ink-faint lg:block">
           {m.navTagline}
@@ -76,8 +92,9 @@ export function Nav({ unread = 0 }: { unread?: number }) {
                     active ? "text-ink" : "text-ink-faint"
                   }`}
                 >
-                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-sand" : ""}`}>
+                  <span className={`relative flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-sand" : ""}`}>
                     <Icon className="h-[21px] w-[21px]" />
+                    {key === "care" && careUnread > 0 && <span className="absolute right-2.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
                   </span>
                   {label}
                 </Link>

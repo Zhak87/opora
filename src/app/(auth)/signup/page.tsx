@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signUp } from "@/lib/auth-actions";
 import { Field, Notice } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -11,8 +12,17 @@ import { useMsg } from "@/i18n/client";
 import { authMessages } from "@/i18n/auth";
 
 export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const [state, action] = useActionState(signUp, undefined);
   const m = useMsg(authMessages);
+  const next = useSearchParams().get("next") ?? "";
   if (state?.ok) {
     return (
       <div className="text-center">
@@ -30,6 +40,7 @@ export default function SignupPage() {
       <p className="mb-7 text-[15px] text-ink-soft">{m.signup.subtitle}</p>
       <DemoNote />
       <form action={action} className="space-y-4">
+        <input type="hidden" name="next" value={next} />
         <Field label={m.signup.name} name="name" autoComplete="given-name" placeholder={m.signup.namePlaceholder} />
         <Field label={m.email} name="email" type="email" autoComplete="email" required />
         <Field label={m.password} name="password" type="password" autoComplete="new-password" minLength={8} placeholder={m.signup.passwordPlaceholder} required />
@@ -38,7 +49,7 @@ export default function SignupPage() {
         <SubmitButton className="w-full" pendingText={m.signup.submitting}>{m.signup.submit}</SubmitButton>
       </form>
       <p className="mt-6 text-center text-sm text-ink-soft">
-        {m.signup.haveAccount} <Link href="/login" className="text-sky-deep hover:text-ink">{m.signup.signIn}</Link>
+        {m.signup.haveAccount} <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-sky-deep hover:text-ink">{m.signup.signIn}</Link>
       </p>
     </>
   );

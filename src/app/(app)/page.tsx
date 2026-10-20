@@ -12,18 +12,28 @@ import { courseState } from "@/lib/course";
 import { courseMessages } from "@/i18n/course";
 import { TipCheck } from "@/components/plan/TipCheck";
 import { DemoImport } from "@/components/DemoImport";
-import { TalkIcon, CompassIcon, PenIcon, ArrowIcon } from "@/components/icons";
+import { TalkIcon, CompassIcon, PenIcon, ArrowIcon, HeartHandIcon } from "@/components/icons";
+import { hasCare } from "@/lib/pro";
+import { scheduleMessages } from "@/i18n/schedule";
+import { wellbeingMessages } from "@/i18n/wellbeing";
+import { getTimeZone } from "@/lib/tz";
+import { dayKey } from "@/lib/time";
 
 export default async function HomePage() {
   const { supabase, user } = await requireUser();
   const locale = await getLocale();
   const m = home[locale];
-  const [{ data: profile }, { data: recent }, stored, course] = await Promise.all([
+  const today = dayKey(new Date(), await getTimeZone());
+  const [{ data: profile }, { data: recent }, stored, course, care, { data: checkin }] = await Promise.all([
     supabase.from("profiles").select("name").eq("id", user!.id).single(),
     supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
     latestPlan(supabase),
     currentCourse(supabase),
+    hasCare(supabase, user!.id),
+    supabase.from("checkins").select("mood").eq("user_id", user!.id).eq("day", today).maybeSingle(),
   ]);
+  const wb = wellbeingMessages[locale].checkin;
+  const suggest = scheduleMessages[locale].catalog;
   const tipIndex = stored ? Math.floor(Date.now() / 86_400_000) % stored.plan.tips.length : 0;
   const question = pickForDay(dailyQuestions(locale));
   const name = profile?.name;
@@ -56,6 +66,22 @@ export default async function HomePage() {
         <ActionLink href="/explore" title={m.explore} hint={m.exploreHint} tone="bg-mist" Icon={CompassIcon} />
         <ActionLink href="/journal" title={m.journal} hint={m.journalHint} tone="bg-sage-soft" Icon={PenIcon} />
       </section>
+
+      <Link
+        href="/wellbeing"
+        className="group mb-4 flex items-center gap-4 rounded-[24px] border border-line/70 bg-paper/80 p-5 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift"
+      >
+        <span className="flex gap-1" aria-hidden>
+          {[1, 2, 3, 4, 5].map((v) => (
+            <span key={v} className={`h-2.5 w-2.5 rounded-full ${checkin && v <= checkin.mood ? "bg-[#6250d6]" : "bg-sand-deep"}`} />
+          ))}
+        </span>
+        <span className="flex-1">
+          <span className="block text-[16px] font-medium text-ink">{checkin ? wb.homeDone : wb.homeTitle}</span>
+          <span className="mt-0.5 block text-sm text-ink-soft">{wb.homeText}</span>
+        </span>
+        <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+      </Link>
 
       <CourseCard course={course} c={courseMessages[locale].home} />
 
@@ -131,6 +157,21 @@ export default async function HomePage() {
             ))}
           </ul>
         </section>
+      )}
+
+      {/* Ненавязчиво: живой специалист как возможность, а не условие. */}
+      {!care && (
+        <Link
+          href="/specialists"
+          className="group mt-10 flex items-center gap-4 rounded-[24px] border border-dashed border-line px-5 py-4 transition hover:border-sand-deep hover:bg-paper/60"
+        >
+          <HeartHandIcon className="h-6 w-6 shrink-0 text-lilac-deep" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] text-ink">{suggest.suggestTitle}</span>
+            <span className="mt-0.5 block text-sm leading-relaxed text-ink-soft">{suggest.suggestText}</span>
+          </span>
+          <ArrowIcon className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+        </Link>
       )}
     </div>
   );

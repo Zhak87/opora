@@ -7,6 +7,7 @@ import { getLocale, getMsg } from "@/i18n/server";
 import { authMessages } from "@/i18n/auth";
 import { legalMessages } from "@/i18n/legal";
 import { consentRecord } from "@/lib/consent";
+import { safeNext } from "@/lib/safe-next";
 
 type State = { error?: string; ok?: string; unconfirmed?: string } | undefined;
 
@@ -38,7 +39,7 @@ export async function signIn(_: State, formData: FormData): Promise<State> {
     const unconfirmed = error.message.toLowerCase().includes("email not confirmed");
     return { error: await translate(error.message), unconfirmed: unconfirmed ? String(formData.get("email")).trim() : undefined };
   }
-  redirect("/");
+  redirect(safeNext(formData.get("next") as string | null));
 }
 
 export async function resendConfirmation(_: State, formData: FormData): Promise<State> {
@@ -62,16 +63,18 @@ export async function signUp(_: State, formData: FormData): Promise<State> {
   if (password.length < 8) return { error: (await getMsg(authMessages)).errors.passwordShort };
   if (!consentGiven(formData)) return { error: (await getMsg(legalMessages)).consent.required };
   const supabase = await createClient();
+  // Куда вернуть человека после подтверждения почты: например, к приглашению психолога.
+  const next = safeNext(formData.get("next") as string | null);
   const { data, error } = await supabase.auth.signUp({
     email: String(formData.get("email")).trim(),
     password,
     options: {
       data: { name: String(formData.get("name") || "").trim().slice(0, 60), consent: consentRecord(await getLocale()) },
-      emailRedirectTo: `${await origin()}/auth/callback`,
+      emailRedirectTo: `${await origin()}/auth/callback${next === "/" ? "" : `?next=${encodeURIComponent(next)}`}`,
     },
   });
   if (error) return { error: await translate(error.message) };
-  if (data.session) redirect("/");
+  if (data.session) redirect(next);
   return { ok: (await getMsg(authMessages)).notices.confirmSent };
 }
 
