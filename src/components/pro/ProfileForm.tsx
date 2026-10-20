@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { savePsychologist, uploadDocument, uploadPhoto } from "@/lib/pro-actions";
 import { Button, Field, Notice, buttonStyles } from "../ui";
 import { Avatar } from "./bits";
@@ -36,12 +36,37 @@ function Pills<T extends string>({ name, values, labels, selected }: { name: str
   );
 }
 
+const MAX_UPLOAD = 4 * 1024 * 1024;
+
+// Фото с телефона весит 5–10 МБ, а для анкеты хватает 800 пикселей: уменьшаем прямо в браузере.
+async function shrinkPhoto(file: File, max = 800): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.86));
+    return blob ? new File([blob], "photo.jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
+}
+
 export function PhotoForm({ name, photo }: { name: string; photo: string | null }) {
-  const [state, action] = useActionState(uploadPhoto, undefined);
+  const [state, action, pending] = useActionState(uploadPhoto, undefined);
+  const [, start] = useTransition();
   const m = useMsg(proMessages).profile;
   const input = useRef<HTMLInputElement>(null);
+  async function pick(file: File) {
+    const data = new FormData();
+    data.set("photo", await shrinkPhoto(file));
+    start(() => action(data));
+  }
   return (
-    <form action={action} className="flex items-center gap-5">
+    <div className="flex items-center gap-5">
       <Avatar name={name} src={photo} size={88} />
       <div className="min-w-0">
         <p className="text-[15px] text-ink">{m.photo}</p>
@@ -49,39 +74,53 @@ export function PhotoForm({ name, photo }: { name: string; photo: string | null 
         <input
           ref={input}
           type="file"
-          name="photo"
           accept="image/jpeg,image/png,image/webp"
           className="sr-only"
-          onChange={(e) => e.currentTarget.files?.length && e.currentTarget.form?.requestSubmit()}
+          onChange={(e) => {
+            const file = e.currentTarget.files?.[0];
+            e.currentTarget.value = "";
+            if (file) pick(file);
+          }}
         />
-        <button type="button" onClick={() => input.current?.click()} className={`${buttonStyles.soft} mt-3 h-10 px-5 text-sm`}>
+        <button type="button" disabled={pending} onClick={() => input.current?.click()} className={`${buttonStyles.soft} mt-3 h-10 px-5 text-sm disabled:opacity-60`}>
           {m.upload}
         </button>
         {state?.error && <p className="mt-2 text-sm text-[#a0614f]">{state.error}</p>}
       </div>
-    </form>
+    </div>
   );
 }
 
 export function DocumentUpload() {
-  const [state, action] = useActionState(uploadDocument, undefined);
+  const [state, action, pending] = useActionState(uploadDocument, undefined);
+  const [tooBig, setTooBig] = useState(false);
+  const [, start] = useTransition();
   const m = useMsg(proMessages).profile;
   const input = useRef<HTMLInputElement>(null);
   return (
-    <form action={action}>
+    <div>
       <input
         ref={input}
         type="file"
-        name="document"
         accept="image/jpeg,image/png,image/webp,application/pdf"
         className="sr-only"
-        onChange={(e) => e.currentTarget.files?.length && e.currentTarget.form?.requestSubmit()}
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = "";
+          if (!file) return;
+          // Больший файл сервер не примет вовсе, и вместо понятной ошибки упадёт страница.
+          setTooBig(file.size > MAX_UPLOAD);
+          if (file.size > MAX_UPLOAD) return;
+          const data = new FormData();
+          data.set("document", file);
+          start(() => action(data));
+        }}
       />
-      <button type="button" onClick={() => input.current?.click()} className={`${buttonStyles.soft} h-10 px-5 text-sm`}>
+      <button type="button" disabled={pending} onClick={() => input.current?.click()} className={`${buttonStyles.soft} h-10 px-5 text-sm disabled:opacity-60`}>
         {m.upload}
       </button>
-      {state?.error && <p className="mt-2 text-sm text-[#a0614f]">{state.error}</p>}
-    </form>
+      {(tooBig || state?.error) && <p className="mt-2 text-sm text-[#a0614f]">{tooBig ? m.errors.tooBig : state?.error}</p>}
+    </div>
   );
 }
 

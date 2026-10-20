@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/pro";
 import { signOut } from "@/lib/actions";
 import { NameForm, DangerZone } from "@/components/ProfileForms";
 import { VoicePicker } from "@/components/VoicePicker";
@@ -31,6 +32,7 @@ export default async function ProfilePage({
     supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
     supabase.from("psychologists").select("user_id", { count: "exact", head: true }).eq("user_id", user!.id),
   ]);
+  const admin = await isAdmin(supabase);
   const since = new Date(profile?.created_at ?? Date.now()).toLocaleDateString(INTL[locale], {
     month: "long",
     year: "numeric",
@@ -102,15 +104,30 @@ export default async function ProfilePage({
           </div>
         </Card>
 
-        <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">
-          <div className="flex-1">
-            <h2 className="text-[15px] font-medium text-ink">{m.proTitle}</h2>
-            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{pro ? m.proOwnText : m.proText}</p>
-          </div>
-          <Link href={pro ? "/pro" : "/pro/join"} className={`${pro ? buttonStyles.primary : buttonStyles.soft} shrink-0`}>
-            {pro ? m.proOpen : m.proJoin}
-          </Link>
-        </Card>
+        {/* Кабинет специалиста и проверка анкет показываются только тем, кому они нужны. */}
+        {pro ? (
+          <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">
+            <div className="flex-1">
+              <h2 className="text-[15px] font-medium text-ink">{m.proTitle}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-ink-soft">{m.proOwnText}</p>
+            </div>
+            <Link href="/pro" className={`${buttonStyles.primary} shrink-0`}>
+              {m.proOpen}
+            </Link>
+          </Card>
+        ) : null}
+
+        {admin && (
+          <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">
+            <div className="flex-1">
+              <h2 className="text-[15px] font-medium text-ink">{m.adminTitle}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-ink-soft">{m.adminText}</p>
+            </div>
+            <Link href="/admin/psychologists" className={`${buttonStyles.soft} shrink-0`}>
+              {m.adminOpen}
+            </Link>
+          </Card>
+        )}
 
         <Card className="p-6 sm:p-8">
           <DangerZone />
@@ -119,6 +136,13 @@ export default async function ProfilePage({
         <form action={signOut} className="pt-2 text-center">
           <button className={buttonStyles.ghost}>{m.signOut}</button>
         </form>
+        {!pro && (
+          <p className="text-center text-xs">
+            <Link href="/pro/join" className="text-ink-faint underline-offset-4 hover:text-ink-soft hover:underline">
+              {m.proLink}
+            </Link>
+          </p>
+        )}
       </div>
     </>
   );
