@@ -14,7 +14,10 @@ import { Card, Notice } from "@/components/ui";
 import { Avatar } from "@/components/pro/bits";
 import { ConfirmForm } from "@/components/ConfirmForm";
 import { MoveSessionForm, SummaryForm } from "@/components/schedule/ProForms";
-import { BackIcon } from "@/components/icons";
+import { BackIcon, SparkIcon } from "@/components/icons";
+import { listNotes, listReports } from "@/lib/analytics";
+import { analyticsMessages } from "@/i18n/analytics";
+import { NotesPanel } from "@/components/analytics/Notes";
 
 export default async function ProSession({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ moved?: string }> }) {
   const { id } = await params;
@@ -30,6 +33,10 @@ export default async function ProSession({ params, searchParams }: { params: Pro
   const { data: client } = await supabase.from("profiles").select("name").eq("id", s.client_id).maybeSingle();
   const name = client?.name ?? proMessages[locale].clients.noName;
   const past = Date.parse(s.starts_at) < Date.now();
+  // Заметки к этой встрече и вопросы из последней ИИ-сводки (если клиент разрешил аналитику — иначе RLS вернёт пусто).
+  const [notes, [report]] = await Promise.all([listNotes(supabase, user!.id, s.client_id, s.id), listReports(supabase, user!.id, s.client_id, 1)]);
+  const am = analyticsMessages[locale];
+  const reportDate = report && new Intl.DateTimeFormat(INTL[locale], { timeZone: tz, day: "numeric", month: "long" }).format(new Date(report.created_at));
 
   return (
     <>
@@ -73,6 +80,28 @@ export default async function ProSession({ params, searchParams }: { params: Pro
               </label>
               <button className="h-11 rounded-full px-5 text-sm text-[#a0614f] transition hover:bg-[#fbf1ec]">{m.pro.cancel}</button>
             </ConfirmForm>
+          </Card>
+        )}
+        {report && report.report.questions.length > 0 && s.status !== "cancelled" && (
+          <Card className="p-6 sm:p-7">
+            <h2 className="mb-1 flex items-center gap-2 text-[15px] font-medium text-ink">
+              <SparkIcon className="h-4 w-4 text-lilac-deep" /> {am.sessionPrep.title}
+            </h2>
+            <p className="mb-3 text-xs text-ink-faint">
+              <Link href={`/pro/clients/${s.client_id}/insights?r=${report.id}`} className="hover:text-ink">
+                {am.sessionPrep.from(reportDate!)}
+              </Link>
+            </p>
+            <ol className="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed text-ink marker:text-ink-faint">
+              {report.report.questions.map((q, i) => (
+                <li key={i}>{q}</li>
+              ))}
+            </ol>
+          </Card>
+        )}
+        {client && (
+          <Card className="p-6 sm:p-7">
+            <NotesPanel notes={notes} client={s.client_id} session={s.id} locale={locale} tz={tz} />
           </Card>
         )}
       </div>

@@ -20,7 +20,10 @@ import { careChatMessages } from "@/i18n/care-chat";
 import { Avatar } from "@/components/pro/bits";
 import { AuditList } from "@/components/pro/AuditList";
 import { ConfirmForm } from "@/components/ConfirmForm";
-import { BackIcon, CheckIcon } from "@/components/icons";
+import { BackIcon, CheckIcon, SparkIcon } from "@/components/icons";
+import { listNotes, listReports } from "@/lib/analytics";
+import { analyticsMessages } from "@/i18n/analytics";
+import { NotesPanel } from "@/components/analytics/Notes";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,11 +39,14 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
   if (!client) notFound();
   // Сам факт просмотра попадает в журнал, который видит клиент.
   await supabase.rpc("log_client_view", { p_client: id, p_what: "card" });
-  const [log, me, sessions] = await Promise.all([
+  const [log, me, sessions, notes, [report]] = await Promise.all([
     auditFor(supabase, { client: id, psychologist: user!.id }, 20),
     myPsychologist(supabase, user!.id),
     listSessions(supabase, { psychologist: user!.id, client: id }),
+    listNotes(supabase, user!.id, id),
+    client.scopes.includes("analytics") ? listReports(supabase, user!.id, id, 1) : [],
   ]);
+  const am = analyticsMessages[locale];
   const range = periodRange(period, me!.timezone);
   const canWell = client.scopes.includes("wellbeing");
   const canGoals = client.scopes.includes("goals");
@@ -72,9 +78,14 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
           <h1 className="font-serif text-[30px] leading-tight text-ink sm:text-[36px]">{client.name ?? m.noName}</h1>
           <p className="text-sm text-ink-faint">{m.since(relativeDate(client.link.activated_at ?? client.link.created_at, locale))}</p>
         </div>
-        <Link href={`/pro/messages/${id}`} className={`${buttonStyles.soft} ml-auto h-11 shrink-0 px-5 text-sm`}>
-          {careChatMessages[locale].write}
-        </Link>
+        <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+          <Link href={`/pro/clients/${id}/insights`} className={`${buttonStyles.soft} h-11 flex-1 shrink-0 px-5 text-sm sm:flex-none`}>
+            <SparkIcon className="h-4 w-4 text-lilac-deep" /> {am.open}
+          </Link>
+          <Link href={`/pro/messages/${id}`} className={`${buttonStyles.soft} h-11 flex-1 shrink-0 px-5 text-sm sm:flex-none`}>
+            {careChatMessages[locale].write}
+          </Link>
+        </div>
       </header>
 
       <div className="stagger grid gap-5 lg:grid-cols-[1fr_320px]">
@@ -126,10 +137,21 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
               <NewSessionForm clients={[{ id, name: client.name ?? m.noName }]} tz={me!.timezone} minutes={me!.session_minutes} formats={me!.formats} />
             </div>
           </Card>
-          <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm leading-relaxed text-ink-soft">{m.soon}</p>
+          <Card className="p-6 sm:p-7">
+            <NotesPanel notes={notes} client={id} locale={locale} tz={me!.timezone} />
+          </Card>
         </div>
 
         <aside className="space-y-5">
+          <Card className="p-6">
+            <h2 className="mb-2 flex items-center gap-2 text-[15px] font-medium text-ink">
+              <SparkIcon className="h-4 w-4 text-lilac-deep" /> {am.title}
+            </h2>
+            <p className="text-sm leading-relaxed text-ink-soft">{report ? report.report.summary : client.scopes.includes("analytics") ? am.history.empty : am.noConsent}</p>
+            <Link href={`/pro/clients/${id}/insights`} className="mt-3 inline-block text-sm text-sky-deep hover:text-ink">
+              {am.open} →
+            </Link>
+          </Card>
           <Card className="p-6">
             <h2 className="mb-4 text-[15px] font-medium text-ink">{m.history}</h2>
             <AuditList rows={log} locale={locale} me={user!.id} empty={care.care.logEmpty} />
