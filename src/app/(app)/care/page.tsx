@@ -13,6 +13,8 @@ import { ConfirmForm } from "@/components/ConfirmForm";
 import { HeartHandIcon, ShieldIcon } from "@/components/icons";
 import { SessionList } from "@/components/schedule/SessionList";
 import { listSessions, type Session } from "@/lib/sessions";
+import { unreadByPeer } from "@/lib/care-chat";
+import { careChatMessages } from "@/i18n/care-chat";
 import { getTimeZone } from "@/lib/tz";
 import { scheduleMessages } from "@/i18n/schedule";
 import { buttonStyles } from "@/components/ui";
@@ -30,10 +32,12 @@ export default async function CarePage({
   const labels = proLabels[locale];
   const sm = scheduleMessages[locale];
   const tz = await getTimeZone();
-  const [care, log, sessions] = await Promise.all([
+  const cm = careChatMessages[locale];
+  const [care, log, sessions, unread] = await Promise.all([
     myCare(supabase, user!.id),
     auditFor(supabase, { client: user!.id }, 30),
     listSessions(supabase, { client: user!.id, from: new Date(Date.now() - 90 * 86_400_000).toISOString() }),
+    unreadByPeer(supabase),
   ]);
   const now = Date.now();
 
@@ -80,11 +84,17 @@ export default async function CarePage({
                     : m.care.since(new Date(link.activated_at ?? link.created_at).toLocaleDateString(INTL[locale], { day: "numeric", month: "long", year: "numeric" }))}
                 </p>
               </div>
-              {p && (
-                <Link href={`/p/${p.slug}`} className="hidden shrink-0 text-sm text-sky-deep hover:text-ink sm:block">
-                  {m.invite.open}
-                </Link>
-              )}
+              <Link
+                href={`/care/chat/${link.psychologist_id}`}
+                className={`${buttonStyles.soft} relative h-10 shrink-0 px-4 text-sm`}
+              >
+                {cm.write}
+                {(unread.get(link.psychologist_id) ?? 0) > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-lilac-deep px-1.5 text-[11px] text-paper">
+                    {unread.get(link.psychologist_id)}
+                  </span>
+                )}
+              </Link>
             </div>
 
             <div className="border-b border-line/60 p-6 sm:p-7">

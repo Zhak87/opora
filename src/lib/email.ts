@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { courseMessages } from "@/i18n/course";
+import { careChatMessages } from "@/i18n/care-chat";
 import { isLocale, type Locale } from "@/i18n/config";
 import { weekOf, type Course, type CourseState } from "./course";
 
@@ -147,7 +148,7 @@ export function renderDailyEmail(opts: {
   return { subject, html, text, unsubscribe: unsubscribeUrl(opts.userId, true) };
 }
 
-export async function sendEmail(msg: { to: string; subject: string; html: string; text: string; unsubscribe: string }) {
+export async function sendEmail(msg: { to: string; subject: string; html: string; text: string; unsubscribe?: string }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
@@ -157,8 +158,47 @@ export async function sendEmail(msg: { to: string; subject: string; html: string
       subject: msg.subject,
       html: msg.html,
       text: msg.text,
-      headers: { "List-Unsubscribe": `<${msg.unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      headers: msg.unsubscribe ? { "List-Unsubscribe": `<${msg.unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined,
     }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 300)}`);
+}
+
+// Напоминание о встрече с психологом: служебное письмо, без подробностей о работе — только время и ссылка.
+export function renderSessionReminder(opts: { locale: Locale; name?: string | null; peer: string; when: string; link: string }) {
+  const m = careChatMessages[opts.locale].email;
+  const subject = m.subject(opts.when);
+  const html = `<!DOCTYPE html>
+<html lang="${opts.locale}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4efe7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4efe7;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
+        <tr>
+          <td style="background:#fffdf9;border:1px solid #ebe4d8;border-radius:28px;padding:36px 32px;">
+            <p style="margin:0 0 14px 0;font-family:${SANS};font-size:14px;color:#6c6f75;">${esc(m.hello(opts.name ?? ""))}</p>
+            <h1 style="margin:0 0 14px 0;font-family:${SERIF};font-weight:normal;font-size:26px;line-height:1.3;color:#34373c;">${esc(opts.when)}</h1>
+            <p style="margin:0 0 26px 0;font-family:${SANS};font-size:16px;line-height:1.65;color:#6c6f75;">${esc(m.text(opts.peer, opts.when))}</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+              <tr>
+                <td align="center" style="border-radius:999px;background:#34373c;">
+                  <a href="${opts.link}" style="display:inline-block;padding:15px 34px;font-family:${SANS};font-size:15px;font-weight:600;color:#fffdf9;text-decoration:none;border-radius:999px;">${esc(m.open)}</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:26px 24px 0 24px;font-family:${SANS};font-size:12px;line-height:1.6;color:#a3a4a8;">${esc(m.why)}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+  const text = [m.hello(opts.name ?? ""), "", m.text(opts.peer, opts.when), "", `${m.open}: ${opts.link}`, "", m.why].join("\n");
+  return { subject, html, text };
 }

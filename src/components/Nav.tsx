@@ -24,7 +24,7 @@ function isActive(path: string, href: string) {
   return path === href || path.startsWith(href + "/");
 }
 
-export function Nav({ unread = 0, care = false, pro = false }: { unread?: number; care?: boolean; pro?: boolean }) {
+export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: { unread?: number; care?: boolean; pro?: boolean; careUnread?: number }) {
   const path = usePathname();
   const ITEMS = care ? [...BASE.slice(0, 4), CARE, BASE[4]] : BASE;
   const inChat = /^\/talk\/.+/.test(path);
@@ -51,7 +51,10 @@ export function Nav({ unread = 0, care = false, pro = false }: { unread?: number
                   active ? "bg-sand/80 text-ink" : "text-ink-soft hover:bg-sand/40 hover:text-ink"
                 }`}
               >
-                <Icon className="h-[22px] w-[22px] shrink-0" />
+                <span className="relative">
+                  <Icon className="h-[22px] w-[22px] shrink-0" />
+                  {key === "care" && careUnread > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
+                </span>
                 <span className="hidden text-[15px] lg:inline">{label}</span>
               </Link>
             );
@@ -89,8 +92,9 @@ export function Nav({ unread = 0, care = false, pro = false }: { unread?: number
                     active ? "text-ink" : "text-ink-faint"
                   }`}
                 >
-                  <span className={`flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-sand" : ""}`}>
+                  <span className={`relative flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-sand" : ""}`}>
                     <Icon className="h-[21px] w-[21px]" />
+                    {key === "care" && careUnread > 0 && <span className="absolute right-2.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
                   </span>
                   {label}
                 </Link>

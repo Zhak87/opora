@@ -12,6 +12,8 @@ import { listSessions } from "@/lib/sessions";
 import { timeOf, dayLabel } from "@/lib/time";
 import { INTL } from "@/i18n/config";
 import { scheduleMessages } from "@/i18n/schedule";
+import { careNotices, lastMessages, markNotificationsRead, unreadByPeer } from "@/lib/care-chat";
+import { careChatMessages } from "@/i18n/care-chat";
 
 export default async function ProOverview() {
   const { supabase, user } = await requireUser();
@@ -20,13 +22,20 @@ export default async function ProOverview() {
   const scopes = careMessages[locale].scopes;
   const me = (await myPsychologist(supabase, user!.id))!;
   const sm = scheduleMessages[locale];
-  const [clients, { data: invites }, upcoming] = await Promise.all([
+  const cm = careChatMessages[locale];
+  const [clients, { data: invites }, upcoming, notices, unread, last] = await Promise.all([
     myClients(supabase, me.user_id),
     supabase.from("invites").select("id, views").eq("psychologist_id", me.user_id),
     listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: new Date(Date.now() - 60 * 60 * 1000).toISOString() }, 5),
+    careNotices(supabase, { me: me.user_id, role: "pro", locale, tz: me.timezone, limit: 6 }),
+    unreadByPeer(supabase),
+    lastMessages(supabase, me.user_id),
   ]);
+  // Уведомления показаны — отмечаем прочитанными; подсветка новых остаётся до следующего захода.
+  if (notices.some((n) => n.fresh)) await markNotificationsRead(supabase, notices.filter((n) => n.fresh).map((n) => n.id));
   const names = Object.fromEntries(clients.map((c) => [c.link.client_id, c.name ?? m.clients.noName]));
   const requests = clients.filter((c) => c.link.status === "pending");
+  const newMessages = [...unread.entries()].map(([peer, n]) => ({ peer, n, msg: last.get(peer) }));
   const active = clients.filter((c) => c.link.status === "active");
   const views = (invites ?? []).reduce((sum, i) => sum + (i.views ?? 0), 0);
   const fromInvites = clients.filter((c) => c.link.source === "invite").length;
@@ -102,6 +111,56 @@ export default async function ProOverview() {
         )}
       </section>
 
+      <div className="mb-10 grid gap-5 lg:grid-cols-2">
+        <section>
+          <div className="mb-3 flex items-baseline justify-between px-1">
+            <h2 className="text-[15px] text-ink-soft">{cm.messages}</h2>
+            <Link href="/pro/messages" className="text-sm text-ink-faint hover:text-ink">
+              {cm.all}
+            </Link>
+          </div>
+          {newMessages.length ? (
+            <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-line/70 bg-paper/75">
+              {newMessages.slice(0, 5).map(({ peer, n, msg }) => (
+                <li key={peer}>
+                  <Link href={`/pro/messages/${peer}`} className="group flex items-center gap-3 px-5 py-4 transition hover:bg-sand/40">
+                    <Avatar name={names[peer] ?? "?"} size={36} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium text-ink">{names[peer] ?? m.clients.noName}</span>
+                      {msg && <span className="block truncate text-sm text-ink-soft">{msg.body}</span>}
+                    </span>
+                    <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-lilac-deep px-2 text-xs text-paper">{n}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm text-ink-soft">{cm.noNew}</p>
+          )}
+        </section>
+        <section>
+          <h2 className="mb-3 px-1 text-[15px] text-ink-soft">{cm.notificationsTitle}</h2>
+          {notices.length ? (
+            <ul className="space-y-2">
+              {notices.map((n) => (
+                <li key={n.id}>
+                  <Link
+                    href={n.href}
+                    className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm transition hover:shadow-soft ${n.fresh ? "border-lilac/50 bg-lilac-soft/50 text-ink" : "border-line/60 bg-paper/70 text-ink-soft"}`}
+                  >
+                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.fresh ? "bg-lilac-deep" : "bg-line"}`} />
+                    <span className="min-w-0 flex-1">{n.text}</span>
+                    <span className="shrink-0 text-xs text-ink-faint">{relativeDate(n.at, locale)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm text-ink-soft">{cm.noNotifications}</p>
+          )}
+        </section>
+      </div>
+
       <section className="mb-10">
         <div className="mb-3 flex items-baseline justify-between px-1">
           <h2 className="text-[15px] text-ink-soft">{m.overview.recentClients}</h2>
@@ -144,7 +203,9 @@ export default async function ProOverview() {
         )}
       </section>
 
-      <p className="text-center text-sm text-ink-faint">{m.overview.soon}</p>
+      <Link href="/pro/invites" className="block text-center text-sm text-ink-faint hover:text-ink md:hidden">
+        {m.nav.invites}
+      </Link>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { defineMessages, plural } from "./config";
 export const notificationMessages = defineMessages({
   ru: {
     title: "Уведомления",
-    lead: "Здесь собираются напоминания на сегодня: занятие курса, совет и вопрос дня.",
+    lead: "Здесь собираются напоминания на сегодня: занятие курса, совет и вопрос дня, а также новости от вашего психолога.",
     bell: (n: number) => (n ? `Уведомления, новых: ${n}` : "Уведомления"),
     empty: "Пока ничего нового. Загляните завтра.",
     newLabel: "новое",
@@ -28,7 +28,7 @@ export const notificationMessages = defineMessages({
   },
   kk: {
     title: "Хабарламалар",
-    lead: "Мұнда бүгінгі еске салғыштар жиналады: курс сабағы, күн кеңесі мен күн сұрағы.",
+    lead: "Мұнда бүгінгі еске салғыштар жиналады: курс сабағы, күн кеңесі мен күн сұрағы, сондай-ақ психологыңыздан жаңалықтар.",
     bell: (n: number) => (n ? `Хабарламалар, жаңалары: ${n}` : "Хабарламалар"),
     empty: "Әзірге жаңа ештеңе жоқ. Ертең кіріп шығыңыз.",
     newLabel: "жаңа",
@@ -52,7 +52,7 @@ export const notificationMessages = defineMessages({
   },
   en: {
     title: "Notifications",
-    lead: "Today's reminders gather here: your course session, the tip and the question of the day.",
+    lead: "Today's reminders gather here: your course session, the tip and the question of the day, plus news from your psychologist.",
     bell: (n: number) => (n ? `Notifications, ${n} new` : "Notifications"),
     empty: "Nothing new yet. Come back tomorrow.",
     newLabel: "new",

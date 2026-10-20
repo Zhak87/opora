@@ -12,7 +12,8 @@ import { getLocale } from "@/i18n/server";
 import { proMessages } from "@/i18n/pro";
 import { careMessages } from "@/i18n/care";
 import { common } from "@/i18n/common";
-import { Card } from "@/components/ui";
+import { Card, buttonStyles } from "@/components/ui";
+import { careChatMessages } from "@/i18n/care-chat";
 import { Avatar } from "@/components/pro/bits";
 import { AuditList } from "@/components/pro/AuditList";
 import { ConfirmForm } from "@/components/ConfirmForm";
@@ -46,13 +47,16 @@ export default async function ClientCard({ params }: { params: Promise<{ id: str
       <Link href="/pro/clients" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
         <BackIcon className="h-4 w-4" /> {common[locale].back}
       </Link>
-      <header className="mb-8 flex items-center gap-5">
+      <header className="mb-8 flex flex-wrap items-center gap-5">
         <Avatar name={client.name ?? "?"} size={64} />
         <div>
           <p className="text-sm text-ink-soft">{m.card}</p>
           <h1 className="font-serif text-[30px] leading-tight text-ink sm:text-[36px]">{client.name ?? m.noName}</h1>
           <p className="text-sm text-ink-faint">{m.since(relativeDate(client.link.activated_at ?? client.link.created_at, locale))}</p>
         </div>
+        <Link href={`/pro/messages/${id}`} className={`${buttonStyles.soft} ml-auto h-11 shrink-0 px-5 text-sm`}>
+          {careChatMessages[locale].write}
+        </Link>
       </header>
 
       <div className="stagger grid gap-5 lg:grid-cols-[1fr_320px]">

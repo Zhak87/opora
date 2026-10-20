@@ -5,10 +5,11 @@ import { requireUser } from "@/lib/supabase/server";
 import { unreadCount } from "@/lib/notifications";
 import { getLocale } from "@/i18n/server";
 import { hasCare } from "@/lib/pro";
+import { unreadTotal } from "@/lib/care-chat";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user } = await requireUser();
-  const [unread, care, pro] = user
+  const [unread, care, pro, careUnread] = user
     ? await Promise.all([
         unreadCount(supabase, await getLocale()).catch(() => 0),
         hasCare(supabase, user.id).catch(() => false),
@@ -17,11 +18,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .select("user_id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .then(({ count }) => (count ?? 0) > 0, () => false),
+        unreadTotal(supabase).catch(() => 0),
       ])
-    : [0, false, false];
+    : [0, false, false, 0];
   return (
     <div className="min-h-dvh md:pl-[88px] lg:pl-[232px]">
-      <Nav unread={unread} care={care} pro={pro} />
+      <Nav unread={unread} care={care} pro={pro} careUnread={careUnread} />
       <div className="fixed right-4 top-4 z-30 flex items-center gap-2 pt-[env(safe-area-inset-top)] md:hidden">
         <Bell unread={unread} />
         <MusicToggle />

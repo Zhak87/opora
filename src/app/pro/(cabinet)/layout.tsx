@@ -4,6 +4,7 @@ import { ProNav } from "@/components/pro/ProNav";
 import { HomeIcon } from "@/components/icons";
 import { requireUser } from "@/lib/supabase/server";
 import { myPsychologist } from "@/lib/pro";
+import { unreadTotal } from "@/lib/care-chat";
 import { getMsg } from "@/i18n/server";
 import { proMessages } from "@/i18n/pro";
 
@@ -12,10 +13,10 @@ export default async function ProLayout({ children }: { children: React.ReactNod
   const { supabase, user } = await requireUser();
   if (!user) redirect("/login?next=/pro");
   if (!(await myPsychologist(supabase, user.id))) redirect("/pro/join");
-  const m = await getMsg(proMessages);
+  const [m, unread] = await Promise.all([getMsg(proMessages), unreadTotal(supabase).catch(() => 0)]);
   return (
     <div className="min-h-dvh md:pl-[88px] lg:pl-[248px]">
-      <ProNav />
+      <ProNav unread={unread} />
       <Link
         href="/"
         aria-label={m.toSelf}

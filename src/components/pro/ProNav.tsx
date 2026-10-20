@@ -2,19 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GridIcon, UsersIcon, LinkIcon, IdIcon, HomeIcon, CalendarIcon } from "../icons";
+import { GridIcon, UsersIcon, LinkIcon, IdIcon, HomeIcon, CalendarIcon, TalkIcon } from "../icons";
 import { Orb } from "../Orb";
 import { useMsg } from "@/i18n/client";
 import { proMessages } from "@/i18n/pro";
 import { common } from "@/i18n/common";
 
+// mobile: false — пункт не помещается в нижнюю панель телефона, туда ведут ссылки с обзора.
 const ITEMS = [
-  { href: "/pro", key: "overview", Icon: GridIcon },
-  { href: "/pro/schedule", key: "schedule", Icon: CalendarIcon },
-  { href: "/pro/clients", key: "clients", Icon: UsersIcon },
-  { href: "/pro/invites", key: "invites", Icon: LinkIcon },
-  { href: "/pro/profile", key: "profile", Icon: IdIcon },
+  { href: "/pro", key: "overview", Icon: GridIcon, mobile: true },
+  { href: "/pro/schedule", key: "schedule", Icon: CalendarIcon, mobile: true },
+  { href: "/pro/messages", key: "messages", Icon: TalkIcon, mobile: true },
+  { href: "/pro/clients", key: "clients", Icon: UsersIcon, mobile: true },
+  { href: "/pro/invites", key: "invites", Icon: LinkIcon, mobile: false },
+  { href: "/pro/profile", key: "profile", Icon: IdIcon, mobile: true },
 ] as const;
+
+function Badge({ n, className = "" }: { n: number; className?: string }) {
+  if (!n) return null;
+  return (
+    <span className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-lilac-deep px-1 text-[10px] font-medium leading-none text-paper ${className}`}>
+      {n > 99 ? "99+" : n}
+    </span>
+  );
+}
 
 const isActive = (path: string, href: string) =>
   href === "/pro"
@@ -22,7 +33,7 @@ const isActive = (path: string, href: string) =>
     : path === href || path.startsWith(href + "/") || (href === "/pro/schedule" && path.startsWith("/pro/sessions/"));
 
 // Навигация кабинета специалиста: своя, отдельная от личного пространства.
-export function ProNav() {
+export function ProNav({ unread = 0 }: { unread?: number }) {
   const path = usePathname();
   const m = useMsg(proMessages);
   const c = useMsg(common);
@@ -48,8 +59,12 @@ export function ProNav() {
                   active ? "bg-lilac-soft text-ink" : "text-ink-soft hover:bg-sand/40 hover:text-ink"
                 }`}
               >
-                <Icon className="h-[22px] w-[22px] shrink-0" />
-                <span className="hidden text-[15px] lg:inline">{m.nav[key]}</span>
+                <span className="relative">
+                  <Icon className="h-[22px] w-[22px] shrink-0" />
+                  {key === "messages" && <Badge n={unread} className="absolute -right-2 -top-2 lg:hidden" />}
+                </span>
+                <span className="hidden flex-1 text-[15px] lg:inline">{m.nav[key]}</span>
+                {key === "messages" && <Badge n={unread} className="hidden lg:flex" />}
               </Link>
             );
           })}
@@ -67,7 +82,7 @@ export function ProNav() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line/60 bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         <div className="mx-auto flex max-w-md items-stretch justify-around px-2">
-          {ITEMS.map(({ href, key, Icon }) => {
+          {ITEMS.filter((i) => i.mobile).map(({ href, key, Icon }) => {
             const active = isActive(path, href);
             return (
               <Link
@@ -75,8 +90,9 @@ export function ProNav() {
                 href={href}
                 className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${active ? "text-ink" : "text-ink-faint"}`}
               >
-                <span className={`flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-lilac-soft" : ""}`}>
+                <span className={`relative flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-lilac-soft" : ""}`}>
                   <Icon className="h-[21px] w-[21px]" />
+                  {key === "messages" && <Badge n={unread} className="absolute -top-1 right-1" />}
                 </span>
                 {m.nav[key]}
               </Link>

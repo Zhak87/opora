@@ -5,7 +5,7 @@ export const proMessages = defineMessages({
   ru: {
     cabinet: "Кабинет специалиста",
     toSelf: "Моё пространство",
-    nav: { overview: "Обзор", schedule: "Расписание", clients: "Клиенты", invites: "Приглашения", profile: "Анкета" },
+    nav: { overview: "Обзор", schedule: "Расписание", messages: "Сообщения", clients: "Клиенты", invites: "Приглашения", profile: "Анкета" },
     navTagline: "Спокойная работа с клиентами. Решения всегда за вами.",
     status: {
       draft: "Черновик",
@@ -136,7 +136,7 @@ export const proMessages = defineMessages({
   kk: {
     cabinet: "Маман кабинеті",
     toSelf: "Менің кеңістігім",
-    nav: { overview: "Шолу", schedule: "Кесте", clients: "Клиенттер", invites: "Шақырулар", profile: "Сауалнама" },
+    nav: { overview: "Шолу", schedule: "Кесте", messages: "Хабарламалар", clients: "Клиенттер", invites: "Шақырулар", profile: "Сауалнама" },
     navTagline: "Клиенттермен тыныш жұмыс. Шешім әрқашан сізде.",
     status: {
       draft: "Жоба",
@@ -267,7 +267,7 @@ export const proMessages = defineMessages({
   en: {
     cabinet: "Specialist workspace",
     toSelf: "My space",
-    nav: { overview: "Overview", schedule: "Schedule", clients: "Clients", invites: "Invites", profile: "Profile" },
+    nav: { overview: "Overview", schedule: "Schedule", messages: "Messages", clients: "Clients", invites: "Invites", profile: "Profile" },
     navTagline: "Calm work with clients. Decisions are always yours.",
     status: {
       draft: "Draft",
