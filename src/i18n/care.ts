@@ -69,7 +69,7 @@ export const careMessages = defineMessages<{
   ru: {
     navItem: "Психолог",
     scopes: {
-      wellbeing: { title: "Самочувствие", text: "Ваши отметки настроения и самооценки, их динамика" },
+      wellbeing: { title: "Самочувствие", text: "Отметки настроения, энергии и сна с заметками, колесо баланса и их динамика" },
       goals: { title: "Цели", text: "Цели, которые вы ставите, и отметки о прогрессе" },
       journal: { title: "Дневник", text: "Записи дневника" },
       ai_chats: { title: "Разговоры с ИИ", text: "Переписка с ИИ-собеседником в «Опоре»" },
@@ -150,13 +150,13 @@ export const careMessages = defineMessages<{
       "session.cancelled": "Встреча отменена",
       "session.completed": "Встреча завершена",
     },
-    whatViewed: { card: "карточку", analytics: "аналитику", journal: "дневник", ai_chats: "разговоры с ИИ" },
+    whatViewed: { card: "карточку", wellbeing: "самочувствие", goals: "цели", analytics: "аналитику", journal: "дневник", ai_chats: "разговоры с ИИ" },
     by: { you: "вы", psychologist: "специалист", client: "клиент", admin: "администратор" },
   },
   kk: {
     navItem: "Психолог",
     scopes: {
-      wellbeing: { title: "Көңіл күй", text: "Көңіл күй белгілеріңіз бен өзін-өзі бағалау, олардың динамикасы" },
+      wellbeing: { title: "Көңіл күй", text: "Көңіл күй, қуат және ұйқы белгілері жазбаларымен, теңгерім дөңгелегі және олардың динамикасы" },
       goals: { title: "Мақсаттар", text: "Қойған мақсаттарыңыз және ілгерілеу белгілері" },
       journal: { title: "Күнделік", text: "Күнделік жазбалары" },
       ai_chats: { title: "ЖИ-мен әңгімелер", text: "«Опорадағы» ЖИ-әңгімелесушімен хат алмасу" },
@@ -237,13 +237,13 @@ export const careMessages = defineMessages<{
       "session.cancelled": "Кездесу болдырылмады",
       "session.completed": "Кездесу аяқталды",
     },
-    whatViewed: { card: "картаны", analytics: "аналитиканы", journal: "күнделікті", ai_chats: "ЖИ-мен әңгімелерді" },
+    whatViewed: { card: "картаны", wellbeing: "көңіл күйді", goals: "мақсаттарды", analytics: "аналитиканы", journal: "күнделікті", ai_chats: "ЖИ-мен әңгімелерді" },
     by: { you: "сіз", psychologist: "маман", client: "клиент", admin: "әкімші" },
   },
   en: {
     navItem: "Psychologist",
     scopes: {
-      wellbeing: { title: "Wellbeing", text: "Your mood check-ins and self-ratings, and how they change" },
+      wellbeing: { title: "Wellbeing", text: "Mood, energy and sleep check-ins with notes, the balance wheel, and how they change" },
       goals: { title: "Goals", text: "Goals you set and progress notes" },
       journal: { title: "Journal", text: "Journal entries" },
       ai_chats: { title: "AI conversations", text: "Your conversations with the AI companion in Opora" },
@@ -324,7 +324,7 @@ export const careMessages = defineMessages<{
       "session.cancelled": "Session cancelled",
       "session.completed": "Session completed",
     },
-    whatViewed: { card: "your card", analytics: "insights", journal: "journal", ai_chats: "AI conversations" },
+    whatViewed: { card: "your card", wellbeing: "wellbeing", goals: "goals", analytics: "insights", journal: "journal", ai_chats: "AI conversations" },
     by: { you: "you", psychologist: "specialist", client: "client", admin: "administrator" },
   },
 });

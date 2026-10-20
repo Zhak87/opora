@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { SCOPES, auditFor, myClients, myPsychologist } from "@/lib/pro";
 import { listSessions } from "@/lib/sessions";
+import { clientAssessments, clientCheckins, clientGoals, periodRange, toPeriod } from "@/lib/wellbeing";
+import { wellbeingMessages } from "@/i18n/wellbeing";
+import { BalancePanel, GoalList, TrendPanel } from "@/components/wellbeing/Panels";
 import { scheduleMessages } from "@/i18n/schedule";
 import { SessionList } from "@/components/schedule/SessionList";
 import { NewSessionForm } from "@/components/schedule/ProForms";
@@ -21,8 +24,9 @@ import { BackIcon, CheckIcon } from "@/components/icons";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function ClientCard({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientCard({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ p?: string }> }) {
   const { id } = await params;
+  const period = toPeriod((await searchParams).p);
   if (!UUID.test(id)) notFound();
   const { supabase, user } = await requireUser();
   const locale = await getLocale();
@@ -37,6 +41,20 @@ export default async function ClientCard({ params }: { params: Promise<{ id: str
     myPsychologist(supabase, user!.id),
     listSessions(supabase, { psychologist: user!.id, client: id }),
   ]);
+  const range = periodRange(period, me!.timezone);
+  const canWell = client.scopes.includes("wellbeing");
+  const canGoals = client.scopes.includes("goals");
+  const [checkins, assessments, goals] = await Promise.all([
+    canWell ? clientCheckins(supabase, id, range.prevFrom) : null,
+    canWell ? clientAssessments(supabase, id) : null,
+    canGoals ? clientGoals(supabase, id) : null,
+  ]);
+  // Просмотр данных по согласию тоже попадает в журнал клиента.
+  await Promise.all([
+    checkins && supabase.rpc("log_client_view", { p_client: id, p_what: "wellbeing" }),
+    goals && supabase.rpc("log_client_view", { p_client: id, p_what: "goals" }),
+  ]);
+  const wm = wellbeingMessages[locale];
   const sm = scheduleMessages[locale].pro;
   const now = Date.now();
   const upcoming = sessions.filter((s) => s.status === "scheduled" && new Date(s.ends_at).getTime() > now);
@@ -79,6 +97,26 @@ export default async function ClientCard({ params }: { params: Promise<{ id: str
                 );
               })}
             </ul>
+          </Card>
+          <Card className="p-6 sm:p-7">
+            {checkins ? (
+              <TrendPanel rows={checkins} period={period} from={range.from} days={range.days} locale={locale} href={(p) => `/pro/clients/${id}${p !== 30 ? `?p=${p}` : ""}`} />
+            ) : (
+              <>
+                <h2 className="text-[15px] font-medium text-ink">{wm.pro.wellbeing}</h2>
+                <p className="mt-2 text-sm text-ink-faint">{wm.pro.notShared}</p>
+              </>
+            )}
+          </Card>
+          {assessments && assessments.length > 0 && (
+            <Card className="p-6 sm:p-7">
+              <h2 className="mb-4 text-[15px] font-medium text-ink">{wm.pro.balance}</h2>
+              <BalancePanel list={assessments} locale={locale} />
+            </Card>
+          )}
+          <Card className="p-6 sm:p-7">
+            <h2 className="mb-4 text-[15px] font-medium text-ink">{wm.pro.goals}</h2>
+            {goals ? goals.length ? <GoalList goals={goals} locale={locale} /> : <p className="text-sm text-ink-faint">{wm.pro.noGoals}</p> : <p className="text-sm text-ink-faint">{wm.pro.notShared}</p>}
           </Card>
           <Card className="p-6 sm:p-7">
             <h2 className="mb-4 text-[15px] font-medium text-ink">{sm.upcomingForClient}</h2>
