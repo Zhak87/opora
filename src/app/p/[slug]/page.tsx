@@ -5,6 +5,8 @@ import { getLocale } from "@/i18n/server";
 import { careMessages } from "@/i18n/care";
 import { PublicShell } from "@/components/pro/PublicShell";
 import { PsychologistProfile } from "@/components/pro/PsychologistProfile";
+import { ButtonLink } from "@/components/ui";
+import { scheduleMessages } from "@/i18n/schedule";
 
 // Публичный профиль психолога. Гость видит только опубликованные анкеты (правило в базе),
 // сам специалист — свою в любом статусе, как предпросмотр.
@@ -21,7 +23,15 @@ export default async function PublicProfile({ params }: { params: Promise<{ slug
       {user?.id === p.user_id && p.status !== "approved" && (
         <p className="mb-4 rounded-2xl bg-mist/60 px-5 py-3 text-sm text-sky-deep">{careMessages[locale].invite.ownInvite}</p>
       )}
-      <PsychologistProfile p={p} locale={locale} />
+      <PsychologistProfile
+        p={p}
+        locale={locale}
+        action={
+          p.status === "approved" && p.accepting_clients && user?.id !== p.user_id ? (
+            <ButtonLink href={`/p/${p.slug}/book`}>{scheduleMessages[locale].catalog.book}</ButtonLink>
+          ) : null
+        }
+      />
     </PublicShell>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GridIcon, UsersIcon, LinkIcon, IdIcon, HomeIcon } from "../icons";
+import { GridIcon, UsersIcon, LinkIcon, IdIcon, HomeIcon, CalendarIcon } from "../icons";
 import { Orb } from "../Orb";
 import { useMsg } from "@/i18n/client";
 import { proMessages } from "@/i18n/pro";
@@ -10,12 +10,16 @@ import { common } from "@/i18n/common";
 
 const ITEMS = [
   { href: "/pro", key: "overview", Icon: GridIcon },
+  { href: "/pro/schedule", key: "schedule", Icon: CalendarIcon },
   { href: "/pro/clients", key: "clients", Icon: UsersIcon },
   { href: "/pro/invites", key: "invites", Icon: LinkIcon },
   { href: "/pro/profile", key: "profile", Icon: IdIcon },
 ] as const;
 
-const isActive = (path: string, href: string) => (href === "/pro" ? path === "/pro" : path === href || path.startsWith(href + "/"));
+const isActive = (path: string, href: string) =>
+  href === "/pro"
+    ? path === "/pro"
+    : path === href || path.startsWith(href + "/") || (href === "/pro/schedule" && path.startsWith("/pro/sessions/"));
 
 // Навигация кабинета специалиста: своя, отдельная от личного пространства.
 export function ProNav() {

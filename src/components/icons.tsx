@@ -83,3 +83,6 @@ export const CheckIcon = ({ className }: P) => (
 export const CopyIcon = ({ className }: P) => (
   <svg {...base} className={className}><rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" /></svg>
 );
+export const CalendarIcon = ({ className }: P) => (
+  <svg {...base} className={className}><rect x="4.5" y="5.5" width="15" height="14" rx="3" /><path d="M8.5 3.5v4M15.5 3.5v4M4.5 10h15" /></svg>
+);

@@ -8,6 +8,10 @@ import { careMessages } from "@/i18n/care";
 import { Avatar, Chip, Stat, StatusPill } from "@/components/pro/bits";
 import { ArrowIcon } from "@/components/icons";
 import { buttonStyles } from "@/components/ui";
+import { listSessions } from "@/lib/sessions";
+import { timeOf, dayLabel } from "@/lib/time";
+import { INTL } from "@/i18n/config";
+import { scheduleMessages } from "@/i18n/schedule";
 
 export default async function ProOverview() {
   const { supabase, user } = await requireUser();
@@ -15,10 +19,14 @@ export default async function ProOverview() {
   const m = proMessages[locale];
   const scopes = careMessages[locale].scopes;
   const me = (await myPsychologist(supabase, user!.id))!;
-  const [clients, { data: invites }] = await Promise.all([
+  const sm = scheduleMessages[locale];
+  const [clients, { data: invites }, upcoming] = await Promise.all([
     myClients(supabase, me.user_id),
     supabase.from("invites").select("id, views").eq("psychologist_id", me.user_id),
+    listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: new Date(Date.now() - 60 * 60 * 1000).toISOString() }, 5),
   ]);
+  const names = Object.fromEntries(clients.map((c) => [c.link.client_id, c.name ?? m.clients.noName]));
+  const requests = clients.filter((c) => c.link.status === "pending");
   const active = clients.filter((c) => c.link.status === "active");
   const views = (invites ?? []).reduce((sum, i) => sum + (i.views ?? 0), 0);
   const fromInvites = clients.filter((c) => c.link.source === "invite").length;
@@ -54,6 +62,44 @@ export default async function ProOverview() {
         <Stat value={active.length} label={m.overview.activeClients(active.length)} tone="bg-gradient-to-br from-paper to-sage-soft/70" />
         <Stat value={views} label={m.overview.invitesViews(views)} tone="bg-gradient-to-br from-paper to-mist/70" />
         <Stat value={fromInvites} label={m.overview.fromInvites(fromInvites)} tone="bg-gradient-to-br from-paper to-sand/80" />
+      </section>
+
+      {requests.length > 0 && (
+        <Link
+          href="/pro/schedule"
+          className="group mb-6 flex items-center gap-4 rounded-[24px] border border-sky/40 bg-mist/60 px-5 py-4 transition hover:bg-mist"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper font-serif text-lg text-sky-deep">{requests.length}</span>
+          <span className="flex-1 text-[15px] text-ink">{sm.pro.requests}</span>
+          <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+        </Link>
+      )}
+
+      <section className="mb-10">
+        <div className="mb-3 flex items-baseline justify-between px-1">
+          <h2 className="text-[15px] text-ink-soft">{sm.care.upcoming}</h2>
+          <Link href="/pro/schedule" className="text-sm text-ink-faint hover:text-ink">
+            {sm.pro.title}
+          </Link>
+        </div>
+        {upcoming.length ? (
+          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-line/70 bg-paper/75">
+            {upcoming.map((s) => (
+              <li key={s.id}>
+                <Link href={`/pro/sessions/${s.id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">
+                  <span className="w-14 shrink-0 font-serif text-[20px] text-ink">{timeOf(s.starts_at, me.timezone, INTL[locale])}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] text-ink">{names[s.client_id] ?? m.clients.noName}</span>
+                    <span className="block text-xs text-ink-faint">{dayLabel(s.starts_at, me.timezone, locale)}</span>
+                  </span>
+                  <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm text-ink-soft">{sm.care.noUpcoming}</p>
+        )}
       </section>
 
       <section className="mb-10">

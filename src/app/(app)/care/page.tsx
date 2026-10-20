@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
 import { SCOPES, auditFor, myCare } from "@/lib/pro";
 import { endLink, setConsent } from "@/lib/pro-actions";
-import { INTL } from "@/i18n/config";
+import { INTL, type Locale } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
 import { careMessages } from "@/i18n/care";
 import { proLabels } from "@/i18n/pro";
@@ -11,15 +11,31 @@ import { Avatar } from "@/components/pro/bits";
 import { AuditList } from "@/components/pro/AuditList";
 import { ConfirmForm } from "@/components/ConfirmForm";
 import { HeartHandIcon, ShieldIcon } from "@/components/icons";
+import { SessionList } from "@/components/schedule/SessionList";
+import { listSessions, type Session } from "@/lib/sessions";
+import { getTimeZone } from "@/lib/tz";
+import { scheduleMessages } from "@/i18n/schedule";
+import { buttonStyles } from "@/components/ui";
 
 // «Мой психолог»: с кем человек работает и что разрешил видеть. Каждое разрешение выключается одним касанием.
-export default async function CarePage({ searchParams }: { searchParams: Promise<{ joined?: string; ended?: string }> }) {
+export default async function CarePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ joined?: string; ended?: string; booked?: string; rescheduled?: string; cancelled?: string }>;
+}) {
   const sp = await searchParams;
   const { supabase, user } = await requireUser();
   const locale = await getLocale();
   const m = careMessages[locale];
   const labels = proLabels[locale];
-  const [care, log] = await Promise.all([myCare(supabase, user!.id), auditFor(supabase, { client: user!.id }, 30)]);
+  const sm = scheduleMessages[locale];
+  const tz = await getTimeZone();
+  const [care, log, sessions] = await Promise.all([
+    myCare(supabase, user!.id),
+    auditFor(supabase, { client: user!.id }, 30),
+    listSessions(supabase, { client: user!.id, from: new Date(Date.now() - 90 * 86_400_000).toISOString() }),
+  ]);
+  const now = Date.now();
 
   return (
     <>
@@ -27,6 +43,9 @@ export default async function CarePage({ searchParams }: { searchParams: Promise
       <div className="stagger space-y-5">
         {sp.ended && <Notice>{m.care.ended}</Notice>}
         {sp.joined && <Notice>{m.care.joined}</Notice>}
+        {sp.booked && <Notice>{sm.care.booked}</Notice>}
+        {sp.rescheduled && <Notice>{sm.care.rescheduled}</Notice>}
+        {sp.cancelled && <Notice>{sm.care.cancelled}</Notice>}
 
         {care.length === 0 && (
           <Card className="overflow-hidden">
@@ -37,6 +56,9 @@ export default async function CarePage({ searchParams }: { searchParams: Promise
               <h2 className="mt-5 font-serif text-[26px] leading-snug text-ink">{m.care.emptyTitle}</h2>
               <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-soft">{m.care.emptyText}</p>
               <p className="mt-3 text-sm text-ink-faint">{m.care.emptyHint}</p>
+              <Link href="/specialists" className={`${buttonStyles.soft} mt-6`}>
+                {sm.catalog.suggestLink}
+              </Link>
             </div>
           </Card>
         )}
@@ -63,6 +85,30 @@ export default async function CarePage({ searchParams }: { searchParams: Promise
                   {m.invite.open}
                 </Link>
               )}
+            </div>
+
+            <div className="border-b border-line/60 p-6 sm:p-7">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="text-[15px] font-medium text-ink">{sm.care.upcoming}</h3>
+                {p && (
+                  <Link href={`/p/${p.slug}/book`} className={`${buttonStyles.primary} h-10 px-5 text-sm`}>
+                    {sm.care.bookMore}
+                  </Link>
+                )}
+              </div>
+              <SessionList
+                sessions={sessions.filter((x) => x.psychologist_id === link.psychologist_id && x.status === "scheduled" && Date.parse(x.ends_at) > now)}
+                tz={tz}
+                locale={locale}
+                empty={sm.care.noUpcoming}
+                manage
+              />
+              <PastSessions
+                sessions={sessions.filter((x) => x.psychologist_id === link.psychologist_id && (x.status !== "scheduled" || Date.parse(x.ends_at) <= now)).reverse()}
+                title={sm.care.past}
+                tz={tz}
+                locale={locale}
+              />
             </div>
 
             <div className="p-6 sm:p-7">
@@ -118,5 +164,19 @@ export default async function CarePage({ searchParams }: { searchParams: Promise
         )}
       </div>
     </>
+  );
+}
+
+// Прошедшие встречи свёрнуты, но если у последней есть итоги или задачи, список открыт сразу.
+function PastSessions({ sessions, title, tz, locale }: { sessions: Session[]; title: string; tz: string; locale: Locale }) {
+  if (!sessions.length) return null;
+  const open = Boolean(sessions[0].summary || sessions[0].tasks || sessions[0].cancel_reason);
+  return (
+    <details className="group mt-5" open={open}>
+      <summary className="cursor-pointer list-none text-sm text-ink-soft hover:text-ink">{title}</summary>
+      <div className="mt-3">
+        <SessionList sessions={sessions} tz={tz} locale={locale} empty="" />
+      </div>
+    </details>
   );
 }

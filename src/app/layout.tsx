@@ -5,6 +5,8 @@ import { MusicProvider } from "@/components/Music";
 import { LocaleProvider } from "@/i18n/client";
 import { getLocale } from "@/i18n/server";
 import { common } from "@/i18n/common";
+import { TimezoneCookie } from "@/components/TimezoneCookie";
+import { savedTimeZone } from "@/lib/tz";
 
 const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "cyrillic"] });
 const lora = Lora({ variable: "--font-lora", subsets: ["latin", "cyrillic"], style: ["normal", "italic"] });
@@ -27,11 +29,13 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale();
+  const tz = await savedTimeZone();
   return (
     <html lang={locale}>
       <body className={`${manrope.variable} ${lora.variable} ambient min-h-dvh`}>
         <LocaleProvider locale={locale}>
           <MusicProvider>{children}</MusicProvider>
+          <TimezoneCookie current={tz} />
         </LocaleProvider>
       </body>
     </html>

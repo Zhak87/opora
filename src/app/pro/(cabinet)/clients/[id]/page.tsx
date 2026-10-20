@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
-import { SCOPES, auditFor, myClients } from "@/lib/pro";
+import { SCOPES, auditFor, myClients, myPsychologist } from "@/lib/pro";
+import { listSessions } from "@/lib/sessions";
+import { scheduleMessages } from "@/i18n/schedule";
+import { SessionList } from "@/components/schedule/SessionList";
+import { NewSessionForm } from "@/components/schedule/ProForms";
 import { endLink } from "@/lib/pro-actions";
 import { relativeDate } from "@/lib/format";
 import { getLocale } from "@/i18n/server";
@@ -27,7 +31,15 @@ export default async function ClientCard({ params }: { params: Promise<{ id: str
   if (!client) notFound();
   // Сам факт просмотра попадает в журнал, который видит клиент.
   await supabase.rpc("log_client_view", { p_client: id, p_what: "card" });
-  const log = await auditFor(supabase, { client: id, psychologist: user!.id }, 20);
+  const [log, me, sessions] = await Promise.all([
+    auditFor(supabase, { client: id, psychologist: user!.id }, 20),
+    myPsychologist(supabase, user!.id),
+    listSessions(supabase, { psychologist: user!.id, client: id }),
+  ]);
+  const sm = scheduleMessages[locale].pro;
+  const now = Date.now();
+  const upcoming = sessions.filter((s) => s.status === "scheduled" && new Date(s.ends_at).getTime() > now);
+  const past = sessions.filter((s) => !upcoming.includes(s)).reverse();
 
   return (
     <>
@@ -63,6 +75,14 @@ export default async function ClientCard({ params }: { params: Promise<{ id: str
                 );
               })}
             </ul>
+          </Card>
+          <Card className="p-6 sm:p-7">
+            <h2 className="mb-4 text-[15px] font-medium text-ink">{sm.upcomingForClient}</h2>
+            <SessionList sessions={[...upcoming, ...past]} tz={me!.timezone} locale={locale} empty={sm.noSessions} href={(s) => `/pro/sessions/${s.id}`} />
+            <div className="mt-6 border-t border-line/60 pt-5">
+              <p className="mb-3 text-sm text-ink-soft">{sm.newSession}</p>
+              <NewSessionForm clients={[{ id, name: client.name ?? m.noName }]} tz={me!.timezone} minutes={me!.session_minutes} formats={me!.formats} />
+            </div>
           </Card>
           <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm leading-relaxed text-ink-soft">{m.soon}</p>
         </div>

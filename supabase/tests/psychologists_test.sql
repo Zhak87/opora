@@ -30,7 +30,7 @@ insert into public.admins (user_id) values ('00000000-0000-0000-0000-00000000000
 
 /* Анкета */
 select pg_temp.act_as('00000000-0000-0000-0000-00000000000a');
-insert into public.psychologists (user_id, slug, full_name, status) values ('00000000-0000-0000-0000-00000000000a', 'anna', '', 'approved');
+insert into public.psychologists (user_id, slug, full_name, status) values ('00000000-0000-0000-0000-00000000000a', 'pgtap-anna', '', 'approved');
 select is((select status from public.psychologists where user_id = '00000000-0000-0000-0000-00000000000a'), 'draft', 'новая анкета всегда черновик, даже если прислать approved');
 
 update public.psychologists set status = 'approved' where user_id = '00000000-0000-0000-0000-00000000000a';
@@ -45,18 +45,18 @@ select is(public.submit_psychologist(), 'pending', 'полная анкета у
 select throws_ok($$ select public.review_psychologist('00000000-0000-0000-0000-00000000000a', 'approved') $$, 'P0001', 'forbidden', 'психолог не может одобрить себя');
 
 select pg_temp.act_as_anon();
-select is((select count(*)::int from public.psychologists), 0, 'гость не видит анкету на проверке');
+select is((select count(*)::int from public.psychologists where user_id = '00000000-0000-0000-0000-00000000000a'), 0, 'гость не видит анкету на проверке');
 
 select pg_temp.act_as('00000000-0000-0000-0000-00000000000d');
 select lives_ok($$ select public.review_psychologist('00000000-0000-0000-0000-00000000000a', 'approved', 'Документы проверены') $$, 'администратор одобряет');
 
 select pg_temp.act_as_anon();
-select is((select slug from public.psychologists), 'anna', 'гость видит опубликованную анкету');
+select is((select slug from public.psychologists where user_id = '00000000-0000-0000-0000-00000000000a'), 'pgtap-anna', 'гость видит опубликованную анкету');
 select throws_ok($$ insert into public.invites (psychologist_id, code) values ('00000000-0000-0000-0000-00000000000a', 'guestcode1') $$, '42501', null, 'гость не создаёт приглашения');
 
 -- Психолог B: черновик, без проверки
 select pg_temp.act_as('00000000-0000-0000-0000-00000000000b');
-insert into public.psychologists (user_id, slug, full_name) values ('00000000-0000-0000-0000-00000000000b', 'boris', 'Борис');
+insert into public.psychologists (user_id, slug, full_name) values ('00000000-0000-0000-0000-00000000000b', 'pgtap-boris', 'Борис');
 insert into public.invites (code) values ('borisinvite1');
 select is((select count(*)::int from public.invite_info('borisinvite1')), 0, 'приглашение непроверенного специалиста не работает');
 

@@ -5,7 +5,7 @@ export const proMessages = defineMessages({
   ru: {
     cabinet: "Кабинет специалиста",
     toSelf: "Моё пространство",
-    nav: { overview: "Обзор", clients: "Клиенты", invites: "Приглашения", profile: "Анкета" },
+    nav: { overview: "Обзор", schedule: "Расписание", clients: "Клиенты", invites: "Приглашения", profile: "Анкета" },
     navTagline: "Спокойная работа с клиентами. Решения всегда за вами.",
     status: {
       draft: "Черновик",
@@ -49,7 +49,7 @@ export const proMessages = defineMessages({
       noClients: "Пока нет клиентов. Поделитесь ссылкой-приглашением, когда анкета пройдёт проверку.",
       noClientsApproved: "Пока нет клиентов. Создайте ссылку-приглашение и отправьте её клиенту.",
       allClients: "Все клиенты",
-      soon: "Скоро здесь появятся ближайшие встречи и новые сообщения.",
+      soon: "Скоро здесь появятся новые сообщения.",
       publicLink: "Публичный профиль",
     },
     profile: {
@@ -127,7 +127,7 @@ export const proMessages = defineMessages({
       sharedTitle: "Что клиент разрешил видеть",
       notShared: "не разрешено",
       shared: "разрешено",
-      soon: "Самочувствие, цели, сообщения, встречи и ИИ-аналитика появятся здесь на следующих этапах.",
+      soon: "Самочувствие, цели, сообщения и ИИ-аналитика появятся здесь на следующих этапах.",
       end: "Завершить работу",
       endConfirm: "Завершить работу с клиентом? Доступ к его данным пропадёт сразу.",
       history: "Журнал",
@@ -136,7 +136,7 @@ export const proMessages = defineMessages({
   kk: {
     cabinet: "Маман кабинеті",
     toSelf: "Менің кеңістігім",
-    nav: { overview: "Шолу", clients: "Клиенттер", invites: "Шақырулар", profile: "Сауалнама" },
+    nav: { overview: "Шолу", schedule: "Кесте", clients: "Клиенттер", invites: "Шақырулар", profile: "Сауалнама" },
     navTagline: "Клиенттермен тыныш жұмыс. Шешім әрқашан сізде.",
     status: {
       draft: "Жоба",
@@ -180,7 +180,7 @@ export const proMessages = defineMessages({
       noClients: "Әзірге клиент жоқ. Сауалнама тексерілгеннен кейін шақыру сілтемесімен бөлісіңіз.",
       noClientsApproved: "Әзірге клиент жоқ. Шақыру сілтемесін жасап, клиентке жіберіңіз.",
       allClients: "Барлық клиенттер",
-      soon: "Жақында мұнда алдағы кездесулер мен жаңа хабарламалар шығады.",
+      soon: "Жақында мұнда жаңа хабарламалар шығады.",
       publicLink: "Жария профиль",
     },
     profile: {
@@ -258,7 +258,7 @@ export const proMessages = defineMessages({
       sharedTitle: "Клиент нені көруге рұқсат берді",
       notShared: "рұқсат жоқ",
       shared: "рұқсат бар",
-      soon: "Көңіл күй, мақсаттар, хабарламалар, кездесулер және ЖИ-аналитика келесі кезеңдерде осында шығады.",
+      soon: "Көңіл күй, мақсаттар, хабарламалар және ЖИ-аналитика келесі кезеңдерде осында шығады.",
       end: "Жұмысты аяқтау",
       endConfirm: "Клиентпен жұмысты аяқтайсыз ба? Оның деректеріне қолжетімділік бірден жойылады.",
       history: "Журнал",
@@ -267,7 +267,7 @@ export const proMessages = defineMessages({
   en: {
     cabinet: "Specialist workspace",
     toSelf: "My space",
-    nav: { overview: "Overview", clients: "Clients", invites: "Invites", profile: "Profile" },
+    nav: { overview: "Overview", schedule: "Schedule", clients: "Clients", invites: "Invites", profile: "Profile" },
     navTagline: "Calm work with clients. Decisions are always yours.",
     status: {
       draft: "Draft",
@@ -311,7 +311,7 @@ export const proMessages = defineMessages({
       noClients: "No clients yet. Share an invite link once your profile is approved.",
       noClientsApproved: "No clients yet. Create an invite link and send it to a client.",
       allClients: "All clients",
-      soon: "Upcoming sessions and new messages will appear here soon.",
+      soon: "New messages will appear here soon.",
       publicLink: "Public profile",
     },
     profile: {
@@ -389,7 +389,7 @@ export const proMessages = defineMessages({
       sharedTitle: "What the client allows you to see",
       notShared: "not allowed",
       shared: "allowed",
-      soon: "Wellbeing, goals, messages, sessions and AI insights will appear here in the next stages.",
+      soon: "Wellbeing, goals, messages and AI insights will appear here in the next stages.",
       end: "End work",
       endConfirm: "End work with this client? Access to their data stops immediately.",
       history: "Log",
