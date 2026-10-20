@@ -8,6 +8,7 @@ import { common } from "@/i18n/common";
 import { welcomeMessages } from "@/i18n/welcome";
 import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
+import { profileMessages } from "@/i18n/profile";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
@@ -16,6 +17,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const c = await getMsg(common);
   const legal = await getMsg(legalMessages);
   const a = await getMsg(aboutMessages);
+  const pm = await getMsg(profileMessages);
   return (
     <div className="relative flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
@@ -66,6 +68,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <p className="mt-2 flex justify-center gap-4">
           <Link href="/privacy" className="hover:text-ink">{legal.links.privacy}</Link>
           <Link href="/terms" className="hover:text-ink">{legal.links.terms}</Link>
+          <Link href="/pro/join" className="hover:text-ink">{pm.proTitle}</Link>
         </p>
       </footer>
     </div>

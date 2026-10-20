@@ -133,7 +133,7 @@ export async function uploadDocument(_: State, formData: FormData): Promise<Stat
   const { supabase, user } = await authed();
   const m = proMessages[await getLocale()].profile;
   const file = formData.get("document");
-  if (!(file instanceof File) || !EXT[file.type] || file.size > 10 * 1024 * 1024 || file.size === 0) return { error: m.errors.file };
+  if (!(file instanceof File) || !EXT[file.type] || file.size > 4 * 1024 * 1024 || file.size === 0) return { error: m.errors.file };
   const safe = file.name.replace(/\.[^.]+$/, "").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 60) || "document";
   const path = `${user.id}/${Date.now()}-${safe}.${EXT[file.type]}`;
   const { error } = await supabase.storage.from("credentials").upload(path, file, { contentType: file.type });

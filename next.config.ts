@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
   experimental: {
     // Уже открытые разделы показываются из кэша браузера мгновенно, данные обновляются после изменений.
     staleTimes: { dynamic: 30, static: 180 },
+    // По умолчанию Next.js принимает в действиях не больше 1 МБ: документы психолога крупнее. Vercel сам не пропускает больше 4,5 МБ.
+    serverActions: { bodySizeLimit: "4mb" },
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
