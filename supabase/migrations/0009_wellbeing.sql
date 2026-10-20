@@ -79,6 +79,8 @@ create policy "own goal updates insert" on public.goal_updates for insert to aut
   with check (user_id = (select auth.uid()) and exists (select 1 from public.goals g where g.id = goal_id and g.user_id = (select auth.uid())));
 create policy "own goal updates delete" on public.goal_updates for delete to authenticated using (user_id = (select auth.uid()));
 
+revoke all on public.checkins, public.self_assessments, public.goals, public.goal_updates from anon;
+
 /* ---------- Чтение психологом ---------- */
 -- Психолог не получает прямого доступа к таблицам. Он читает данные клиента только через эти функции,
 -- которые проверяют активную связь и согласие на вид данных и пишут просмотр в журнал, видимый клиенту.

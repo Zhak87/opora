@@ -92,7 +92,7 @@ as $$
   select exists (
     select 1 from public.client_links l
     where l.client_id = client and l.psychologist_id = (select auth.uid()) and l.status in ('pending', 'active')
-  )
+  ) and public.psy_active((select auth.uid()))
 $$;
 drop policy "linked psychologist reads client profile" on public.profiles;
 create policy "linked psychologist reads client profile" on public.profiles

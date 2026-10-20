@@ -58,6 +58,7 @@ export type Link = {
   client_id: string;
   status: "pending" | "active" | "ended";
   source: "invite" | "catalog";
+  invite_id: string | null;
   created_at: string;
   activated_at: string | null;
   ended_at: string | null;
@@ -69,7 +70,7 @@ export type Grant = { link_id: string; scope: Scope; granted_at: string };
 export async function myCare(supabase: SupabaseClient, userId: string) {
   const { data: links } = await supabase
     .from("client_links")
-    .select("id, psychologist_id, client_id, status, source, created_at, activated_at, ended_at")
+    .select("id, psychologist_id, client_id, status, source, invite_id, created_at, activated_at, ended_at")
     .eq("client_id", userId)
     .in("status", ["pending", "active"])
     .order("created_at", { ascending: false });
@@ -107,7 +108,7 @@ export type ClientRow = { link: Link; name: string | null; scopes: Scope[] };
 export async function myClients(supabase: SupabaseClient, psychologistId: string, withEnded = false) {
   let q = supabase
     .from("client_links")
-    .select("id, psychologist_id, client_id, status, source, created_at, activated_at, ended_at")
+    .select("id, psychologist_id, client_id, status, source, invite_id, created_at, activated_at, ended_at")
     .eq("psychologist_id", psychologistId)
     .order("created_at", { ascending: false });
   if (!withEnded) q = q.in("status", ["pending", "active"]);

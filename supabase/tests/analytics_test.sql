@@ -1,7 +1,7 @@
 -- ИИ-аналитика и заметки психолога (pgTAP). Запуск: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(21);
 
 create function pg_temp.act_as(uid uuid) returns void language plpgsql as $$
 begin
@@ -50,6 +50,21 @@ select throws_ok($$ insert into public.ai_reports (psychologist_id, client_id, p
   '42501', null, 'напрямую отчёт не записать');
 insert into public.psychologist_notes (client_id, kind, body) values ('00000000-0000-0000-0000-0000000000c7', 'hypothesis', 'Возможно, тревога связана с работой');
 
+-- Второй клиент Анны и встреча с первым: заметку о втором нельзя привязать к встрече с первым
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values ('00000000-0000-0000-0000-0000000000d7', 'd-ai@test.local', '{"name":"Дана"}');
+insert into public.invites (psychologist_id, code) values ('00000000-0000-0000-0000-0000000000a7', 'pgtapai002');
+insert into public.sessions (id, psychologist_id, client_id, starts_at, ends_at) values
+  ('00000000-0000-0000-0000-00000000e5e7', '00000000-0000-0000-0000-0000000000a7', '00000000-0000-0000-0000-0000000000c7', now() + interval '1 day', now() + interval '1 day 50 minutes');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000d7');
+select public.accept_invite('pgtapai002', '{}', 'test');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a7');
+select lives_ok($$ insert into public.psychologist_notes (client_id, session_id, kind, body) values ('00000000-0000-0000-0000-0000000000c7', '00000000-0000-0000-0000-00000000e5e7', 'session', 'к встрече') $$,
+  'заметку можно привязать к встрече с этим клиентом');
+select throws_ok($$ insert into public.psychologist_notes (client_id, session_id, body) values ('00000000-0000-0000-0000-0000000000d7', '00000000-0000-0000-0000-00000000e5e7', 'x') $$,
+  '42501', null, 'нельзя привязать к встрече с другим клиентом');
+select throws_ok($$ update public.psychologist_notes set client_id = '00000000-0000-0000-0000-0000000000d7' $$, '42501', null, 'клиента у заметки не поменять');
+
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000c7');
 select is((select count(*)::int from public.psychologist_notes), 0, 'клиент не видит заметки психолога');
 select is((select count(*)::int from public.ai_reports), 0, 'и отчёты тоже');
@@ -57,6 +72,16 @@ select ok(exists (select 1 from public.audit_log where action = 'analytics.gener
 
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000b7');
 select throws_ok($$ insert into public.psychologist_notes (client_id, body) values ('00000000-0000-0000-0000-0000000000c7', 'x') $$, '42501', null, 'чужой психолог не пишет заметки о клиенте');
+
+-- Отстранённый специалист сразу теряет доступ к клиентам
+reset role;
+update public.psychologists set status = 'suspended' where user_id = '00000000-0000-0000-0000-0000000000a7';
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a7');
+select ok(not public.can_view('00000000-0000-0000-0000-0000000000c7', 'wellbeing'), 'приостановленный психолог не видит данных клиента');
+select throws_ok($$ select public.send_care_message('00000000-0000-0000-0000-0000000000c7', 'привет') $$, 'P0001', 'forbidden', 'и не пишет клиенту');
+select throws_ok($$ insert into public.psychologist_notes (client_id, body) values ('00000000-0000-0000-0000-0000000000c7', 'x') $$, '42501', null, 'и не добавляет заметки');
+reset role;
+update public.psychologists set status = 'approved' where user_id = '00000000-0000-0000-0000-0000000000a7';
 
 -- Отзыв согласия на аналитику прячет и старые отчёты
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000c7');

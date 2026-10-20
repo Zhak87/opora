@@ -22,11 +22,16 @@ create policy "notes own select" on public.psychologist_notes for select to auth
   using (psychologist_id = (select auth.uid()));
 create policy "notes own insert" on public.psychologist_notes for insert to authenticated
   with check (psychologist_id = (select auth.uid()) and public.is_my_client(client_id)
-    and (session_id is null or exists (select 1 from public.sessions s where s.id = session_id and s.psychologist_id = (select auth.uid()) and s.client_id = client_id)));
+    and (session_id is null or exists (select 1 from public.sessions s where s.id = psychologist_notes.session_id
+                                         and s.psychologist_id = (select auth.uid()) and s.client_id = psychologist_notes.client_id)));
 create policy "notes own update" on public.psychologist_notes for update to authenticated
   using (psychologist_id = (select auth.uid())) with check (psychologist_id = (select auth.uid()));
 create policy "notes own delete" on public.psychologist_notes for delete to authenticated
   using (psychologist_id = (select auth.uid()));
+-- Менять можно только текст и тип: привязку к клиенту и встрече после создания не трогаем.
+revoke all on public.psychologist_notes from anon;
+revoke update on public.psychologist_notes from authenticated;
+grant update (body, kind, updated_at) on public.psychologist_notes to authenticated;
 
 /* ---------- ИИ-отчёты ---------- */
 

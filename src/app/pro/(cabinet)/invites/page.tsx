@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { requireUser } from "@/lib/supabase/server";
-import { myPsychologist, siteOrigin } from "@/lib/pro";
+import { myClients, myPsychologist, siteOrigin } from "@/lib/pro";
+import { dashboardMessages } from "@/i18n/dashboard";
 import { revokeInvite } from "@/lib/pro-actions";
 import { relativeDate } from "@/lib/format";
 import { getLocale } from "@/i18n/server";
@@ -13,11 +14,23 @@ export default async function InvitesPage() {
   const locale = await getLocale();
   const m = proMessages[locale].invites;
   const me = (await myPsychologist(supabase, user!.id))!;
-  const [{ data: invites }, { data: links }] = await Promise.all([
+  const dm = dashboardMessages[locale];
+  const [{ data: invites }, all] = await Promise.all([
     supabase.from("invites").select("id, code, label, views, created_at, revoked_at").eq("psychologist_id", me.user_id).order("created_at", { ascending: false }),
-    supabase.from("client_links").select("invite_id").eq("psychologist_id", me.user_id).not("invite_id", "is", null),
+    myClients(supabase, me.user_id, true),
   ]);
-  const joined = (id: string) => (links ?? []).filter((l) => l.invite_id === id).length;
+  // Воронка по ссылкам: переходы → подключились → работают сейчас → делятся хотя бы одним видом данных.
+  const byInvite = all.filter((c) => c.link.invite_id);
+  const joined = (id: string) => byInvite.filter((c) => c.link.invite_id === id).length;
+  const activeBy = (id: string) => byInvite.filter((c) => c.link.invite_id === id && c.link.status === "active").length;
+  const totalViews = (invites ?? []).reduce((n, i) => n + (i.views ?? 0), 0);
+  const funnel = [
+    [dm.funnel.views, totalViews],
+    [dm.funnel.joined, byInvite.length],
+    [dm.funnel.active, byInvite.filter((c) => c.link.status === "active").length],
+    [dm.funnel.sharing, byInvite.filter((c) => c.link.status === "active" && c.scopes.length > 0).length],
+  ] as const;
+  const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
   const origin = siteOrigin(await headers());
 
   return (
@@ -28,6 +41,30 @@ export default async function InvitesPage() {
         <Card className="p-5 sm:p-6">
           <CreateInvite />
         </Card>
+
+        {(invites?.length ?? 0) > 0 && (
+          <Card className="p-5 sm:p-6">
+            <h2 className="mb-4 text-[15px] font-medium text-ink">{dm.funnel.title}</h2>
+            {totalViews ? (
+              <>
+                <ol className="space-y-2.5">
+                  {funnel.map(([label, n]) => (
+                    <li key={label} className="grid grid-cols-[7.5rem_1fr_2.5rem] items-center gap-3 text-sm sm:grid-cols-[10rem_1fr_3rem]">
+                      <span className="text-ink-soft">{label}</span>
+                      <span className="h-2.5 overflow-hidden rounded-full bg-sand/70">
+                        <span className="block h-full rounded-full bg-[#6250d6]" style={{ width: `${Math.max(n ? 2 : 0, pct(n, totalViews))}%` }} />
+                      </span>
+                      <span className="text-right font-medium text-ink">{n}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-4 text-sm text-ink-soft">{dm.funnel.conversion(pct(byInvite.length, totalViews))}</p>
+              </>
+            ) : (
+              <p className="text-sm text-ink-faint">{dm.funnel.noData}</p>
+            )}
+          </Card>
+        )}
 
         {invites?.length ? (
           <ul className="space-y-3">
@@ -40,13 +77,21 @@ export default async function InvitesPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[15px] font-medium text-ink">{inv.label || m.untitled}</p>
                       <p className="mt-1 truncate font-mono text-xs text-ink-faint">{url}</p>
-                      <p className="mt-2 flex gap-4 text-sm text-ink-soft">
+                      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft">
                         <span>
                           <b className="font-medium text-ink">{inv.views}</b> {m.views}
                         </span>
                         <span>
                           <b className="font-medium text-ink">{joined(inv.id)}</b> {m.joined}
                         </span>
+                        <span>
+                          <b className="font-medium text-ink">{activeBy(inv.id)}</b> {dm.invite.active}
+                        </span>
+                        {inv.views > 0 && (
+                          <span>
+                            <b className="font-medium text-ink">{pct(joined(inv.id), inv.views)}%</b> {dm.invite.conversion}
+                          </span>
+                        )}
                         <span className="text-ink-faint">{relativeDate(inv.created_at, locale)}</span>
                       </p>
                     </div>

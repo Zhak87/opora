@@ -76,6 +76,12 @@ create index client_links_client_idx on public.client_links (client_id, status);
 create index client_links_psychologist_idx on public.client_links (psychologist_id, status);
 alter table public.client_links enable row level security;
 
+-- Специалист не отстранён: приостановленная или отклонённая анкета сразу закрывает доступ к клиентам.
+create function public.psy_active(psychologist uuid)
+returns boolean
+language sql stable security definer set search_path = ''
+as $$ select exists (select 1 from public.psychologists p where p.user_id = psychologist and p.status not in ('suspended', 'rejected')) $$;
+
 -- Кто из специалистов работает с этим клиентом прямо сейчас.
 create function public.is_my_client(client uuid)
 returns boolean
@@ -84,7 +90,7 @@ as $$
   select exists (
     select 1 from public.client_links l
     where l.client_id = client and l.psychologist_id = (select auth.uid()) and l.status = 'active'
-  )
+  ) and public.psy_active((select auth.uid()))
 $$;
 
 -- Работает ли со мной этот психолог (активная связь).
@@ -158,7 +164,7 @@ as $$
       and l.status = 'active'
       and g.scope = data_scope
       and g.revoked_at is null
-  )
+  ) and public.psy_active((select auth.uid()))
 $$;
 
 /* ---------- Журнал важных действий ---------- */

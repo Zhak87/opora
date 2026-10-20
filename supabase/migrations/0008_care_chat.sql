@@ -45,7 +45,7 @@ begin
    where status in ('pending', 'active')
      and ((psychologist_id = me and client_id = p_to) or (client_id = me and psychologist_id = p_to))
    limit 1;
-  if l.id is null then raise exception 'forbidden'; end if;
+  if l.id is null or not public.psy_active(l.psychologist_id) then raise exception 'forbidden'; end if;
   -- Не больше 30 сообщений за минуту от одного человека.
   if (select count(*) from public.care_messages where sender_id = me and created_at > now() - interval '1 minute') >= 30 then
     raise exception 'too many';

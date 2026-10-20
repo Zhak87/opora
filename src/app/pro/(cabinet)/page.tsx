@@ -14,6 +14,7 @@ import { INTL } from "@/i18n/config";
 import { scheduleMessages } from "@/i18n/schedule";
 import { careNotices, lastMessages, markNotificationsRead, unreadByPeer } from "@/lib/care-chat";
 import { careChatMessages } from "@/i18n/care-chat";
+import { dashboardMessages } from "@/i18n/dashboard";
 
 export default async function ProOverview() {
   const { supabase, user } = await requireUser();
@@ -23,14 +24,20 @@ export default async function ProOverview() {
   const me = (await myPsychologist(supabase, user!.id))!;
   const sm = scheduleMessages[locale];
   const cm = careChatMessages[locale];
-  const [clients, { data: invites }, upcoming, notices, unread, last] = await Promise.all([
+  const dm = dashboardMessages[locale];
+  const now = Date.now();
+  const [clients, { data: invites }, upcoming, notices, unread, last, overdue, week] = await Promise.all([
     myClients(supabase, me.user_id),
     supabase.from("invites").select("id, views").eq("psychologist_id", me.user_id),
     listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: new Date(Date.now() - 60 * 60 * 1000).toISOString() }, 5),
     careNotices(supabase, { me: me.user_id, role: "pro", locale, tz: me.timezone, limit: 6 }),
     unreadByPeer(supabase),
     lastMessages(supabase, me.user_id),
+    // Прошедшие, но не завершённые встречи: клиент ждёт итогов.
+    listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], to: new Date(now - 60 * 60 * 1000).toISOString() }, 10),
+    listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: new Date(now).toISOString(), to: new Date(now + 7 * 86_400_000).toISOString() }, 200),
   ]);
+  const needSummary = overdue.filter((s) => Date.parse(s.ends_at) < now);
   // Уведомления показаны — отмечаем прочитанными; подсветка новых остаётся до следующего захода.
   if (notices.some((n) => n.fresh)) await markNotificationsRead(supabase, notices.filter((n) => n.fresh).map((n) => n.id));
   const names = Object.fromEntries(clients.map((c) => [c.link.client_id, c.name ?? m.clients.noName]));
@@ -67,8 +74,9 @@ export default async function ProOverview() {
         </div>
       </section>
 
-      <section className="mb-10 grid grid-cols-3 gap-2 sm:gap-4">
+      <section className="mb-10 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
         <Stat value={active.length} label={m.overview.activeClients(active.length)} tone="bg-gradient-to-br from-paper to-sage-soft/70" />
+        <Stat value={week.length} label={dm.week(week.length)} tone="bg-gradient-to-br from-paper to-lilac-soft/70" />
         <Stat value={views} label={m.overview.invitesViews(views)} tone="bg-gradient-to-br from-paper to-mist/70" />
         <Stat value={fromInvites} label={m.overview.fromInvites(fromInvites)} tone="bg-gradient-to-br from-paper to-sand/80" />
       </section>
@@ -82,6 +90,28 @@ export default async function ProOverview() {
           <span className="flex-1 text-[15px] text-ink">{sm.pro.requests}</span>
           <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
         </Link>
+      )}
+
+      {needSummary.length > 0 && (
+        <section className="mb-10">
+          <h2 className="mb-1 px-1 text-[15px] text-ink-soft">{dm.needSummary.title}</h2>
+          <p className="mb-3 px-1 text-xs leading-relaxed text-ink-faint">{dm.needSummary.hint}</p>
+          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-[#e5dcc9] bg-[#fbf6ea]/70">
+            {needSummary.map((s) => (
+              <li key={s.id}>
+                <Link href={`/pro/sessions/${s.id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] text-ink">{names[s.client_id] ?? m.clients.noName}</span>
+                    <span className="block text-xs text-ink-faint">
+                      {dayLabel(s.starts_at, me.timezone, locale)}, {timeOf(s.starts_at, me.timezone, INTL[locale])}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm text-sky-deep group-hover:text-ink">{dm.needSummary.action}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section className="mb-10">
