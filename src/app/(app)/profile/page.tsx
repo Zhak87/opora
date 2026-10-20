@@ -25,10 +25,11 @@ export default async function ProfilePage({
   const legal = legalMessages[locale];
   const a = aboutMessages[locale];
   const { supabase, user } = await requireUser();
-  const [{ data: profile }, { count: talks }, { count: notes }] = await Promise.all([
+  const [{ data: profile }, { count: talks }, { count: notes }, { count: pro }] = await Promise.all([
     supabase.from("profiles").select("name, created_at, voice").eq("id", user!.id).single(),
-    supabase.from("conversations").select("id", { count: "exact", head: true }),
-    supabase.from("journal_entries").select("id", { count: "exact", head: true }),
+    supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
+    supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
+    supabase.from("psychologists").select("user_id", { count: "exact", head: true }).eq("user_id", user!.id),
   ]);
   const since = new Date(profile?.created_at ?? Date.now()).toLocaleDateString(INTL[locale], {
     month: "long",
@@ -99,6 +100,16 @@ export default async function ProfilePage({
               {a.whatsapp}
             </a>
           </div>
+        </Card>
+
+        <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">
+          <div className="flex-1">
+            <h2 className="text-[15px] font-medium text-ink">{m.proTitle}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{pro ? m.proOwnText : m.proText}</p>
+          </div>
+          <Link href={pro ? "/pro" : "/pro/join"} className={`${pro ? buttonStyles.primary : buttonStyles.soft} shrink-0`}>
+            {pro ? m.proOpen : m.proJoin}
+          </Link>
         </Card>
 
         <Card className="p-6 sm:p-8">

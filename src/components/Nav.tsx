@@ -2,28 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon } from "./icons";
+import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon } from "./icons";
 import { Orb } from "./Orb";
 import { MusicToggle } from "./Music";
 import { Bell } from "./Bell";
 import { useMsg } from "@/i18n/client";
 import { common } from "@/i18n/common";
 
-const ITEMS = [
+const BASE = [
   { href: "/", key: "home", Icon: HomeIcon },
   { href: "/talk", key: "talk", Icon: TalkIcon },
   { href: "/journal", key: "journal", Icon: JournalIcon },
   { href: "/hope", key: "hope", Icon: HopeIcon },
   { href: "/profile", key: "profile", Icon: ProfileIcon },
 ] as const;
+// Пункт «Психолог» появляется, только когда человек работает со специалистом.
+const CARE = { href: "/care", key: "care", Icon: HeartHandIcon } as const;
 
 function isActive(path: string, href: string) {
   if (href === "/") return path === "/" || path.startsWith("/explore") || path.startsWith("/play") || path.startsWith("/course");
   return path === href || path.startsWith(href + "/");
 }
 
-export function Nav({ unread = 0 }: { unread?: number }) {
+export function Nav({ unread = 0, care = false, pro = false }: { unread?: number; care?: boolean; pro?: boolean }) {
   const path = usePathname();
+  const ITEMS = care ? [...BASE.slice(0, 4), CARE, BASE[4]] : BASE;
   const inChat = /^\/talk\/.+/.test(path);
   const m = useMsg(common);
 
@@ -55,6 +58,16 @@ export function Nav({ unread = 0 }: { unread?: number }) {
           })}
         </nav>
         <Bell unread={unread} withLabel className="mt-4 lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
+        {pro && (
+          <Link
+            href="/pro"
+            title={m.nav.pro}
+            className="mt-1.5 flex h-12 items-center gap-3 rounded-2xl px-3 text-lilac-deep transition hover:bg-lilac-soft/70 lg:px-3.5"
+          >
+            <GridIcon className="h-[22px] w-[22px] shrink-0" />
+            <span className="hidden text-[15px] lg:inline">{m.nav.pro}</span>
+          </Link>
+        )}
         <MusicToggle withLabel className="mt-auto lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
         <p className="mt-6 hidden px-3 text-xs leading-relaxed text-ink-faint lg:block">
           {m.navTagline}

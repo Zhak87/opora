@@ -1,8 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasConsent } from "@/lib/consent";
+import { safeNext } from "@/lib/safe-next";
 
-const PUBLIC_PATHS = ["/welcome", "/demo", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email"];
+const PUBLIC_PATHS = [
+  "/welcome", "/demo", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email",
+  // Открытые страницы специалистов: профиль, приглашение по ссылке, страница «Для психологов».
+  "/p", "/invite", "/pro/join",
+];
 
 export async function updateSession(request: NextRequest) {
   const { searchParams, pathname } = request.nextUrl;
@@ -55,10 +60,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && ["/welcome", "/demo", "/login", "/signup"].includes(path)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(new URL(safeNext(searchParams.get("next")), request.url));
   }
 
   // Кто зарегистрировался до появления согласия (или до новой версии политики), подтверждает его один раз.

@@ -32,7 +32,9 @@ function ResendForm({ email }: { email?: string }) {
 
 function LoginForm() {
   const [state, action] = useActionState(signIn, undefined);
-  const expired = useSearchParams().get("link") === "expired";
+  const params = useSearchParams();
+  const expired = params.get("link") === "expired";
+  const next = params.get("next") ?? "";
   const m = useMsg(authMessages);
   return (
     <>
@@ -47,6 +49,7 @@ function LoginForm() {
           </>
         )}
         <form action={action} className="space-y-4">
+          <input type="hidden" name="next" value={next} />
           <Field label={m.email} name="email" type="email" autoComplete="email" required />
           <Field label={m.password} name="password" type="password" autoComplete="current-password" required />
           {state?.error && <Notice tone="error">{state.error}</Notice>}
@@ -58,7 +61,7 @@ function LoginForm() {
         <Link href="/forgot" className="hover:text-ink">{m.login.forgot}</Link>
         <p>
           {m.login.firstTime}{" "}
-          <Link href="/signup" className="text-sky-deep hover:text-ink">{m.login.createAccount}</Link>
+          <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"} className="text-sky-deep hover:text-ink">{m.login.createAccount}</Link>
         </p>
       </div>
     </>

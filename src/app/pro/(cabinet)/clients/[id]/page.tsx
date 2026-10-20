@@ -1,0 +1,82 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireUser } from "@/lib/supabase/server";
+import { SCOPES, auditFor, myClients } from "@/lib/pro";
+import { endLink } from "@/lib/pro-actions";
+import { relativeDate } from "@/lib/format";
+import { getLocale } from "@/i18n/server";
+import { proMessages } from "@/i18n/pro";
+import { careMessages } from "@/i18n/care";
+import { common } from "@/i18n/common";
+import { Card } from "@/components/ui";
+import { Avatar } from "@/components/pro/bits";
+import { AuditList } from "@/components/pro/AuditList";
+import { ConfirmForm } from "@/components/ConfirmForm";
+import { BackIcon, CheckIcon } from "@/components/icons";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function ClientCard({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!UUID.test(id)) notFound();
+  const { supabase, user } = await requireUser();
+  const locale = await getLocale();
+  const m = proMessages[locale].clients;
+  const care = careMessages[locale];
+  const client = (await myClients(supabase, user!.id)).find((c) => c.link.client_id === id && c.link.status === "active");
+  if (!client) notFound();
+  // Сам факт просмотра попадает в журнал, который видит клиент.
+  await supabase.rpc("log_client_view", { p_client: id, p_what: "card" });
+  const log = await auditFor(supabase, { client: id, psychologist: user!.id }, 20);
+
+  return (
+    <>
+      <Link href="/pro/clients" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
+        <BackIcon className="h-4 w-4" /> {common[locale].back}
+      </Link>
+      <header className="mb-8 flex items-center gap-5">
+        <Avatar name={client.name ?? "?"} size={64} />
+        <div>
+          <p className="text-sm text-ink-soft">{m.card}</p>
+          <h1 className="font-serif text-[30px] leading-tight text-ink sm:text-[36px]">{client.name ?? m.noName}</h1>
+          <p className="text-sm text-ink-faint">{m.since(relativeDate(client.link.activated_at ?? client.link.created_at, locale))}</p>
+        </div>
+      </header>
+
+      <div className="stagger grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-5">
+          <Card className="p-6 sm:p-7">
+            <h2 className="mb-4 text-[15px] font-medium text-ink">{m.sharedTitle}</h2>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {SCOPES.map((s) => {
+                const on = client.scopes.includes(s);
+                return (
+                  <li key={s} className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${on ? "bg-sage-soft/70" : "bg-sand/40"}`}>
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full ${on ? "bg-sage text-paper" : "border border-line"}`}>
+                      {on && <CheckIcon className="h-3.5 w-3.5" />}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm text-ink">{care.scopes[s].title}</span>
+                      <span className="text-xs text-ink-faint">{on ? m.shared : m.notShared}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+          <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm leading-relaxed text-ink-soft">{m.soon}</p>
+        </div>
+
+        <aside className="space-y-5">
+          <Card className="p-6">
+            <h2 className="mb-4 text-[15px] font-medium text-ink">{m.history}</h2>
+            <AuditList rows={log} locale={locale} me={user!.id} empty={care.care.logEmpty} />
+          </Card>
+          <ConfirmForm action={endLink} question={m.endConfirm} hidden={{ link: client.link.id, back: "pro" }} className="text-center">
+            <button className="h-11 rounded-full px-5 text-sm text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.end}</button>
+          </ConfirmForm>
+        </aside>
+      </div>
+    </>
+  );
+}

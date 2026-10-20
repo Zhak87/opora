@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safe-next";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -19,10 +20,4 @@ export async function GET(request: NextRequest) {
 
   const target = ok ? (type === "recovery" ? "/reset" : next) : "/login?link=expired";
   return NextResponse.redirect(new URL(target, origin));
-}
-
-// Только адрес внутри сайта: «//evil.com» и «/\evil.com» браузер понял бы как другой сайт.
-function safeNext(value: string | null) {
-  if (!value || !/^\/(?![\/\\])/.test(value) || /[\u0000-\u001f]/.test(value)) return "/";
-  return value;
 }
