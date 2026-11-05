@@ -23,6 +23,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
       key={conversation.id}
       conversationId={conversation.id}
       title={conversation.title}
+      topic={conversation.topic}
       label={getTopic(conversation.topic, locale)?.title ?? t.modeLabel[conversation.mode] ?? t.defaultLabel}
       voice={normalizeVoice(profile?.voice)}
       initialMessages={(messages ?? []) as { id: string; role: "user" | "assistant"; content: string }[]}

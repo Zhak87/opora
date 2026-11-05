@@ -8,24 +8,28 @@ import { Breathe } from "./Breathe";
 import { MusicToggle } from "./Music";
 import { SpeakButton } from "./SpeakButton";
 import { VoiceMode } from "./VoiceMode";
-import { deleteConversation, saveVoice } from "@/lib/actions";
+import { CalmCard, CalmOverlay, type CalmTool } from "./CalmTools";
+import { deleteConversation, saveVoice, undoLastMessage } from "@/lib/actions";
 import { speech } from "@/lib/speech";
 import type { VoiceSettings } from "@/lib/voices";
-import { looksLikeCrisis } from "@/lib/prompt";
+import { looksAnxious, looksLikeCrisis } from "@/lib/prompt";
 import { useLocale } from "@/i18n/client";
 import { chatMessages } from "@/i18n/chat";
 
-type Message = { id: string; role: "user" | "assistant"; content: string };
+// pending: реплика ещё не точно сохранена на сервере, отменять её пока нельзя.
+type Message = { id: string; role: "user" | "assistant"; content: string; pending?: boolean };
 
 export function Chat({
   conversationId,
   title,
   label,
+  topic,
   initialMessages,
   voice: initialVoice,
 }: {
   conversationId: string;
   title: string;
+  topic?: string | null;
   label: string;
   initialMessages: Message[];
   voice: VoiceSettings;
@@ -49,6 +53,12 @@ export function Chat({
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const autoStarted = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  // Упражнение при тревоге: какое открыто сейчас и для какой реплики карточку уже закрыли.
+  const [calmTool, setCalmTool] = useState<CalmTool | null>(null);
+  const [calmDismissed, setCalmDismissed] = useState<string | null>(null);
+  const [afterCalm, setAfterCalm] = useState(false);
 
   const scrollDown = useCallback((smooth = true) => {
     bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
@@ -60,19 +70,26 @@ export function Chat({
       let reply: string | null = null;
       setBusy(true);
       const replyId = `a-${Date.now()}`;
+      const userId = `u-${Date.now()}`;
+      setAfterCalm(false);
       setMessages((prev) => [
         ...prev,
-        ...(content ? [{ id: `u-${Date.now()}`, role: "user" as const, content }] : []),
+        ...(content ? [{ id: userId, role: "user" as const, content, pending: true }] : []),
         { id: replyId, role: "assistant" as const, content: "" },
       ]);
       if (content && looksLikeCrisis(content)) setShowCrisis(true);
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ conversationId, message: content, voice: viaVoice }),
+          signal: controller.signal,
         });
+        // Сервер отвечает только после того, как сохранил реплику: теперь её можно отменить.
+        if (res.ok) setMessages((prev) => prev.map((m) => (m.id === userId ? { ...m, pending: false } : m)));
         if (!res.body) throw new Error("no body");
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -87,6 +104,7 @@ export function Chat({
         reply = acc;
         if (voiceRef.current.auto && !viaVoice) speech.speak(replyId, acc, voiceRef.current, textRef.current.locale);
       } catch {
+        if (controller.signal.aborted) return null;
         setMessages((prev) =>
           prev.map((m) =>
             m.id === replyId
@@ -95,6 +113,7 @@ export function Chat({
           ),
         );
       } finally {
+        if (abortRef.current === controller) abortRef.current = null;
         setBusy(false);
         if (!viaVoice) inputRef.current?.focus({ preventScroll: true });
       }
@@ -102,6 +121,30 @@ export function Chat({
     },
     [conversationId],
   );
+
+  // Отмена последней реплики: останавливаем ответ, удаляем реплику и ответ, текст возвращаем в поле ввода.
+  const undo = async (id: string) => {
+    if (undoing) return;
+    setUndoing(true);
+    speech.stop();
+    if (abortRef.current) {
+      abortRef.current.abort();
+      // Даём серверу заметить обрыв, чтобы недописанный ответ не сохранился после удаления.
+      await new Promise((r) => setTimeout(r, 600));
+    }
+    const r = await undoLastMessage(conversationId);
+    setUndoing(false);
+    if ("error" in r) {
+      alert(r.error);
+      return;
+    }
+    setMessages((prev) => {
+      const i = prev.findIndex((m) => m.id === id);
+      return i >= 0 ? prev.slice(0, i) : prev;
+    });
+    setInput(r.content);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
 
   const askVoice = useCallback((t: string) => send(t, true), [send]);
   const closeVoice = useCallback(() => setTalking(false), []);
@@ -145,6 +188,17 @@ export function Chat({
   };
 
   const empty = messages.length === 0;
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const lastIsUser = messages[messages.length - 1]?.role === "user";
+  // Сначала успокоиться, потом разговор: в теме «Тревога» до первой реплики и после тревожных сообщений.
+  const calmKey = lastUser
+    ? looksAnxious(lastUser.content) && !lastIsUser
+      ? lastUser.id
+      : null
+    : topic === "anxiety"
+      ? "topic"
+      : null;
+  const showCalm = !busy && !!calmKey && calmKey !== calmDismissed;
 
   return (
     <div className="flex h-dvh flex-col">
@@ -222,10 +276,25 @@ export function Chat({
           <div className="space-y-7">
             {messages.map((m) =>
               m.role === "user" ? (
-                <div key={m.id} className="flex animate-rise justify-end">
+                <div key={m.id} className="flex animate-rise flex-col items-end">
                   <p className="max-w-[85%] whitespace-pre-wrap rounded-[24px] rounded-br-lg bg-sand px-5 py-3.5 text-[15.5px] leading-relaxed text-ink">
                     {m.content}
                   </p>
+                  {m.id === lastUser?.id && !m.pending && (
+                    <button
+                      type="button"
+                      onClick={() => undo(m.id)}
+                      disabled={undoing}
+                      title={t.undoTitle}
+                      className="mt-1 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs text-ink-faint transition hover:bg-sand/60 hover:text-ink disabled:opacity-50"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M9 14L4 9l5-5" />
+                        <path d="M4 9h10.5a5.5 5.5 0 010 11H11" />
+                      </svg>
+                      {t.undo}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div key={m.id} className="flex animate-rise gap-3.5">
@@ -253,6 +322,29 @@ export function Chat({
               ),
             )}
           </div>
+
+          {showCalm && (
+            <CalmCard
+              onPick={(tool) => {
+                setCalmTool(tool);
+                setCalmDismissed(calmKey);
+              }}
+              onSkip={() => {
+                setCalmDismissed(calmKey);
+                inputRef.current?.focus();
+              }}
+            />
+          )}
+          {afterCalm && !busy && (
+            <div className="mt-6 flex justify-end animate-rise">
+              <button
+                onClick={() => send(t.calmAfter)}
+                className="rounded-full border border-line bg-paper/80 px-4 py-2 text-sm text-ink-soft transition hover:border-sand-deep hover:text-ink"
+              >
+                {t.calmAfter}
+              </button>
+            </div>
+          )}
 
           {showCrisis && (
             <aside className="mt-8 animate-rise rounded-[24px] border border-lilac/50 bg-lilac-soft/70 p-5 text-[14.5px] leading-relaxed text-ink">
@@ -323,6 +415,23 @@ export function Chat({
       </div>
 
       {breathing && <Breathe onClose={() => setBreathing(false)} />}
+      {calmTool === "breath" && (
+        <Breathe
+          onClose={() => {
+            setCalmTool(null);
+            setAfterCalm(true);
+          }}
+        />
+      )}
+      {calmTool && calmTool !== "breath" && (
+        <CalmOverlay
+          tool={calmTool}
+          onClose={() => {
+            setCalmTool(null);
+            setAfterCalm(true);
+          }}
+        />
+      )}
       {talking && <VoiceMode voice={voice} ask={askVoice} onClose={closeVoice} />}
     </div>
   );
