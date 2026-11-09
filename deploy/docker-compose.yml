@@ -81,6 +81,41 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # Резервная копия: каждую ночь в 02:00 по Астане база (pg_dump) и файлы (tar)
+  # складываются в /opt/opora/backups на сервере и хранятся 14 дней.
+  backup:
+    image: supabase/postgres:17.6.1.136
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      PGPASSWORD: ${SB_DB_PASSWORD}
+      KEEP_DAYS: 14
+    volumes:
+      - ./backups:/backups
+      - storage_data:/storage:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        umask 077
+        run() {
+          d=$$(date -u +%Y-%m-%d_%H%M)
+          if pg_dump -h db -U supabase_admin -d postgres -Fc -f /backups/db_$$d.part; then
+            mv /backups/db_$$d.part /backups/db_$$d.dump
+            echo "backup: база -> db_$$d.dump ($$(du -h /backups/db_$$d.dump | cut -f1))"
+          else
+            echo "backup: ОШИБКА копии базы"
+          fi
+          tar -czf /backups/files_$$d.tar.gz -C /storage . && echo "backup: файлы -> files_$$d.tar.gz"
+          find /backups -maxdepth 1 -type f -mtime +$$KEEP_DAYS -delete
+        }
+        sleep 120; run
+        while true; do
+          now=$$(date -u +%s); next=$$(date -u -d "$$(date -u +%F) 21:00" +%s)
+          [ $$next -le $$now ] && next=$$((next + 86400))
+          sleep $$((next - now)); run
+        done
+    logging: *logs
+
   auth:
     image: supabase/gotrue:v2.197.0
     restart: unless-stopped
