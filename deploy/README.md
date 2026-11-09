@@ -79,3 +79,13 @@ ssh-keygen -t ed25519 -C opora-deploy -f $HOME/.ssh/opora_deploy
 Перенос из облачного Supabase: **Actions → Server → migrate-db** (нужен секрет `SUPABASE_DB_URL`). Переносятся схема, права и правила
 доступа, аккаунты с паролями (людям придётся войти заново), все данные и файлы из открытых корзин. Потом в `deploy/site.env`
 `NEXT_PUBLIC_SUPABASE_URL` меняется на адрес сайта, а `NEXT_PUBLIC_SUPABASE_ANON_KEY` — на ключ из **Server → anon-key**.
+
+## Резервные копии
+
+Служба `backup` каждую ночь в 02:00 по Астане сохраняет базу (`db_*.dump`, pg_dump) и файлы (`files_*.tar.gz`)
+в `/opt/opora/backups` на сервере и хранит их 14 дней. Список последних копий: **Actions → Server → status**.
+Копии лежат на том же сервере, поэтому от поломки самого сервера они не спасут: позже стоит добавить копию
+во второе хранилище в Казахстане.
+
+Восстановить базу из копии (на сервере, в `/opt/opora`):
+`./dc.sh exec -T db pg_restore -U supabase_admin -d postgres --clean --if-exists < backups/db_ДАТА.dump`
