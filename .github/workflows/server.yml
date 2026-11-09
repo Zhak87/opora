@@ -110,22 +110,30 @@ jobs:
           $PGD/pg_dump "$SRC" --data-only --disable-triggers -t auth.users -t auth.identities -t storage.buckets > data-auth.sql
           $PGD/pg_dump "$SRC" --data-only --disable-triggers --schema=public > data-public.sql
           wc -c *.sql
-          ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres -tAc "select count(*) from auth.users"' | grep -qx 0 \
-            || { echo "::error::В своей базе уже есть аккаунты, перенос остановлен, чтобы ничего не затереть"; exit 1; }
           run() { ssh prod "cd /opt/opora && ./dc.sh exec -T db psql -v ON_ERROR_STOP=1 -q -1 -U $1 -d postgres"; }
-          echo "create extension if not exists btree_gist with schema extensions;" | run supabase_admin
-          run postgres < schema.sql
-          run supabase_admin < data-auth.sql
-          run supabase_admin < data-public.sql
-          run supabase_admin < extras.sql
+          if ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres -tAc "select count(*) from auth.users"' | grep -qx 0; then
+            echo "create extension if not exists btree_gist with schema extensions;" | run supabase_admin
+            run postgres < schema.sql
+            run supabase_admin < data-auth.sql
+            run supabase_admin < data-public.sql
+            run supabase_admin < extras.sql
+          else
+            # Повторный запуск: база уже перенесена, затирать её не будем, докопируем только файлы и ссылки
+            echo "::notice::В своей базе уже есть аккаунты: данные не трогаю, переношу только файлы"
+          fi
           # 4. Файлы из открытых корзин (фото психологов): скачиваются по открытой ссылке и загружаются в свою базу
+          for i in $(seq 1 20); do
+            ssh prod 'cd /opt/opora && ./dc.sh exec -T storage wget -qO- http://127.0.0.1:5000/status' >/dev/null 2>&1 && break
+            [ $i = 20 ] && { echo "::error::Служба файлов не отвечает"; ssh prod 'cd /opt/opora && ./dc.sh ps storage && ./dc.sh logs --tail 40 storage'; exit 1; }
+            sleep 3
+          done
           $PGD/psql "$SRC" -At -F '|' -c "select o.bucket_id, o.name, coalesce(o.metadata->>'mimetype','application/octet-stream'), b.public from storage.objects o join storage.buckets b on b.id = o.bucket_id" > objects.txt
           while IFS='|' read -r bucket name mime public; do
             [ -n "$bucket" ] || continue
             if [ "$public" != "t" ]; then echo "::warning::Закрытый файл $bucket/$name не перенесён (нужен ключ облака)"; continue; fi
             curl -fsS -o obj.bin "$OLD_URL/storage/v1/object/public/$bucket/$name"
             scp -q obj.bin prod:/tmp/obj.bin
-            ssh prod "cd /opt/opora && ./dc.sh cp /tmp/obj.bin storage:/tmp/obj.bin && K=\$(grep '^SB_SERVICE_ROLE_KEY=' server.env | cut -d= -f2-) && ./dc.sh exec -T storage wget -qO- --header \"Authorization: Bearer \$K\" --header 'Content-Type: $mime' --header 'x-upsert: true' --post-file /tmp/obj.bin 'http://localhost:5000/object/$bucket/$name' && rm -f /tmp/obj.bin"
+            ssh prod "cd /opt/opora && ./dc.sh cp /tmp/obj.bin storage:/tmp/obj.bin && K=\$(grep '^SB_SERVICE_ROLE_KEY=' server.env | cut -d= -f2-) && ./dc.sh exec -T storage wget -qO- --header \"Authorization: Bearer \$K\" --header 'Content-Type: $mime' --header 'x-upsert: true' --post-file /tmp/obj.bin 'http://127.0.0.1:5000/object/$bucket/$name' && rm -f /tmp/obj.bin"
             echo "файл перенесён: $bucket/$name"
           done < objects.txt
           # 5. Ссылки на файлы в облаке → на свой домен
