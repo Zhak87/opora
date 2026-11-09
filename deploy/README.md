@@ -10,7 +10,7 @@ GitHub (main) ──► GitHub Actions: проверка и сборка обр�
 ```
 
 - **CI** (`.github/workflows/ci.yml`): на каждый pull request и в main проверяет линтер, типы и сборку.
-- **CD** (`.github/workflows/deploy.yml`): после каждого слияния в main собирает Docker-образ на GitHub, отправляет его на сервер по SSH и перезапускает сайт, потом проверяет, что сайт открывается. Пока в GitHub нет секретов `DEPLOY_SSH_KEY` и `PROD_ENV`, выкладка пропускается.
+- **CD** (`.github/workflows/deploy.yml`): после каждого слияния в main собирает Docker-образ на GitHub, отправляет его на сервер по SSH и перезапускает сайт, потом проверяет, что сайт открывается. Пока в GitHub нет секретов `DEPLOY_SSH_KEY` и `GEMINI_API_KEY`, выкладка пропускается.
 - **Server** (`.github/workflows/server.yml`): ручные действия без входа на сервер: `setup` (первая настройка), `status`, `logs`, `restart`.
 - SSL: Caddy сам получает сертификат Let's Encrypt для домена и `www`, сам продлевает. Платить и что-то настраивать не нужно.
 
@@ -44,8 +44,9 @@ ssh-keygen -t ed25519 -C opora-deploy -f $HOME/.ssh/opora_deploy
 | Имя | Что вставить |
 |---|---|
 | `DEPLOY_SSH_KEY` | весь текст секретного ключа `opora_deploy`, вместе со строками `-----BEGIN…` и `-----END…` |
-| `PROD_ENV` | содержимое файла `deploy/env.example`, заполненное значениями (те же, что сейчас в Vercel → Settings → Environment Variables) |
-| `ROOT_PASSWORD` | только если хостинг дал пароль root, а ключ добавить было нельзя. После настройки сервера этот секрет удалите |
+| `ROOT_PASSWORD` | пароль root из письма хостинга. Нужен один раз для первой настройки, потом секрет можно удалить |
+| `GEMINI_API_KEY` | ключ ИИ (Vercel → Settings → Environment Variables или https://aistudio.google.com/apikey) |
+| `PROD_ENV` | необязательно: дополнительные настройки, образец в `deploy/env.example` |
 
 Открытые настройки (IP сервера, адрес сайта, публичный ключ базы) уже записаны в `deploy/site.env`, в GitHub их добавлять не нужно.
 

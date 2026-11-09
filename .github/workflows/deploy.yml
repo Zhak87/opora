@@ -22,13 +22,13 @@ jobs:
         id: cfg
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          PROD_ENV: ${{ secrets.PROD_ENV }}
+          GEMINI: ${{ secrets.GEMINI_API_KEY }}
         run: |
           # Открытые настройки (IP сервера, адрес сайта) лежат в deploy/site.env.
           grep -E '^[A-Z_]+=' deploy/site.env >> "$GITHUB_ENV"
           echo "HOST=$(grep '^DEPLOY_HOST=' deploy/site.env | cut -d= -f2-)" >> "$GITHUB_ENV"
-          if [ -z "$SSH_KEY" ] || [ -z "$PROD_ENV" ]; then
-            echo "::notice::Выкладка пропущена: в GitHub ещё нет секретов DEPLOY_SSH_KEY и PROD_ENV (см. deploy/README.md)."
+          if [ -z "$SSH_KEY" ] || [ -z "$GEMINI" ]; then
+            echo "::notice::Выкладка пропущена: в GitHub ещё нет секретов DEPLOY_SSH_KEY и GEMINI_API_KEY (см. deploy/README.md)."
             echo "ready=no" >> "$GITHUB_OUTPUT"
           else
             echo "ready=yes" >> "$GITHUB_OUTPUT"
@@ -57,19 +57,26 @@ jobs:
       - name: Отправить образ и настройки на сервер
         if: steps.cfg.outputs.ready == 'yes'
         env:
+          GEMINI: ${{ secrets.GEMINI_API_KEY }}
           PROD_ENV: ${{ secrets.PROD_ENV }}
         run: |
           docker save opora:${{ github.sha }} | gzip -1 | ssh prod 'gunzip | docker load'
           scp deploy/docker-compose.yml deploy/Caddyfile prod:/opt/opora/
-          # Секреты сайта хранятся в GitHub (секрет PROD_ENV) и при каждой выкладке записываются на сервер.
-          if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV" | ssh prod 'umask 077 && cat > /opt/opora/.env'; fi
+          # .env собирается из открытых настроек и секретов GitHub при каждой выкладке.
+          # server.env создаётся на сервере один раз (CRON_SECRET и другие внутренние ключи) и его не покидает.
+          {
+            grep -E '^[A-Z_]+=' deploy/site.env
+            echo "DOMAIN=${NEXT_PUBLIC_SITE_URL#https://}"
+            echo "GEMINI_API_KEY=$GEMINI"
+            if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV"; fi
+          } | ssh prod 'umask 077 && cat > /opt/opora/.env'
+          ssh prod 'cd /opt/opora && test -f server.env || (umask 077 && echo "CRON_SECRET=$(openssl rand -hex 32)" > server.env)'
 
       - name: Перезапустить сайт
         if: steps.cfg.outputs.ready == 'yes'
         run: |
           ssh prod "set -e
             cd /opt/opora
-            test -f .env || { echo 'Нет /opt/opora/.env: добавьте секрет PROD_ENV в GitHub'; exit 1; }
             docker tag opora:${{ github.sha }} opora:latest
             OPORA_TAG=${{ github.sha }} docker compose up -d --remove-orphans
             docker images opora --format '{{.Tag}}' | grep -v '^latest$' | tail -n +4 | xargs -r -I{} docker rmi opora:{} >/dev/null || true

@@ -4,7 +4,7 @@ services:
   app:
     image: opora:${OPORA_TAG:-latest}
     restart: unless-stopped
-    env_file: .env
+    env_file: [.env, server.env]
     expose:
       - "3000"
     logging:
@@ -21,7 +21,6 @@ services:
       - "443:443/udp"
     environment:
       DOMAIN: ${DOMAIN:?укажите DOMAIN в .env}
-      ACME_EMAIL: ${ACME_EMAIL:?укажите ACME_EMAIL в .env (почта для Let's Encrypt)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -35,7 +34,7 @@ services:
     image: alpine:3.22
     restart: unless-stopped
     depends_on: [app]
-    env_file: .env
+    env_file: [.env, server.env]
     command:
       - /bin/sh
       - -c
