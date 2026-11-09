@@ -3,6 +3,8 @@
 #   status  — что запущено, память, диск, срок SSL
 #   logs    — последние строки журналов сайта и Caddy
 #   restart — перезапустить сайт
+#   migrate-db — перенести данные и аккаунты из облачного Supabase в свою базу (нужен секрет SUPABASE_DB_URL)
+#   anon-key — показать публичный ключ своей базы (он не секретный, его видит каждый браузер)
 name: Server
 
 on:
@@ -11,7 +13,7 @@ on:
       action:
         description: Что сделать
         type: choice
-        options: [status, logs, restart, setup]
+        options: [status, logs, restart, setup, migrate-db, anon-key]
         default: status
 
 concurrency:
@@ -36,7 +38,8 @@ jobs:
         run: |
           test -n "$SSH_KEY" || { echo "Добавьте секрет DEPLOY_SSH_KEY (см. deploy/README.md)"; exit 1; }
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null || { echo "::error::Секрет DEPLOY_SSH_KEY не похож на ключ: вставьте весь файл opora_deploy, от -----BEGIN до -----END"; exit 1; }
           if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -t ed25519 "$HOST" > ~/.ssh/known_hosts; fi
           echo "Отпечаток ключа сервера (сверьте с панелью хостинга, если она его показывает):"
           ssh-keygen -lf ~/.ssh/known_hosts
@@ -48,21 +51,27 @@ jobs:
           ROOT_PASSWORD: ${{ secrets.ROOT_PASSWORD }}
         run: |
           PUB=$(ssh-keygen -y -f ~/.ssh/id_deploy)
-          # Если хостинг выдал только пароль root: он лежит в секрете ROOT_PASSWORD, по нему один раз
-          # кладётся ключ, дальше вход по паролю выключается. Секрет после этого можно удалить.
-          if [ -n "$ROOT_PASSWORD" ]; then
-            sudo apt-get -qq install -y sshpass >/dev/null
-            echo "$PUB" | SSHPASS="$ROOT_PASSWORD" sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no "root@$HOST" \
-              'install -d -m 700 /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'
+          if ssh -o BatchMode=yes -o ConnectTimeout=15 prod true 2>/dev/null; then
+            # Пользователь deploy уже есть (повторный запуск): настраиваем через sudo
+            T=prod; RUN="sudo bash"
+          else
+            T=prod-root; RUN=bash
+            # Если хостинг выдал только пароль root: он лежит в секрете ROOT_PASSWORD, по нему один раз
+            # кладётся ключ, дальше вход по паролю выключается. Секрет после этого можно удалить.
+            if [ -n "$ROOT_PASSWORD" ]; then
+              sudo apt-get -qq install -y sshpass >/dev/null
+              echo "$PUB" | SSHPASS="$ROOT_PASSWORD" sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no "root@$HOST" \
+                'install -d -m 700 /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'
+            fi
           fi
-          scp deploy/server-setup.sh prod-root:/root/server-setup.sh
-          ssh prod-root "bash /root/server-setup.sh '$PUB'"
+          scp deploy/server-setup.sh $T:/tmp/server-setup.sh
+          ssh $T "$RUN /tmp/server-setup.sh '$PUB'"
           ssh prod 'docker --version && echo "Вход deploy по ключу работает"'
 
       - name: status
         if: inputs.action == 'status'
         run: |
-          ssh prod 'uptime; echo; free -h; echo; df -h /; echo; cd /opt/opora 2>/dev/null && docker compose ps || echo "Сайт ещё не выложен"'
+          ssh prod 'uptime; echo; free -h; echo; df -h /; echo; cd /opt/opora 2>/dev/null && ./dc.sh ps || echo "Сайт ещё не выложен"'
           if [ -n "$NEXT_PUBLIC_SITE_URL" ]; then
             D=$(echo "$NEXT_PUBLIC_SITE_URL" | sed -E 's#https?://##; s#/.*##')
             echo; echo "SSL для $D:"; echo | openssl s_client -connect "$D:443" -servername "$D" 2>/dev/null | openssl x509 -noout -issuer -enddate || echo "SSL пока нет"
@@ -70,8 +79,55 @@ jobs:
 
       - name: logs
         if: inputs.action == 'logs'
-        run: ssh prod 'cd /opt/opora && docker compose logs --tail 150 app caddy cron'
+        run: ssh prod 'cd /opt/opora && ./dc.sh logs --tail 150 app caddy cron auth rest storage'
 
       - name: restart
         if: inputs.action == 'restart'
-        run: ssh prod 'cd /opt/opora && docker compose restart app && docker compose ps'
+        run: ssh prod 'cd /opt/opora && ./dc.sh restart app && ./dc.sh ps'
+
+      - name: anon-key
+        if: inputs.action == 'anon-key'
+        run: ssh prod 'grep "^SB_ANON_KEY=" /opt/opora/server.env'
+
+      - name: migrate-db
+        if: inputs.action == 'migrate-db'
+        env:
+          SRC: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          test -n "$SRC" || { echo "::error::Добавьте секрет SUPABASE_DB_URL (строка подключения к облачной базе)"; exit 1; }
+          sudo apt-get -qq install -y postgresql-common >/dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          sudo apt-get -qq install -y postgresql-client-17 >/dev/null
+          PGD=/usr/lib/postgresql/17/bin
+          mkdir -p dump && cd dump
+          # 1. Схема своих таблиц, функций, правил доступа (RLS) и прав
+          $PGD/pg_dump "$SRC" --schema-only --schema=public --no-owner \
+            | sed '/^CREATE SCHEMA public;$/d; /^COMMENT ON SCHEMA public IS/d; /^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin /d' > schema.sql
+          # 2. То, что живёт в служебных схемах: триггеры на auth.users и правила доступа к файлам
+          $PGD/psql "$SRC" -At -f ../deploy/supabase/extras.sql > extras.sql
+          # 3. Данные: аккаунты (с хешами паролей), корзины файлов, все свои таблицы
+          $PGD/pg_dump "$SRC" --data-only --disable-triggers -t auth.users -t auth.identities -t storage.buckets > data-auth.sql
+          $PGD/pg_dump "$SRC" --data-only --disable-triggers --schema=public > data-public.sql
+          wc -c *.sql
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres -tAc "select count(*) from auth.users"' | grep -qx 0 \
+            || { echo "::error::В своей базе уже есть аккаунты, перенос остановлен, чтобы ничего не затереть"; exit 1; }
+          run() { ssh prod "cd /opt/opora && ./dc.sh exec -T db psql -v ON_ERROR_STOP=1 -q -1 -U $1 -d postgres"; }
+          echo "create extension if not exists btree_gist with schema extensions;" | run supabase_admin
+          run postgres < schema.sql
+          run supabase_admin < data-auth.sql
+          run supabase_admin < data-public.sql
+          run supabase_admin < extras.sql
+          # 4. Файлы из открытых корзин (фото психологов): скачиваются по открытой ссылке и загружаются в свою базу
+          $PGD/psql "$SRC" -At -F '|' -c "select o.bucket_id, o.name, coalesce(o.metadata->>'mimetype','application/octet-stream'), b.public from storage.objects o join storage.buckets b on b.id = o.bucket_id" > objects.txt
+          while IFS='|' read -r bucket name mime public; do
+            [ -n "$bucket" ] || continue
+            if [ "$public" != "t" ]; then echo "::warning::Закрытый файл $bucket/$name не перенесён (нужен ключ облака)"; continue; fi
+            curl -fsS -o obj.bin "$OLD_URL/storage/v1/object/public/$bucket/$name"
+            scp -q obj.bin prod:/tmp/obj.bin
+            ssh prod "cd /opt/opora && ./dc.sh cp /tmp/obj.bin storage:/tmp/obj.bin && K=\$(grep '^SB_SERVICE_ROLE_KEY=' server.env | cut -d= -f2-) && ./dc.sh exec -T storage wget -qO- --header \"Authorization: Bearer \$K\" --header 'Content-Type: $mime' --header 'x-upsert: true' --post-file /tmp/obj.bin 'http://localhost:5000/object/$bucket/$name' && rm -f /tmp/obj.bin"
+            echo "файл перенесён: $bucket/$name"
+          done < objects.txt
+          # 5. Ссылки на файлы в облаке → на свой домен
+          ssh prod "cd /opt/opora && ./dc.sh exec -T db psql -v ON_ERROR_STOP=1 -q -U supabase_admin -d postgres -v old=$OLD_URL -v new=$NEXT_PUBLIC_SITE_URL" < ../deploy/supabase/rewrite-urls.sql
+          echo "Перенесено:"
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres -c "select (select count(*) from auth.users) as users, (select count(*) from public.profiles) as profiles, (select count(*) from public.messages) as messages"'

@@ -47,7 +47,7 @@ LoginGraceTime 30
 X11Forwarding no
 AllowAgentForwarding no
 CONF
-sshd -t
+mkdir -p /run/sshd && sshd -t
 systemctl reload ssh || systemctl reload sshd
 
 # Пароль root, выданный хостингом, больше не работает (вход только по ключу, root по SSH закрыт).
