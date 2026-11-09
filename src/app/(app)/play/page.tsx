@@ -123,7 +123,7 @@ function GameGlyph({ slug }: { slug: string }) {
     return (
       <span className={base} aria-hidden>
         <svg viewBox="0 0 24 24" className="h-6 w-6 text-lilac-deep" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
-          <path d="M4 16c3-6 6 2 9-4s5-3 7-5" style={{ filter: "drop-shadow(0 0 3px #b9aed6)" }} />
+          <path d="M4 16c3-6 6 2 9-4s5-3 7-5" style={{ filter: "drop-shadow(0 0 3px #aaa4ff)" }} />
         </svg>
       </span>
     );
@@ -173,7 +173,7 @@ function GameGlyph({ slug }: { slug: string }) {
       <span className={base} aria-hidden>
         <span className="relative h-5 w-7 rounded-[4px] bg-sand-deep">
           <svg viewBox="0 0 28 20" className="absolute inset-0 h-full w-full">
-            <path d="M1 2 L14 11 L27 2" fill="none" stroke="#fffdf9" strokeWidth="1.5" />
+            <path d="M1 2 L14 11 L27 2" fill="none" stroke="#ffffff" strokeWidth="1.5" />
           </svg>
           <span className="absolute -bottom-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-lilac-deep" />
         </span>
@@ -196,7 +196,7 @@ function GameGlyph({ slug }: { slug: string }) {
             <path
               key={i}
               d={`M12 12 L${12 + r * Math.cos(a0)} ${12 + r * Math.sin(a0)} A${r} ${r} 0 0 1 ${12 + r * Math.cos(a1)} ${12 + r * Math.sin(a1)}Z`}
-              fill={["#9db894", "#b9aed6", "#d8b98f", "#8fa8bf", "#a9c7c0", "#c6b0d8"][i]}
+              fill={["#7ccfaa", "#aaa4ff", "#d8b98f", "#8db4ea", "#a9c7c0", "#c6b0d8"][i]}
             />
           );
         })}

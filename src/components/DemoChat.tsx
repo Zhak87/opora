@@ -122,7 +122,7 @@ export function DemoChat() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="sticky top-0 z-20 border-b border-line/50 bg-milk/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 bg-milk/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-3xl items-center gap-2 px-3 sm:px-6">
           <Link href="/welcome" aria-label={t.toHome} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink">
             <BackIcon className="h-5 w-5" />
@@ -149,7 +149,7 @@ export function DemoChat() {
         <div className="mx-auto max-w-2xl px-5 pb-8 pt-8 sm:px-8">
           {empty && (
             <div className="flex animate-fade flex-col items-center pt-[8vh] text-center">
-              <Orb size={140} />
+              <Orb size={150} face />
               <p className="mt-8 font-serif text-[26px] leading-snug text-ink">{t.emptyTitle}</p>
               <p className="mt-2 max-w-sm text-[15px] text-ink-soft">{t.emptyText}</p>
               <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -157,7 +157,7 @@ export function DemoChat() {
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="rounded-full border border-line bg-paper/80 px-4 py-2 text-sm text-ink-soft transition hover:border-sand-deep hover:text-ink"
+                    className="rounded-full border-2 border-sand-deep bg-paper/60 px-4 py-2 text-sm text-ink transition hover:-translate-y-0.5 hover:border-lilac hover:bg-paper"
                   >
                     {s}
                   </button>
@@ -170,17 +170,13 @@ export function DemoChat() {
             {messages.map((m) =>
               m.role === "user" ? (
                 <div key={m.id} className="flex animate-rise justify-end">
-                  <p className="max-w-[85%] whitespace-pre-wrap rounded-[24px] rounded-br-lg bg-sand px-5 py-3.5 text-[15.5px] leading-relaxed text-ink">
+                  <p className="max-w-[85%] whitespace-pre-wrap rounded-[24px] rounded-br-[8px] bg-lilac-deep px-5 py-3.5 text-[15.5px] leading-relaxed text-paper shadow-soft">
                     {m.content}
                   </p>
                 </div>
               ) : (
                 <div key={m.id} className="flex animate-rise gap-3.5">
-                  <span
-                    className="mt-1.5 h-3 w-3 shrink-0 rounded-full"
-                    style={{ background: "radial-gradient(circle at 35% 30%, #fffdf9, #c9d8e6 55%, #b4cbaa)" }}
-                    aria-hidden
-                  />
+                  <Orb size={34} still face className="-mt-1 hidden sm:block" />
                   {m.content ? (
                     <p className="min-w-0 whitespace-pre-wrap font-serif text-[17px] leading-[1.7] text-ink">{m.content}</p>
                   ) : (
@@ -243,7 +239,7 @@ export function DemoChat() {
       </div>
 
       {!reachedLimit && (
-        <div className="border-t border-line/40 bg-gradient-to-t from-milk via-milk to-milk/70 pb-[env(safe-area-inset-bottom)]">
+        <div className="bg-gradient-to-t from-milk via-milk/95 to-milk/0 pb-[env(safe-area-inset-bottom)]">
           <form onSubmit={submit} className="mx-auto flex max-w-2xl items-end gap-2 px-4 py-3 sm:px-8 sm:py-5">
             <label className="sr-only" htmlFor="demo-input">{t.inputLabel}</label>
             <textarea
@@ -255,13 +251,13 @@ export function DemoChat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder={t.placeholder}
-              className="max-h-[200px] min-h-[52px] flex-1 resize-none rounded-[26px] border border-line bg-paper px-5 py-[14px] text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+              className="max-h-[200px] min-h-[52px] flex-1 resize-none rounded-[20px] border-2 border-transparent bg-paper px-5 py-[13px] text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/50 focus:ring-4 focus:ring-lilac-soft"
             />
             <button
               type="submit"
               disabled={busy || !input.trim()}
               aria-label={t.send}
-              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-ink/90 disabled:bg-sand-deep disabled:text-paper"
+              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[18px] bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-lilac-deep active:scale-90 disabled:bg-sand-deep disabled:text-paper"
             >
               <SendIcon className="h-5 w-5" />
             </button>

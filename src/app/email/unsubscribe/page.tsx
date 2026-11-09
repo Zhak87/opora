@@ -12,7 +12,7 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
   const invalid = status === "invalid" || (!status && (!u || !t));
   return (
     <main className="ambient flex min-h-dvh items-center justify-center px-5 py-16">
-      <div className="w-full max-w-md animate-rise rounded-[32px] border border-line/70 bg-paper/85 p-8 text-center shadow-soft sm:p-10">
+      <div className="w-full max-w-md animate-rise rounded-[32px] bg-paper shadow-soft p-8 text-center shadow-soft sm:p-10">
         <Orb size={64} className="mx-auto mb-6" />
         {status === "done" ? (
           <>

@@ -113,7 +113,7 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
                     </a>
                   ))
                 ) : (
-                  <p className="text-[#a0614f]">{m.noDocuments}</p>
+                  <p className="text-[#c2453d]">{m.noDocuments}</p>
                 )}
               </div>
             </div>
@@ -124,7 +124,7 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
                 rows={2}
                 maxLength={2000}
                 placeholder={m.note}
-                className="w-full rounded-2xl border border-line bg-paper px-4 py-3 text-sm text-ink outline-none focus:border-sky focus:ring-4 focus:ring-mist"
+                className="w-full rounded-2xl border border-line bg-paper px-4 py-3 text-sm text-ink outline-none focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
               />
               <div className="flex flex-wrap gap-2">
                 {p.status !== "approved" && (
@@ -134,7 +134,7 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
                   <button name="status" value="rejected" className="h-10 rounded-full border border-line bg-paper px-5 text-sm text-ink hover:border-sand-deep">{m.reject}</button>
                 )}
                 {p.status !== "suspended" && (
-                  <button name="status" value="suspended" className="h-10 rounded-full px-5 text-sm text-[#a0614f] hover:bg-[#fbf1ec]">{m.suspend}</button>
+                  <button name="status" value="suspended" className="h-10 rounded-full px-5 text-sm text-[#c2453d] hover:bg-[#ffeeec]">{m.suspend}</button>
                 )}
               </div>
             </form>

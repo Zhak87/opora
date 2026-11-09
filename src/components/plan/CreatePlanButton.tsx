@@ -49,7 +49,7 @@ export function CreatePlanButton({ label, goTo, variant = "primary" }: { label?:
       <button onClick={run} className={`${buttonStyles[variant]} w-full sm:w-auto`}>
         {label ?? m.label}
       </button>
-      {error && <p className="mt-3 text-sm text-[#94594a]">{error}</p>}
+      {error && <p className="mt-3 text-sm text-[#b23b33]">{error}</p>}
     </div>
   );
 }

@@ -18,9 +18,9 @@ import { proLabels } from "@/i18n/pro";
 import { minutesToTime } from "@/lib/time";
 
 const input =
-  "h-11 rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
+  "h-11 rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
 const area =
-  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
+  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
 
 type Window = { start_min: number; end_min: number };
 
@@ -43,7 +43,7 @@ export function AvailabilityForm({ initial }: { initial: Record<number, Window[]
                 <input type="time" name={`start-${d}`} value={row.a} step={900} required onChange={(e) => update(d, days[d].map((r, j) => (j === i ? { ...r, a: e.target.value } : r)))} className={input} aria-label={m.pro.from} />
                 <span className="text-ink-faint">—</span>
                 <input type="time" name={`end-${d}`} value={row.b} step={900} required onChange={(e) => update(d, days[d].map((r, j) => (j === i ? { ...r, b: e.target.value } : r)))} className={input} aria-label={m.pro.to} />
-                <button type="button" onClick={() => update(d, days[d].filter((_, j) => j !== i))} aria-label={m.pro.remove} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint hover:bg-[#fbf1ec] hover:text-[#a0614f]">
+                <button type="button" onClick={() => update(d, days[d].filter((_, j) => j !== i))} aria-label={m.pro.remove} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint hover:bg-[#ffeeec] hover:text-[#c2453d]">
                   <TrashIcon className="h-[18px] w-[18px]" />
                 </button>
               </div>

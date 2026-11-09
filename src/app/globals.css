@@ -1,36 +1,46 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
-  --font-serif: var(--font-lora), Georgia, serif;
+  --font-sans: var(--font-onest), system-ui, sans-serif;
+  --font-serif: var(--font-unbounded), var(--font-onest), system-ui, sans-serif;
+  --font-display: var(--font-unbounded), var(--font-onest), system-ui, sans-serif;
 }
 
 @theme {
-  --color-milk: #fbf8f3;
-  --color-paper: #fffdf9;
-  --color-sand: #f2ebe0;
-  --color-sand-deep: #e6dccd;
-  --color-mist: #dfe7ef;
-  --color-sky: #8fa8bf;
-  --color-sky-deep: #5f7d98;
-  --color-sage-soft: #e3ecdf;
-  --color-sage: #9db894;
-  --color-sage-deep: #6a8a62;
-  --color-lilac-soft: #ebe6f4;
-  --color-lilac: #b9aed6;
-  --color-lilac-deep: #7f71a8;
-  --color-ink: #34373c;
-  --color-ink-soft: #6c6f75;
-  --color-ink-faint: #a3a4a8;
-  --color-line: #ebe4d8;
+  /* «Живая форма»: прохладный светлый фон, белые карточки, графит и мягкий фиолетовый акцент */
+  --color-milk: #f3f4f8;
+  --color-paper: #ffffff;
+  --color-sand: #eceef5;
+  --color-sand-deep: #dcdfea;
+  --color-mist: #dcebfb;
+  --color-sky: #8db4ea;
+  --color-sky-deep: #3d6fb8;
+  --color-sage-soft: #d6f2e6;
+  --color-sage: #7ccfaa;
+  --color-sage-deep: #2c8462;
+  --color-lilac-soft: #e6e4ff;
+  --color-lilac: #aaa4ff;
+  --color-lilac-deep: #6c63ff;
+  --color-peach-soft: #ffe4d8;
+  --color-peach: #ffb79c;
+  --color-peach-deep: #c25a37;
+  --color-rose-soft: #fbe4f0;
+  --color-rose: #f2a7cb;
+  --color-ink: #1d1e2c;
+  --color-ink-soft: #62657a;
+  --color-ink-faint: #9fa2b5;
+  --color-line: #e6e8f0;
 
-
-  --shadow-soft: 0 1px 2px rgb(60 50 35 / 0.04), 0 8px 24px -12px rgb(60 50 35 / 0.12);
+--shadow-soft: 0 1px 2px rgb(60 50 35 / 0.04), 0 8px 24px -12px rgb(60 50 35 / 0.12);
   --shadow-lift: 0 2px 4px rgb(60 50 35 / 0.04), 0 18px 40px -18px rgb(60 50 35 / 0.22);
 
   --animate-breathe: breathe 8s ease-in-out infinite;
   --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-fade: fade 0.6s ease both;
+  --animate-morph: morph 14s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-page: page 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-pop: pop 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) both;
 
   @keyframes breathe {
     0%, 100% { transform: scale(0.94); opacity: 0.85; }
@@ -39,6 +49,24 @@
   @keyframes rise {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes morph {
+    0%, 100% { border-radius: 58% 42% 46% 54% / 52% 44% 56% 48%; }
+    25% { border-radius: 44% 56% 58% 42% / 46% 58% 42% 54%; }
+    50% { border-radius: 52% 48% 40% 60% / 58% 46% 54% 42%; }
+    75% { border-radius: 40% 60% 52% 48% / 44% 52% 48% 56%; }
+  }
+  @keyframes float {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -8px; }
+  }
+  @keyframes page {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
   }
   @keyframes fade {
     from { opacity: 0; }
@@ -58,22 +86,44 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Мягкий фон: едва заметные цветные облака */
+/* Фон: прохладный светлый, с едва заметными цветными пятнами по углам */
 .ambient {
   background:
-    radial-gradient(60rem 40rem at 10% -10%, rgb(223 231 239 / 0.75), transparent 60%),
-    radial-gradient(50rem 36rem at 100% 10%, rgb(235 230 244 / 0.7), transparent 60%),
-    radial-gradient(50rem 40rem at 50% 110%, rgb(227 236 223 / 0.6), transparent 60%),
+    radial-gradient(44rem 30rem at 0% 0%, rgb(230 228 255 / 0.7), transparent 60%),
+    radial-gradient(40rem 28rem at 100% 100%, rgb(255 228 216 / 0.45), transparent 60%),
     var(--color-milk);
   background-attachment: fixed;
+}
+
+/* Заголовки: крупный округлый гротеск. Шрифт широкий, поэтому выравниваем его кегль под основной текст. */
+.font-serif {
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-size-adjust: 0.5;
+}
+
+/* Живые карточки: мягко приподнимаются и чуть пружинят при нажатии */
+.lift {
+  transition: transform 0.35s cubic-bezier(0.3, 1.4, 0.5, 1), box-shadow 0.35s ease;
+}
+.lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.lift:active { transform: scale(0.97); }
+
+/* Капля-персонаж: моргание */
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
 }
 
 ::selection {
   background: var(--color-lilac-soft);
 }
 
+/* Плавная смена экранов там, где браузер это умеет */
+@view-transition { navigation: auto; }
+
 :focus-visible {
-  outline: 2px solid var(--color-sky);
+  outline: 2px solid var(--color-lilac-deep);
   outline-offset: 3px;
   border-radius: 12px;
 }

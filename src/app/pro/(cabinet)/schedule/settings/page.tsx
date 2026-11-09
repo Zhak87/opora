@@ -52,7 +52,7 @@ export default async function ScheduleSettings() {
                 </span>
                 <form action={deleteTimeOff}>
                   <input type="hidden" name="id" value={t.id} />
-                  <button aria-label={m.remove} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-faint hover:bg-[#fbf1ec] hover:text-[#a0614f]">
+                  <button aria-label={m.remove} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-faint hover:bg-[#ffeeec] hover:text-[#c2453d]">
                     <TrashIcon className="h-4 w-4" />
                   </button>
                 </form>

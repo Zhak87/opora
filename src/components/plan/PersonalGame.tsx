@@ -78,7 +78,7 @@ function Cards({ game, onDone }: { game: Extract<PlanGame, { type: "cards" }>; o
         aria-label={flipped ? m.flipBack : m.flip}
       >
         <span className="flip-inner relative block h-full w-full">
-          <span className="flip-face absolute inset-0 flex flex-col items-center justify-center rounded-[32px] border border-line/70 bg-paper px-8 text-center shadow-lift">
+          <span className="flip-face absolute inset-0 flex flex-col items-center justify-center rounded-[32px] bg-paper shadow-soft px-8 text-center shadow-lift">
             <span className="text-xs uppercase tracking-[0.16em] text-ink-faint">{m.whenItSeems}</span>
             <span className="mt-4 font-serif text-[23px] leading-snug text-ink">{card.front}</span>
             <span className="mt-8 text-sm text-ink-faint">{m.tapToFlip}</span>
@@ -134,7 +134,7 @@ function Reframe({ game, onDone }: { game: Extract<PlanGame, { type: "reframe" }
             onChange={(e) => setText(e.target.value)}
             rows={3}
             placeholder={m.reframePlaceholder}
-            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
           />
         </label>
         {shown ? (

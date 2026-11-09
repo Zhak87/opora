@@ -54,13 +54,13 @@ export function DangerZone() {
             <p className="text-sm text-ink-soft">{m.deleteHint}</p>
           </div>
           {!open && (
-            <button onClick={() => setOpen(true)} className="h-12 shrink-0 rounded-full border border-[#ecd6cd] px-6 text-[15px] text-[#a0614f] transition hover:bg-[#fbf1ec]">
+            <button onClick={() => setOpen(true)} className="h-12 shrink-0 rounded-full border border-[#f7d2cf] px-6 text-[15px] text-[#c2453d] transition hover:bg-[#ffeeec]">
               {m.deleteTitle}
             </button>
           )}
         </div>
         {open && (
-          <form action={deleteAccount} className="mt-5 animate-rise space-y-3 rounded-2xl bg-[#fbf1ec]/70 p-4">
+          <form action={deleteAccount} className="mt-5 animate-rise space-y-3 rounded-2xl bg-[#ffeeec]/70 p-4">
             <label className="block text-sm text-ink-soft">
               {m.confirmPrompt} <b className="font-medium text-ink">{m.confirmWord}</b>
               <input
@@ -68,7 +68,7 @@ export function DangerZone() {
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value.toLowerCase())}
                 autoComplete="off"
-                className="mt-2 h-12 w-full rounded-2xl border border-[#ecd6cd] bg-paper px-4 text-[15px] text-ink outline-none focus:ring-4 focus:ring-[#fbf1ec]"
+                className="mt-2 h-12 w-full rounded-2xl border border-[#f7d2cf] bg-paper px-4 text-[15px] text-ink outline-none focus:ring-4 focus:ring-[#ffeeec]"
               />
             </label>
             <div className="flex gap-2">

@@ -16,7 +16,7 @@ import { buttonStyles } from "@/components/ui";
 
 const PRICES = [10000, 15000, 20000, 30000];
 const select =
-  "h-11 w-full rounded-2xl border border-line bg-paper px-3 text-[14px] text-ink outline-none focus:border-sky focus:ring-4 focus:ring-mist";
+  "h-11 w-full rounded-2xl border border-line bg-paper px-3 text-[14px] text-ink outline-none focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
 
 type Search = { spec?: string; price?: string; format?: string; lang?: string; when?: string };
 
@@ -53,7 +53,7 @@ export default async function Specialists({ searchParams }: { searchParams: Prom
         <p className="mt-3 text-[16px] leading-relaxed text-ink-soft">{m.intro}</p>
       </header>
 
-      <form className="mb-8 grid grid-cols-2 gap-3 rounded-[28px] border border-line/70 bg-paper/80 p-4 shadow-soft sm:p-5 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
+      <form className="mb-8 grid grid-cols-2 gap-3 rounded-[28px] bg-paper shadow-soft p-4 shadow-soft sm:p-5 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
         <label className="col-span-2 lg:col-span-1">
           <span className="mb-1.5 block text-xs text-ink-faint">{m.specialization}</span>
           <select name="spec" defaultValue={sp.spec ?? ""} className={select}>
@@ -120,7 +120,7 @@ export default async function Specialists({ searchParams }: { searchParams: Prom
       ) : (
         <ul className="stagger grid gap-4 md:grid-cols-2">
           {shown.map(({ p, next }) => (
-            <li key={p.user_id} className="flex flex-col rounded-[28px] border border-line/70 bg-paper/85 p-5 shadow-soft transition hover:shadow-lift sm:p-6">
+            <li key={p.user_id} className="flex flex-col rounded-[28px] bg-paper shadow-soft p-5 shadow-soft transition hover:shadow-lift sm:p-6">
               <div className="flex items-start gap-4">
                 <Avatar name={p.full_name} src={p.photo_url} size={72} />
                 <div className="min-w-0 flex-1">

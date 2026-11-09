@@ -86,7 +86,7 @@ function EmailForm({ kind, invite }: { kind: "client" | "colleague"; invite?: st
     if (state?.ok) form.current?.reset();
   }, [state]);
   const input =
-    "w-full rounded-2xl border border-line bg-paper px-4 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
+    "w-full rounded-2xl border border-line bg-paper px-4 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
   return (
     <form ref={form} action={action} className="animate-rise space-y-3 rounded-[22px] bg-sand/50 p-4">
       <input type="hidden" name="kind" value={kind} />

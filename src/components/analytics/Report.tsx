@@ -4,7 +4,7 @@ import type { Insight, Report, StoredReport } from "@/lib/analytics";
 
 const TREND_TONE = {
   better: "bg-sage-soft text-sage-deep",
-  worse: "bg-[#fbf1ec] text-[#94594a]",
+  worse: "bg-[#ffeeec] text-[#b23b33]",
   stable: "bg-mist text-sky-deep",
   unclear: "bg-sand text-ink-soft",
 };
@@ -27,7 +27,7 @@ function InsightList({ items, locale }: { items: Insight[]; locale: Locale }) {
       {items.map((i, n) => (
         <li
           key={n}
-          className={`rounded-2xl px-4 py-3 ${i.basis === "fact" ? "border border-line/70 bg-paper" : "border border-dashed border-lilac-deep/40 bg-lilac-soft/30"}`}
+          className={`rounded-2xl px-4 py-3 ${i.basis === "fact" ? "bg-paper shadow-soft" : "border border-dashed border-lilac-deep/40 bg-lilac-soft/30"}`}
         >
           <div className="flex flex-wrap items-center gap-2">
             <p className="mr-auto text-[15px] font-medium text-ink">{i.title}</p>
@@ -172,7 +172,7 @@ const DOT: Record<TimelineEvent["kind"], string> = {
   session: "bg-sky-deep",
   report: "bg-lilac-deep",
   goal: "bg-sage-deep",
-  balance: "bg-[#6250d6]",
+  balance: "bg-[#6c63ff]",
   checkin: "bg-[#eb6834]",
 };
 

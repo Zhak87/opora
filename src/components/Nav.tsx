@@ -33,10 +33,10 @@ export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: {
   return (
     <>
       {/* Компьютер и планшет: тихая боковая панель */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[88px] flex-col items-center border-r border-line/60 bg-paper/60 py-6 backdrop-blur-xl md:flex lg:w-[232px] lg:items-stretch lg:px-5">
-        <Link href="/" className="mb-10 flex items-center gap-3 lg:px-2">
-          <Orb size={36} still />
-          <span className="hidden font-serif text-xl text-ink lg:inline">{m.brand}</span>
+      <aside className="fixed inset-y-3 left-3 z-30 hidden w-[76px] flex-col items-center rounded-[30px] bg-paper/90 py-5 shadow-soft backdrop-blur-xl md:flex lg:w-[220px] lg:items-stretch lg:px-4">
+        <Link href="/" className="mb-9 flex items-center gap-2.5 lg:px-2">
+          <Orb size={40} face />
+          <span className="hidden font-display text-[19px] font-semibold lowercase tracking-[-0.03em] text-ink lg:inline">{m.brand}</span>
         </Link>
         <nav className="flex flex-col gap-1.5">
           {ITEMS.map(({ href, key, Icon }) => {
@@ -47,15 +47,15 @@ export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: {
                 key={href}
                 href={href}
                 title={label}
-                className={`group flex h-12 items-center gap-3 rounded-2xl px-3 transition-all duration-300 lg:px-3.5 ${
-                  active ? "bg-sand/80 text-ink" : "text-ink-soft hover:bg-sand/40 hover:text-ink"
+                className={`group relative flex h-12 items-center gap-3 rounded-[18px] px-3 transition-all duration-300 lg:px-3.5 ${
+                  active ? "bg-ink text-paper shadow-soft" : "text-ink-soft hover:bg-sand hover:text-ink"
                 }`}
               >
                 <span className="relative">
                   <Icon className="h-[22px] w-[22px] shrink-0" />
                   {key === "care" && careUnread > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
                 </span>
-                <span className="hidden text-[15px] lg:inline">{label}</span>
+                <span className="hidden text-[15px] font-medium lg:inline">{label}</span>
               </Link>
             );
           })}
@@ -65,7 +65,7 @@ export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: {
           <Link
             href="/pro"
             title={m.nav.pro}
-            className="mt-1.5 flex h-12 items-center gap-3 rounded-2xl px-3 text-lilac-deep transition hover:bg-lilac-soft/70 lg:px-3.5"
+            className="mt-1.5 flex h-12 items-center gap-3 rounded-[18px] px-3 text-lilac-deep transition hover:bg-lilac-soft lg:px-3.5"
           >
             <GridIcon className="h-[22px] w-[22px] shrink-0" />
             <span className="hidden text-[15px] lg:inline">{m.nav.pro}</span>
@@ -79,8 +79,8 @@ export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: {
 
       {/* Телефон: нижняя панель */}
       {!inChat && (
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line/60 bg-paper/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
-          <div className="mx-auto flex max-w-md items-stretch justify-around px-2">
+        <nav className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 rounded-[26px] bg-paper/90 shadow-lift backdrop-blur-xl md:hidden">
+          <div className="mx-auto flex max-w-md items-stretch justify-around px-1.5">
             {ITEMS.map(({ href, key, Icon }) => {
               const label = m.nav[key];
               const active = isActive(path, href);
@@ -88,11 +88,15 @@ export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: {
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${
+                  className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-medium transition-colors ${
                     active ? "text-ink" : "text-ink-faint"
                   }`}
                 >
-                  <span className={`relative flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-sand" : ""}`}>
+                  <span
+                    className={`relative flex h-9 w-12 items-center justify-center rounded-[14px] transition-all duration-500 ease-[cubic-bezier(0.3,1.5,0.5,1)] ${
+                      active ? "scale-100 bg-ink text-paper" : "scale-90"
+                    }`}
+                  >
                     <Icon className="h-[21px] w-[21px]" />
                     {key === "care" && careUnread > 0 && <span className="absolute right-2.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
                   </span>

@@ -47,7 +47,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
       <main className="mx-auto w-full max-w-5xl px-5 pb-20 pt-6 sm:px-8 sm:pt-12">
         <section className="max-w-2xl animate-rise">
           {inviter && !own && (
-            <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-line/70 bg-paper/80 py-1.5 pl-1.5 pr-5 shadow-soft">
+            <div className="mb-6 inline-flex items-center gap-3 rounded-full bg-paper shadow-soft py-1.5 pl-1.5 pr-5 shadow-soft">
               <Avatar name={inviter.full_name} src={inviter.photo_url} size={36} />
               <span className="text-sm text-ink">{sm.invitedBy(inviter.full_name)}</span>
             </div>

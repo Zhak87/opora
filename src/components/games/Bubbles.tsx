@@ -115,7 +115,7 @@ export function Bubbles() {
           onChange={(e) => setText(e.target.value)}
           maxLength={80}
           placeholder={m.placeholder}
-          className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+          className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
         />
         <button className="h-12 shrink-0 rounded-full bg-ink px-5 text-[15px] text-paper transition hover:bg-ink/90">{m.button}</button>
       </form>

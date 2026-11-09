@@ -11,7 +11,7 @@ const TONE: Record<Notice["kind"], { dot: string; bg: string }> = {
   course: { dot: "bg-lilac-deep", bg: "from-lilac-soft/80" },
   milestone: { dot: "bg-sage-deep", bg: "from-sage-soft/80" },
   tip: { dot: "bg-sky-deep", bg: "from-mist/80" },
-  question: { dot: "bg-[#9a8466]", bg: "from-sand/80" },
+  question: { dot: "bg-[#b0623f]", bg: "from-sand/80" },
   care: { dot: "bg-lilac-deep", bg: "from-lilac-soft/80" },
 };
 
@@ -27,7 +27,7 @@ export default async function NotificationsPage() {
       <PageHeader title={m.title}>{m.lead}</PageHeader>
       <MarkSeen ids={unseen} />
       {list.length === 0 ? (
-        <p className="rounded-[24px] border border-line/70 bg-paper/70 p-6 text-center text-[15px] text-ink-soft">{m.empty}</p>
+        <p className="rounded-[24px] bg-paper shadow-soft p-6 text-center text-[15px] text-ink-soft">{m.empty}</p>
       ) : (
         <>
           <p className="mb-3 px-1 text-[15px] text-ink-soft">{m.today}</p>

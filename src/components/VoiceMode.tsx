@@ -251,7 +251,7 @@ export function VoiceMode({
         </p>
         <div className="mt-4 min-h-[96px] max-w-md text-center">
           {error ? (
-            <p className="text-[15px] leading-relaxed text-[#94594a]">{error}</p>
+            <p className="text-[15px] leading-relaxed text-[#b23b33]">{error}</p>
           ) : (
             <>
               {heard && <p className="animate-fade text-[14px] leading-relaxed text-ink-faint">«{heard}»</p>}

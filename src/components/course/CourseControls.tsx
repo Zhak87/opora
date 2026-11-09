@@ -16,7 +16,7 @@ export function StopCourse({ courseId }: { courseId: string }) {
       </button>
     );
   return (
-    <form action={stopCourse} className="animate-fade rounded-[22px] border border-line/70 bg-paper/80 p-5 text-left">
+    <form action={stopCourse} className="animate-fade rounded-[22px] bg-paper shadow-soft p-5 text-left">
       <input type="hidden" name="id" value={courseId} />
       <p className="text-sm leading-relaxed text-ink-soft">{m.stopConfirm}</p>
       <div className="mt-4 flex flex-wrap gap-2">

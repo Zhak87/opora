@@ -77,7 +77,7 @@ export default async function MyPlanPage() {
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-line/70 bg-paper/70 p-6">
+      <section className="rounded-[28px] bg-paper shadow-soft p-6">
         <p className="text-[15px] text-ink">{m.renewTitle}</p>
         <p className="mb-4 mt-1 text-sm text-ink-soft">
           {m.renewLead}

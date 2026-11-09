@@ -29,8 +29,8 @@ export default async function ProProfilePage() {
             <p className="text-sm text-ink-soft">{m.statusHint[me.status]}</p>
           </div>
           {lastNote && (me.status === "rejected" || me.status === "suspended") && (
-            <div className="mt-4 rounded-2xl bg-[#fbf1ec]/80 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#a0614f]">{m.profile.reviewNote}</p>
+            <div className="mt-4 rounded-2xl bg-[#ffeeec]/80 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.12em] text-[#c2453d]">{m.profile.reviewNote}</p>
               <p className="mt-1 text-sm leading-relaxed text-ink">{lastNote}</p>
             </div>
           )}
@@ -59,7 +59,7 @@ export default async function ProProfilePage() {
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">{f.name.replace(/^\d+-/, "")}</span>
                   <form action={deleteDocument}>
                     <input type="hidden" name="name" value={f.name} />
-                    <button aria-label={m.profile.removeDoc} title={m.profile.removeDoc} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">
+                    <button aria-label={m.profile.removeDoc} title={m.profile.removeDoc} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">
                       <TrashIcon className="h-[18px] w-[18px]" />
                     </button>
                   </form>

@@ -27,7 +27,7 @@ export default async function ClientsPage() {
             <li key={c.link.id}>
               <Link
                 href={`/pro/clients/${c.link.client_id}`}
-                className="group flex h-full items-start gap-4 rounded-[24px] border border-line/70 bg-paper/80 p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
+                className="group flex h-full items-start gap-4 rounded-[24px] bg-paper shadow-soft p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
               >
                 <Avatar name={c.name ?? "?"} size={48} />
                 <span className="min-w-0 flex-1">
@@ -57,7 +57,7 @@ export default async function ClientsPage() {
       {ended.length > 0 && (
         <section className="mt-10">
           <h2 className="mb-3 px-1 text-[15px] text-ink-soft">{m.ended}</h2>
-          <ul className="divide-y divide-line/70 rounded-[24px] border border-line/70 bg-paper/50">
+          <ul className="divide-y divide-line/70 rounded-[24px] bg-paper shadow-soft">
             {ended.map((c) => (
               <li key={c.link.id} className="flex items-center gap-4 px-5 py-3 text-sm text-ink-faint">
                 <span className="flex-1">{m.noName}</span>

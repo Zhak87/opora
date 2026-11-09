@@ -54,7 +54,7 @@ export function Values() {
           <div className="absolute inset-x-3 top-2 h-full rounded-[32px] bg-sand" aria-hidden />
           <div
             key={value}
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-[32px] border border-line/70 bg-paper shadow-lift"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-[32px] bg-paper shadow-soft shadow-lift"
             style={{
               animation: leaving
                 ? `card-out-${leaving} 0.38s ease-in forwards`

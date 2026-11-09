@@ -51,7 +51,7 @@ export function GratitudeJar() {
               <stop offset="100%" stopColor="#fff6d8" stopOpacity="0" />
             </radialGradient>
           </defs>
-          <rect x="70" y="18" width="100" height="26" rx="8" fill="#e6dccd" />
+          <rect x="70" y="18" width="100" height="26" rx="8" fill="#dcdfea" />
           <path d="M78 44 h84 v14 c34 14 50 40 50 80 v150 c0 22 -16 36 -38 36 h-108 c-22 0 -38 -14 -38 -36 v-150 c0 -40 16 -66 50 -80 z" fill="url(#jar-glow)" stroke="#d8cfc0" strokeWidth="3" />
           <path d="M48 140 c0 -20 6 -34 18 -44" stroke="#fff" strokeWidth="5" strokeLinecap="round" opacity="0.7" fill="none" />
         </svg>
@@ -93,7 +93,7 @@ export function GratitudeJar() {
             onChange={(e) => setText(e.target.value)}
             maxLength={140}
             placeholder={m.placeholder}
-            className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+            className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
           />
           <button disabled={!text.trim() || !!falling} className="h-12 shrink-0 rounded-full bg-ink px-5 text-[15px] text-paper shadow-soft transition hover:bg-ink/90 disabled:opacity-40">
             {m.button}

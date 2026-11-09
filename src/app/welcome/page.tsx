@@ -11,6 +11,13 @@ import { aboutMessages } from "@/i18n/about";
 import { profileMessages } from "@/i18n/profile";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
+const BUBBLES = [
+  "left-0 top-[12%] bg-peach-soft",
+  "right-0 top-[22%] bg-lilac-soft",
+  "left-[4%] bottom-[16%] bg-sage-soft",
+  "right-[2%] bottom-[8%] bg-mist",
+];
+
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
   const { deleted } = await searchParams;
   const m = await getMsg(welcomeMessages);
@@ -21,7 +28,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   return (
     <div className="relative flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
-        <span className="font-serif text-xl text-ink">{c.brand}</span>
+        <span className="flex items-center gap-2"><Orb size={34} still face /><span className="hidden font-display text-[19px] font-semibold lowercase tracking-[-0.03em] text-ink sm:inline">{c.brand}</span></span>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher />
           <MusicToggle withLabel className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline sm:pr-2" />
@@ -33,22 +40,30 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         {deleted && (
           <p className="mb-8 rounded-full bg-paper/80 px-5 py-2 text-sm text-ink-soft shadow-soft">{m.deleted}</p>
         )}
-        <Orb size={180} className="mb-10 animate-fade" />
-        <h1 className="max-w-2xl animate-rise font-serif text-[38px] leading-[1.15] text-ink sm:text-[56px]">{m.title}</h1>
-        <p className="mt-6 max-w-lg animate-rise text-[17px] leading-relaxed text-ink-soft [animation-delay:120ms]">{m.lead}</p>
-        <div className="mt-10 flex w-full max-w-xs animate-rise flex-col gap-3 [animation-delay:220ms] sm:max-w-none sm:flex-row sm:justify-center">
-          <ButtonLink href="/demo">{m.tryDemo}</ButtonLink>
-          <ButtonLink href="/signup" variant="soft">{m.createAccount}</ButtonLink>
-        </div>
-        <p className="mt-4 animate-fade text-sm text-ink-faint [animation-delay:300ms]">{m.noEmail}</p>
-
-        <div className="mt-16 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-ink-faint animate-fade [animation-delay:400ms]">
-          {m.feelings.map((f, i) => (
-            <span key={f} className="flex items-center gap-3">
-              {i > 0 && <span className="h-px w-6 bg-line" />}
-              {f}
-            </span>
-          ))}
+        <div className="grid w-full items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-6 lg:text-left">
+          {/* Капля и чувства, с которыми сюда приходят, мягко плавают вокруг неё */}
+          <div className="relative mx-auto flex h-[300px] w-full max-w-[420px] items-center justify-center sm:h-[400px] lg:order-2">
+            <Orb size={220} face className="sm:hidden" />
+            <Orb size={290} face className="hidden sm:block" />
+            {m.feelings.slice(0, 4).map((f, i) => (
+              <span
+                key={f}
+                className={`absolute animate-float whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-ink shadow-soft ${BUBBLES[i]}`}
+                style={{ animationDelay: `${-i * 1.4}s` }}
+              >
+                {f}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-col items-center lg:items-start">
+            <h1 className="max-w-2xl animate-rise font-serif text-[34px] leading-[1.08] text-ink sm:text-[54px]">{m.title}</h1>
+            <p className="mt-6 max-w-lg animate-rise text-[17px] leading-relaxed text-ink-soft [animation-delay:120ms]">{m.lead}</p>
+            <div className="mt-9 flex w-full max-w-xs animate-rise flex-col gap-3 [animation-delay:220ms] sm:max-w-none sm:flex-row sm:justify-center lg:justify-start">
+              <ButtonLink href="/demo" className="h-14 whitespace-nowrap px-8">{m.tryDemo}</ButtonLink>
+              <ButtonLink href="/signup" variant="soft" className="h-14 whitespace-nowrap px-8">{m.createAccount}</ButtonLink>
+            </div>
+            <p className="mt-4 animate-fade text-sm text-ink-faint [animation-delay:300ms]">{m.noEmail}</p>
+          </div>
         </div>
       </main>
 

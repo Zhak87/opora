@@ -87,7 +87,7 @@ export default async function ProfilePage({
             </Link>
             {filled && (
               <form action={clearIntake}>
-                <button type="submit" className="px-2 text-xs text-ink-faint transition hover:text-[#a0614f]">
+                <button type="submit" className="px-2 text-xs text-ink-faint transition hover:text-[#c2453d]">
                   {q.profileClear}
                 </button>
               </form>

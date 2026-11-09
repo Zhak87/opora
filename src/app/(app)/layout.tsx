@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ])
     : [0, false, false, 0];
   return (
-    <div className="min-h-dvh md:pl-[88px] lg:pl-[232px]">
+    <div className="min-h-dvh md:pl-[100px] lg:pl-[244px]">
       <Nav unread={unread} care={care} pro={pro} careUnread={careUnread} />
       <div className="fixed right-4 top-4 z-30 flex items-center gap-2 pt-[env(safe-area-inset-top)] md:hidden">
         <Bell unread={unread} />

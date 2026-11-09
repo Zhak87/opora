@@ -19,17 +19,14 @@ export default async function HopePage() {
       <PageHeader title={m.title}>{m.intro}</PageHeader>
 
       <div className="stagger space-y-12">
-        <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#f6efe4] via-lilac-soft to-mist px-7 py-12 text-center shadow-soft sm:px-14 sm:py-16">
-          <div
-            className="pointer-events-none absolute -bottom-24 left-1/2 h-48 w-[120%] -translate-x-1/2 rounded-[100%] opacity-60"
-            style={{ background: "radial-gradient(closest-side, #fffdf9, transparent)" }}
-            aria-hidden
-          />
-          <p className="relative mb-5 text-xs uppercase tracking-[0.16em] text-lilac-deep">{m.thoughtToday}</p>
-          <blockquote className="relative mx-auto max-w-xl font-serif text-[24px] leading-snug text-ink sm:text-[30px]">
+        <section className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-[#a9b4ff] via-[#c7b2f5] to-[#ffc9b5] px-7 pb-12 pt-10 shadow-lift sm:px-12 sm:pb-14 sm:pt-12">
+          <span className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 animate-morph bg-paper/30" aria-hidden />
+          <span className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 animate-morph bg-paper/20 [animation-delay:-6s]" aria-hidden />
+          <p className="relative mb-16 inline-flex rounded-full bg-paper/40 px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-ink/70 sm:mb-20">{m.thoughtToday}</p>
+          <blockquote className="relative max-w-xl font-serif text-[23px] leading-[1.25] text-ink sm:text-[32px]">
             {thought.text}
           </blockquote>
-          <p className="relative mx-auto mt-5 max-w-md text-[15px] text-ink-soft">{thought.note}</p>
+          <p className="relative mt-5 max-w-md text-[15px] text-ink/70">{thought.note}</p>
         </section>
 
         <section>
@@ -42,7 +39,7 @@ export default async function HopePage() {
                 mode="hope"
                 title={p.title}
                 prompt={p.text}
-                className="group flex w-full items-center justify-between gap-3 rounded-[22px] border border-line/70 bg-paper/80 px-5 py-4 text-left transition hover:shadow-soft"
+                className="group flex w-full items-center justify-between gap-3 lift rounded-[22px] bg-paper shadow-soft px-5 py-4 text-left"
               >
                 <span className="text-[15px] text-ink">{p.title}</span>
                 <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
@@ -51,7 +48,7 @@ export default async function HopePage() {
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-line/70 bg-sage-soft/50 p-6 sm:p-8">
+        <section className="rounded-[30px] bg-sage-soft p-6 sm:p-8">
           <h2 className="mb-1 font-serif text-[22px] text-ink">{m.threeGood}</h2>
           <p className="mb-6 text-[15px] text-ink-soft">
             {m.threeGoodHint}
@@ -63,7 +60,7 @@ export default async function HopePage() {
           <h2 className="mb-5 font-serif text-[22px] text-ink">{m.reflections}</h2>
           <div className="space-y-3">
             {reflections(locale).map((r) => (
-              <details key={r.title} className="group rounded-[22px] border border-line/70 bg-paper/75 px-6 py-5 open:shadow-soft">
+              <details key={r.title} className="group rounded-[22px] bg-paper shadow-soft px-6 py-5 open:shadow-soft">
                 <summary className="flex cursor-pointer list-none items-center justify-between text-[16px] text-ink">
                   {r.title}
                   <span className="text-ink-faint transition group-open:rotate-45">+</span>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMsg } from "@/i18n/client";
 import { lightMessages } from "@/i18n/game-light";
 
-const COLORS = ["#8fa8bf", "#b9aed6", "#9db894", "#d8b98f", "#7f71a8"];
+const COLORS = ["#8db4ea", "#aaa4ff", "#7ccfaa", "#d8b98f", "#6c63ff"];
 
 // Рисование светом: линии светятся и медленно растворяются. Режим «мандала» повторяет штрих по кругу.
 export function LightDraw() {
@@ -37,7 +37,7 @@ export function LightDraw() {
       c.width = Math.round(r.width * dpr);
       c.height = Math.round(r.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = "#fbf8f3";
+      ctx.fillStyle = "#f3f4f8";
       ctx.fillRect(0, 0, r.width, r.height);
       if (copy) ctx.drawImage(copy, 0, 0, copy.width / dpr, copy.height / dpr);
       c.dataset.ready = "1";
@@ -98,7 +98,7 @@ export function LightDraw() {
     const c = canvas.current!;
     const ctx = c.getContext("2d")!;
     const r = c.getBoundingClientRect();
-    ctx.fillStyle = "#fbf8f3";
+    ctx.fillStyle = "#f3f4f8";
     ctx.fillRect(0, 0, r.width, r.height);
   };
 

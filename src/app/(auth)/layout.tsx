@@ -14,10 +14,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         <MusicToggle />
       </div>
       <Link href="/welcome" className="mb-8 mt-6 flex flex-col items-center gap-4 animate-fade sm:mt-0">
-        <Orb size={88} />
-        <span className="font-serif text-2xl text-ink">{m.brand}</span>
+        <Orb size={104} face />
+        <span className="font-display text-[22px] font-semibold lowercase tracking-[-0.03em] text-ink">{m.brand}</span>
       </Link>
-      <div className="w-full max-w-[400px] animate-rise rounded-[32px] border border-line/70 bg-paper/85 p-7 shadow-lift backdrop-blur sm:p-9">
+      <div className="w-full max-w-[400px] animate-rise rounded-[32px] bg-paper p-7 shadow-lift sm:p-9">
         {children}
       </div>
     </div>

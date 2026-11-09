@@ -166,11 +166,11 @@ function Gate({ onEnter }: { onEnter: () => void }) {
       className="ambient fixed inset-0 z-[60] flex animate-fade cursor-pointer flex-col items-center justify-center px-6 text-center"
     >
       <div className="relative h-40 w-40" aria-hidden>
-        <div className="absolute inset-0 animate-breathe rounded-full opacity-70 blur-2xl" style={{ background: "radial-gradient(circle at 40% 40%, #ebe6f4, #c9d8e6 50%, #d6e5cf 80%)" }} />
+        <div className="absolute inset-0 animate-breathe rounded-full opacity-70 blur-2xl" style={{ background: "radial-gradient(circle at 40% 40%, #e6e4ff, #aab4ff 50%, #d6f2e6 80%)" }} />
         <div
           className="absolute inset-[14%] animate-breathe rounded-full"
           style={{
-            background: "radial-gradient(circle at 35% 30%, #fffdf9 0%, #e7e1f2 35%, #bccfe0 70%, #b4cbaa 100%)",
+            background: "radial-gradient(circle at 35% 30%, #ffffff 0%, #e6e4ff 35%, #c7b2f5 70%, #ffc9b5 100%)",
             boxShadow: "0 20px 50px -20px rgb(95 125 152 / 0.45)",
           }}
         />

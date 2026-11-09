@@ -24,7 +24,7 @@ export function Letter() {
           <div className="absolute inset-0 rounded-[18px] bg-sand shadow-lift" />
           <svg viewBox="0 0 300 200" className="absolute inset-0 h-full w-full">
             <path d="M0 18 L150 120 L300 18" fill="none" stroke="#d8cfc0" strokeWidth="2" />
-            <path d="M0 200 L120 100 M300 200 L180 100" stroke="#e6dccd" strokeWidth="2" />
+            <path d="M0 200 L120 100 M300 200 L180 100" stroke="#dcdfea" strokeWidth="2" />
           </svg>
           <span
             className="absolute left-1/2 top-[104px] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-lilac-deep font-serif text-lg text-paper shadow-lift"
@@ -52,14 +52,14 @@ export function Letter() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="relative rounded-[28px] border border-line/70 bg-paper px-6 py-7 shadow-soft sm:px-9 sm:py-9">
+      <div className="relative rounded-[28px] bg-paper shadow-soft px-6 py-7 shadow-soft sm:px-9 sm:py-9">
         <p className="font-serif text-[20px] text-ink">{m.greeting}</p>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={10}
           placeholder={m.placeholder}
-          className="mt-3 w-full resize-none bg-[repeating-linear-gradient(transparent,transparent_31px,#ebe4d8_32px)] bg-local font-serif text-[17px] leading-[32px] text-ink outline-none placeholder:text-ink-faint"
+          className="mt-3 w-full resize-none bg-[repeating-linear-gradient(transparent,transparent_31px,#e6e8f0_32px)] bg-local font-serif text-[17px] leading-[32px] text-ink outline-none placeholder:text-ink-faint"
           aria-label={m.aria}
         />
       </div>

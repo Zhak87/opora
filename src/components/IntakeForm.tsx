@@ -114,7 +114,7 @@ export function IntakeForm({ initial }: { initial: Intake | null }) {
               onChange={(e) => setA((prev) => ({ ...prev, note: e.target.value }))}
               placeholder={m.notePlaceholder}
               aria-label={m.q.note}
-              className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+              className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
             />
             <p className="mt-1 text-right text-xs text-ink-faint">
               {a.note.length}/{NOTE_MAX}
@@ -152,7 +152,7 @@ export function IntakeForm({ initial }: { initial: Intake | null }) {
         )}
       </fieldset>
 
-      {error && <p className="text-sm text-[#a0614f]">{error}</p>}
+      {error && <p className="text-sm text-[#c2453d]">{error}</p>}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
         {step > 0 && (
