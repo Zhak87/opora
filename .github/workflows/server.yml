@@ -1,0 +1,77 @@
+# Обслуживание сервера без входа на него руками: запускается вручную (Actions → Server → Run workflow).
+#   setup   — первая настройка чистого сервера (входит как root по тому же ключу, потом root закрывается)
+#   status  — что запущено, память, диск, срок SSL
+#   logs    — последние строки журналов сайта и Caddy
+#   restart — перезапустить сайт
+name: Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Что сделать
+        type: choice
+        options: [status, logs, restart, setup]
+        default: status
+
+concurrency:
+  group: production-server
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Настройки
+        run: |
+          grep -E '^[A-Z_]+=' deploy/site.env >> "$GITHUB_ENV"
+          echo "HOST=$(grep '^DEPLOY_HOST=' deploy/site.env | cut -d= -f2-)" >> "$GITHUB_ENV"
+
+      - name: Подготовить SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_KEY" || { echo "Добавьте секрет DEPLOY_SSH_KEY (см. deploy/README.md)"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -t ed25519 "$HOST" > ~/.ssh/known_hosts; fi
+          echo "Отпечаток ключа сервера (сверьте с панелью хостинга, если она его показывает):"
+          ssh-keygen -lf ~/.ssh/known_hosts
+          printf 'Host prod\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\nHost prod-root\n  HostName %s\n  User root\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n' "$HOST" "$HOST" > ~/.ssh/config
+
+      - name: setup
+        if: inputs.action == 'setup'
+        env:
+          ROOT_PASSWORD: ${{ secrets.ROOT_PASSWORD }}
+        run: |
+          PUB=$(ssh-keygen -y -f ~/.ssh/id_deploy)
+          # Если хостинг выдал только пароль root: он лежит в секрете ROOT_PASSWORD, по нему один раз
+          # кладётся ключ, дальше вход по паролю выключается. Секрет после этого можно удалить.
+          if [ -n "$ROOT_PASSWORD" ]; then
+            sudo apt-get -qq install -y sshpass >/dev/null
+            echo "$PUB" | SSHPASS="$ROOT_PASSWORD" sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no "root@$HOST" \
+              'install -d -m 700 /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'
+          fi
+          scp deploy/server-setup.sh prod-root:/root/server-setup.sh
+          ssh prod-root "bash /root/server-setup.sh '$PUB'"
+          ssh prod 'docker --version && echo "Вход deploy по ключу работает"'
+
+      - name: status
+        if: inputs.action == 'status'
+        run: |
+          ssh prod 'uptime; echo; free -h; echo; df -h /; echo; cd /opt/opora 2>/dev/null && docker compose ps || echo "Сайт ещё не выложен"'
+          if [ -n "$NEXT_PUBLIC_SITE_URL" ]; then
+            D=$(echo "$NEXT_PUBLIC_SITE_URL" | sed -E 's#https?://##; s#/.*##')
+            echo; echo "SSL для $D:"; echo | openssl s_client -connect "$D:443" -servername "$D" 2>/dev/null | openssl x509 -noout -issuer -enddate || echo "SSL пока нет"
+          fi
+
+      - name: logs
+        if: inputs.action == 'logs'
+        run: ssh prod 'cd /opt/opora && docker compose logs --tail 150 app caddy cron'
+
+      - name: restart
+        if: inputs.action == 'restart'
+        run: ssh prod 'cd /opt/opora && docker compose restart app && docker compose ps'

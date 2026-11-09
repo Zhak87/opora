@@ -15,6 +15,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Для своего сервера: сборка складывает всё нужное для запуска в .next/standalone (см. Dockerfile).
+  output: "standalone",
   experimental: {
     // Уже открытые разделы показываются из кэша браузера мгновенно, данные обновляются после изменений.
     staleTimes: { dynamic: 30, static: 180 },

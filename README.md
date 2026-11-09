@@ -20,6 +20,10 @@
 
 ---
 
+## Свой сервер в Казахстане
+
+Выкладка на VPS с доменом `.kz`, бесплатным SSL и автоматическим CI/CD: [deploy/README.md](deploy/README.md).
+
 ## Запуск в интернете (≈10 минут)
 
 База данных Supabase уже создана: проект **opora**, адрес `https://tjvavsizvmjoaieankmy.supabase.co`, таблицы и правила доступа настроены (схема в `supabase/migrations/0001_init.sql`).

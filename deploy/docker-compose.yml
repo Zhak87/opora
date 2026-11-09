@@ -1,0 +1,48 @@
+# Запуск на сервере: сайт + Caddy (сам получает и продлевает бесплатный SSL от Let's Encrypt).
+# Лежит в /opt/opora на сервере, туда же кладётся .env с секретами (см. deploy/README.md).
+services:
+  app:
+    image: opora:${OPORA_TAG:-latest}
+    restart: unless-stopped
+    env_file: [.env, server.env]
+    expose:
+      - "3000"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?укажите DOMAIN в .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Замена Vercel Cron: раз в день в 03:00 UTC (08:00 по Астане) дёргает рассылку и напоминания о встречах.
+  cron:
+    image: alpine:3.22
+    restart: unless-stopped
+    depends_on: [app]
+    env_file: [.env, server.env]
+    command:
+      - /bin/sh
+      - -c
+      - |
+        H="Authorization: Bearer $$CRON_SECRET"
+        echo "0 3 * * * wget -qO- --header '$$H' http://app:3000/api/cron/daily-email; wget -qO- --header '$$H' http://app:3000/api/cron/session-reminders" > /etc/crontabs/root
+        exec crond -f -l 8
+
+volumes:
+  caddy_data:
+  caddy_config:
