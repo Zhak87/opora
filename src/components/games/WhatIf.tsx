@@ -64,7 +64,7 @@ export function WhatIf() {
             onChange={(e) => setAnswer(e.target.value)}
             rows={3}
             placeholder={m.placeholder}
-            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 font-serif text-[16px] leading-relaxed text-ink outline-none placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
+            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink outline-none placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
           />
           <div className="mt-4">
             <ResultActions

@@ -38,8 +38,8 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
     <div className="min-h-dvh">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-6 sm:px-8">
         <Link href={user ? "/" : "/welcome"} className="flex items-center gap-3">
-          <Orb size={32} still />
-          <span className="font-serif text-xl text-ink">{c.brand}</span>
+          <Orb size={36} face />
+          <span className="font-display text-[19px] font-semibold lowercase tracking-[-0.03em] text-ink">{c.brand}</span>
         </Link>
         <LanguageSwitcher />
       </header>

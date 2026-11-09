@@ -91,7 +91,7 @@ export function Bubbles() {
                 type="button"
                 aria-label={b.text ? m.releaseAria(b.text) : m.popAria}
                 onPointerDown={() => !b.popped && pop(b.id)}
-                className="flex h-full w-full items-center justify-center rounded-full p-3 text-center font-serif text-[13px] leading-snug text-ink/80"
+                className="flex h-full w-full items-center justify-center rounded-full p-3 text-center text-[13px] leading-snug text-ink/80"
                 style={{
                   background: HUES[b.hue],
                   boxShadow: "inset -6px -8px 18px rgba(127,113,168,0.12), inset 4px 4px 10px rgba(255,255,255,0.7), 0 10px 30px -14px rgba(95,125,152,0.4)",

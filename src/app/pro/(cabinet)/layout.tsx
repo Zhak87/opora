@@ -15,7 +15,7 @@ export default async function ProLayout({ children }: { children: React.ReactNod
   if (!(await myPsychologist(supabase, user.id))) redirect("/pro/join");
   const [m, unread] = await Promise.all([getMsg(proMessages), unreadTotal(supabase).catch(() => 0)]);
   return (
-    <div className="min-h-dvh md:pl-[88px] lg:pl-[248px]">
+    <div className="min-h-dvh md:pl-[100px] lg:pl-[260px]">
       <ProNav unread={unread} />
       <Link
         href="/"

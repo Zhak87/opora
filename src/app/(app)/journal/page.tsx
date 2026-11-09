@@ -67,7 +67,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                         {new Date(e.created_at).toLocaleTimeString(INTL[locale], { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" })}
                       </span>
                     </div>
-                    <p className="whitespace-pre-wrap font-serif text-[16.5px] leading-[1.7] text-ink">{e.content}</p>
+                    <p className="whitespace-pre-wrap text-[16.5px] leading-[1.7] text-ink">{e.content}</p>
                     <div className="mt-4 flex items-center gap-1 sm:opacity-60 sm:transition sm:group-hover:opacity-100">
                       <form action={reflectOnJournal}>
                         <input type="hidden" name="id" value={e.id} />

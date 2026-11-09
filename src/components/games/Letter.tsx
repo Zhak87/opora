@@ -59,7 +59,7 @@ export function Letter() {
           onChange={(e) => setText(e.target.value)}
           rows={10}
           placeholder={m.placeholder}
-          className="mt-3 w-full resize-none bg-[repeating-linear-gradient(transparent,transparent_31px,#e6e8f0_32px)] bg-local font-serif text-[17px] leading-[32px] text-ink outline-none placeholder:text-ink-faint"
+          className="mt-3 w-full resize-none bg-[repeating-linear-gradient(transparent,transparent_31px,#e6e8f0_32px)] bg-local text-[17px] leading-[32px] text-ink outline-none placeholder:text-ink-faint"
           aria-label={m.aria}
         />
       </div>

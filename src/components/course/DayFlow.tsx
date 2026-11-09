@@ -146,7 +146,7 @@ export function DayFlow(props: {
           <article className="relative overflow-hidden rounded-[30px] border border-line/70 bg-gradient-to-b from-paper to-sand/40 p-7 shadow-soft sm:p-10">
             <span className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-lilac-soft/70 blur-2xl" aria-hidden />
             <p className="relative text-xs uppercase tracking-[0.14em] text-ink-faint">{m.letter}</p>
-            <div className="relative mt-4 space-y-4 font-serif text-[19px] leading-[1.7] text-ink sm:text-[21px]">
+            <div className="relative mt-4 space-y-4 text-[19px] leading-[1.7] text-ink sm:text-[21px]">
               {content.letter.split(/\n+/).map((p, k) => (
                 <p key={k}>{p}</p>
               ))}

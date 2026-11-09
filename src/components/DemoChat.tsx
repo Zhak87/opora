@@ -178,7 +178,7 @@ export function DemoChat() {
                 <div key={m.id} className="flex animate-rise gap-3.5">
                   <Orb size={34} still face className="-mt-1 hidden sm:block" />
                   {m.content ? (
-                    <p className="min-w-0 whitespace-pre-wrap font-serif text-[17px] leading-[1.7] text-ink">{m.content}</p>
+                    <p className="min-w-0 max-w-[92%] whitespace-pre-wrap rounded-[24px] rounded-bl-[8px] bg-paper px-5 py-3.5 text-[16px] leading-[1.6] text-ink shadow-soft">{m.content}</p>
                   ) : (
                     <p className="flex items-center gap-1.5 pt-1 text-sm text-ink-faint" aria-live="polite">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
@@ -209,7 +209,7 @@ export function DemoChat() {
 
           {showInvite && (
             <aside className="mt-10 animate-rise rounded-[28px] border border-line/70 bg-gradient-to-br from-paper via-paper to-mist/70 p-6 text-center shadow-soft sm:p-7">
-              <Orb size={56} className="mx-auto" />
+              <Orb size={64} face className="mx-auto" />
               <p className="mt-4 font-serif text-[22px] leading-snug text-ink">
                 {reachedLimit ? t.inviteLimitTitle : t.inviteTitle}
               </p>

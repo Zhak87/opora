@@ -64,7 +64,7 @@ export default async function CourseDayPage({ params }: { params: Promise<{ n: s
           {c?.letter && (
             <section className="rounded-[28px] bg-paper shadow-soft p-6 shadow-soft sm:p-8">
               <p className="text-xs uppercase tracking-[0.14em] text-ink-faint">{m.letter}</p>
-              <p className="mt-3 whitespace-pre-line font-serif text-[18px] leading-relaxed text-ink">{c.letter}</p>
+              <p className="mt-3 whitespace-pre-line text-[18px] leading-relaxed text-ink">{c.letter}</p>
             </section>
           )}
           {c?.insight && (

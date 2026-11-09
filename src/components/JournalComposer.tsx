@@ -61,7 +61,7 @@ export function JournalComposer({ question }: { question?: string }) {
         onChange={(e) => setText(e.target.value)}
         placeholder={m.placeholders[kind]}
         rows={5}
-        className="w-full resize-none rounded-2xl bg-transparent px-2 py-2 font-serif text-[17px] leading-[1.7] text-ink outline-none placeholder:text-ink-faint"
+        className="w-full resize-none rounded-2xl bg-transparent px-2 py-2 text-[17px] leading-[1.7] text-ink outline-none placeholder:text-ink-faint"
       />
       <div className="mt-2 flex items-center justify-between gap-3">
         <p className="px-2 text-sm text-sage-deep" aria-live="polite">

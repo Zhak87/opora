@@ -65,7 +65,7 @@ export default async function HopePage() {
                   {r.title}
                   <span className="text-ink-faint transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="mt-4 font-serif text-[16.5px] leading-[1.75] text-ink-soft">{r.body}</p>
+                <p className="mt-4 text-[16.5px] leading-[1.75] text-ink-soft">{r.body}</p>
               </details>
             ))}
           </div>
