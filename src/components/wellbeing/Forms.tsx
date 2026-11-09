@@ -9,8 +9,8 @@ import { AREAS, FEELINGS, METRICS, wellbeingMessages, type Metric } from "@/i18n
 import type { Checkin } from "@/lib/wellbeing";
 
 const area =
-  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
-const input = "h-11 w-full rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
+  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
+const input = "h-11 w-full rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
 
 // Шкала 1–5 кнопками: крупные цели касания, подписи краёв.
 function Scale({ name, label, low, high, value, onChange }: { name: Metric; label: string; low: string; high: string; value: number | null; onChange: (v: number) => void }) {
@@ -109,7 +109,7 @@ export function BalanceForm({ initial }: { initial: number[] }) {
               step={1}
               value={vals[i]}
               onChange={(e) => setVals((v) => v.map((x, j) => (j === i ? Number(e.target.value) : x)))}
-              className="w-full accent-[#6250d6]"
+              className="w-full accent-[#6c63ff]"
             />
           </label>
         ))}
@@ -170,7 +170,7 @@ export function GoalStepForm({ goal, progress }: { goal: string; progress: numbe
           {m.progress}
           <span className="text-ink">{value}%</span>
         </span>
-        <input type="range" name="progress" min={0} max={100} step={10} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full accent-[#6250d6]" />
+        <input type="range" name="progress" min={0} max={100} step={10} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-full accent-[#6c63ff]" />
       </label>
       <div className="flex gap-2">
         <input name="note" maxLength={1000} placeholder={m.stepPlaceholder} aria-label={m.step} className={input} />

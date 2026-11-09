@@ -89,7 +89,7 @@ export function BreathWave() {
           style={{
             width: size,
             height: size,
-            background: "radial-gradient(circle at 38% 32%, #fffdf9, #e3ecdf 40%, #b8cfe0 80%, #9db894)",
+            background: "radial-gradient(circle at 38% 32%, #ffffff, #d6f2e6 40%, #b8cfe0 80%, #7ccfaa)",
             boxShadow: `0 ${20 + level * 20}px ${50 + level * 40}px -24px rgba(106,138,98,0.55)`,
           }}
         />

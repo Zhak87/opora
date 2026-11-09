@@ -76,9 +76,9 @@ export default async function ProSession({ params, searchParams }: { params: Pro
             <ConfirmForm action={cancelSession} question={m.pro.cancelConfirm} hidden={{ session: s.id, back: "pro" }} className="flex flex-col gap-3 border-t border-line/60 pt-5 sm:flex-row sm:items-end">
               <label className="flex-1">
                 <span className="mb-2 block text-sm text-ink-soft">{m.pro.reason}</span>
-                <input name="reason" maxLength={500} className="h-11 w-full rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none focus:border-sky focus:ring-4 focus:ring-mist" />
+                <input name="reason" maxLength={500} className="h-11 w-full rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft" />
               </label>
-              <button className="h-11 rounded-full px-5 text-sm text-[#a0614f] transition hover:bg-[#fbf1ec]">{m.pro.cancel}</button>
+              <button className="h-11 rounded-full px-5 text-sm text-[#c2453d] transition hover:bg-[#ffeeec]">{m.pro.cancel}</button>
             </ConfirmForm>
           </Card>
         )}

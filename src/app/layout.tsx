@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Lora } from "next/font/google";
+import { Onest, Unbounded } from "next/font/google";
 import "./globals.css";
 import { OG_IMAGE } from "@/lib/og";
 import { MusicProvider } from "@/components/Music";
@@ -9,8 +9,9 @@ import { common } from "@/i18n/common";
 import { TimezoneCookie } from "@/components/TimezoneCookie";
 import { savedTimeZone } from "@/lib/tz";
 
-const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "cyrillic"] });
-const lora = Lora({ variable: "--font-lora", subsets: ["latin", "cyrillic"], style: ["normal", "italic"] });
+// Основной текст — Onest, заголовки — округлый Unbounded. Оба с казахскими буквами (cyrillic-ext).
+const onest = Onest({ variable: "--font-onest", subsets: ["latin", "cyrillic", "cyrillic-ext"] });
+const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin", "cyrillic", "cyrillic-ext"], weight: ["400", "500", "600"] });
 
 export async function generateMetadata(): Promise<Metadata> {
   const m = common[await getLocale()];
@@ -27,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#fbf8f3",
+  themeColor: "#f3f4f8",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -38,7 +39,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const tz = await savedTimeZone();
   return (
     <html lang={locale}>
-      <body className={`${manrope.variable} ${lora.variable} ambient min-h-dvh`}>
+      <body className={`${onest.variable} ${unbounded.variable} ambient min-h-dvh`}>
         <LocaleProvider locale={locale}>
           <MusicProvider>{children}</MusicProvider>
           <TimezoneCookie current={tz} />

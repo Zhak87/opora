@@ -13,7 +13,7 @@ export function PsychologistProfile({ p, locale, action }: { p: Psychologist; lo
   const labels = proLabels[locale];
   const price = formatPrice(p.price, p.currency, INTL[locale]);
   return (
-    <article className="overflow-hidden rounded-[32px] border border-line/70 bg-paper/85 shadow-lift">
+    <article className="overflow-hidden rounded-[32px] bg-paper shadow-soft shadow-lift">
       <div className="bg-gradient-to-br from-mist/80 via-paper to-lilac-soft/70 p-6 sm:p-9">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
           <Avatar name={p.full_name} src={p.photo_url} size={112} />
@@ -44,7 +44,7 @@ export function PsychologistProfile({ p, locale, action }: { p: Psychologist; lo
           )}
           {action}
         </div>
-        {!p.accepting_clients && <p className="mt-3 text-sm text-[#a0614f]">{m.notAccepting}</p>}
+        {!p.accepting_clients && <p className="mt-3 text-sm text-[#c2453d]">{m.notAccepting}</p>}
       </div>
 
       <div className="grid gap-8 p-6 sm:p-9 md:grid-cols-[1fr_260px]">

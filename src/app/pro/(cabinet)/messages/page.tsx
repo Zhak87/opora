@@ -25,7 +25,7 @@ export default async function ProMessages() {
     <>
       <PageHeader title={m.messages} />
       {rows.length ? (
-        <ul className="stagger divide-y divide-line/70 overflow-hidden rounded-[24px] border border-line/70 bg-paper/75">
+        <ul className="stagger divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
           {rows.map(({ c, last: msg, unread: n }) => (
             <li key={c.link.id}>
               <Link href={`/pro/messages/${c.link.client_id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">

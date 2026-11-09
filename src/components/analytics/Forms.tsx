@@ -10,8 +10,8 @@ import { NOTE_KINDS, REPORT_PERIODS, analyticsMessages } from "@/i18n/analytics"
 import type { Note } from "@/lib/analytics";
 
 const area =
-  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
-const select = "h-11 rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
+  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
+const select = "h-11 rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
 
 export function GenerateForm({ client, period }: { client: string; period: number }) {
   const [state, action] = useActionState(generateReport, undefined);
@@ -92,7 +92,7 @@ export function NoteItem({ note, date, sessionLabel }: { note: Note; date: strin
     if (state?.ok) setEditing(false);
   }, [state]);
   return (
-    <li className="rounded-2xl border border-line/70 bg-paper/80 p-4">
+    <li className="rounded-2xl bg-paper shadow-soft p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
         <span className={`rounded-full px-2.5 py-0.5 ${TONE[note.kind]}`}>{m.kinds[note.kind]}</span>
         <span className="text-ink-faint">
@@ -128,7 +128,7 @@ export function NoteItem({ note, date, sessionLabel }: { note: Note; date: strin
               {m.edit}
             </button>
             <ConfirmForm action={deleteNote} question={m.removeConfirm} hidden={{ note: note.id }}>
-              <button className="h-9 rounded-full px-3 text-sm text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.remove}</button>
+              <button className="h-9 rounded-full px-3 text-sm text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">{m.remove}</button>
             </ConfirmForm>
           </div>
         </>

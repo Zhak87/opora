@@ -39,7 +39,7 @@ export default async function TalkPage() {
             {conversations.map((c) => {
               const label = getTopic(c.topic, locale)?.title ?? m.modes[c.mode] ?? m.conversation;
               return (
-                <li key={c.id} className="group flex items-center rounded-[22px] border border-line/70 bg-paper/75 transition hover:shadow-soft">
+                <li key={c.id} className="group flex items-center rounded-[22px] bg-paper shadow-soft transition hover:shadow-soft">
                   <Link href={`/talk/${c.id}`} className="min-w-0 flex-1 px-5 py-4">
                     <span className="block truncate text-[15px] text-ink">{c.title}</span>
                     <span className="mt-0.5 block text-xs text-ink-faint">
@@ -52,7 +52,7 @@ export default async function TalkPage() {
                       type="submit"
                       aria-label={m.delete}
                       title={m.delete}
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint opacity-100 transition hover:bg-[#fbf1ec] hover:text-[#a0614f] sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint opacity-100 transition hover:bg-[#ffeeec] hover:text-[#c2453d] sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                     >
                       <TrashIcon className="h-[18px] w-[18px]" />
                     </button>

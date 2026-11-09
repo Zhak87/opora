@@ -91,7 +91,7 @@ export function Bubbles() {
                 type="button"
                 aria-label={b.text ? m.releaseAria(b.text) : m.popAria}
                 onPointerDown={() => !b.popped && pop(b.id)}
-                className="flex h-full w-full items-center justify-center rounded-full p-3 text-center font-serif text-[13px] leading-snug text-ink/80"
+                className="flex h-full w-full items-center justify-center rounded-full p-3 text-center text-[13px] leading-snug text-ink/80"
                 style={{
                   background: HUES[b.hue],
                   boxShadow: "inset -6px -8px 18px rgba(127,113,168,0.12), inset 4px 4px 10px rgba(255,255,255,0.7), 0 10px 30px -14px rgba(95,125,152,0.4)",
@@ -115,7 +115,7 @@ export function Bubbles() {
           onChange={(e) => setText(e.target.value)}
           maxLength={80}
           placeholder={m.placeholder}
-          className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+          className="h-12 min-w-0 flex-1 rounded-full border border-line bg-paper px-5 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
         />
         <button className="h-12 shrink-0 rounded-full bg-ink px-5 text-[15px] text-paper transition hover:bg-ink/90">{m.button}</button>
       </form>

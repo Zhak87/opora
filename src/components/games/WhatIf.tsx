@@ -51,7 +51,7 @@ export function WhatIf() {
             <span className="font-serif text-[64px] leading-none text-lilac-deep/70">?</span>
             <span className="mt-4 text-sm text-ink-soft">{m.tapOpen}</span>
           </div>
-          <div className="flip-face flip-back absolute inset-0 flex items-center justify-center rounded-[32px] border border-line/70 bg-paper px-8 shadow-lift">
+          <div className="flip-face flip-back absolute inset-0 flex items-center justify-center rounded-[32px] bg-paper shadow-soft px-8 shadow-lift">
             <p className="text-center font-serif text-[23px] leading-snug text-ink">{q}</p>
           </div>
         </div>
@@ -64,7 +64,7 @@ export function WhatIf() {
             onChange={(e) => setAnswer(e.target.value)}
             rows={3}
             placeholder={m.placeholder}
-            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 font-serif text-[16px] leading-relaxed text-ink outline-none placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink outline-none placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
           />
           <div className="mt-4">
             <ResultActions

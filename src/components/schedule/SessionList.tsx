@@ -32,7 +32,7 @@ export function SessionList({
   return (
     <ul className="space-y-3">
       {sessions.map((s) => (
-        <li key={s.id} className="rounded-2xl border border-line/70 bg-paper/70 p-4">
+        <li key={s.id} className="rounded-2xl bg-paper shadow-soft p-4">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-lilac-soft/70 text-ink">
               <span className="font-serif text-[18px] leading-none">{new Intl.DateTimeFormat(INTL[locale], { timeZone: tz, day: "numeric" }).format(new Date(s.starts_at))}</span>
@@ -67,7 +67,7 @@ export function SessionList({
                   {m.care.reschedule}
                 </Link>
                 <ConfirmForm action={cancelSession} question={m.care.cancelConfirm} hidden={{ session: s.id }}>
-                  <button className="h-9 rounded-full px-3 text-sm text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.care.cancel}</button>
+                  <button className="h-9 rounded-full px-3 text-sm text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">{m.care.cancel}</button>
                 </ConfirmForm>
               </div>
             )}

@@ -68,7 +68,7 @@ export function CourseIntake({ topics, initialTopic }: { topics: { slug: string;
 
       <ul className="stagger grid gap-3 sm:grid-cols-3">
         {m.how.map((h, i) => (
-          <li key={h.title} className="rounded-[24px] border border-line/60 bg-paper/70 p-5">
+          <li key={h.title} className="rounded-[24px] bg-paper shadow-soft p-5">
             <span className={`mb-3 block h-2 w-8 rounded-full ${["bg-sky", "bg-lilac", "bg-sage"][i]}`} />
             <p className="text-[15px] font-medium text-ink">{h.title}</p>
             <p className="mt-1 text-sm leading-relaxed text-ink-soft">{h.text}</p>
@@ -104,7 +104,7 @@ export function CourseIntake({ topics, initialTopic }: { topics: { slug: string;
           rows={4}
           maxLength={2000}
           placeholder={m.goalPlaceholder}
-          className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+          className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
         />
       </label>
 
@@ -143,7 +143,7 @@ export function CourseIntake({ topics, initialTopic }: { topics: { slug: string;
 
       <div>
         <button className={`${buttonStyles.primary} h-14 w-full text-[16px] sm:w-auto sm:px-10`}>{m.submit}</button>
-        {error && <p className="mt-3 text-sm text-[#94594a]">{error}</p>}
+        {error && <p className="mt-3 text-sm text-[#b23b33]">{error}</p>}
         <p className="mt-5 text-xs leading-relaxed text-ink-faint">{m.disclaimer}</p>
       </div>
     </form>

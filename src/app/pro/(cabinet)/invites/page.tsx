@@ -59,7 +59,7 @@ export default async function InvitesPage() {
                     <li key={label} className="grid grid-cols-[7.5rem_1fr_2.5rem] items-center gap-3 text-sm sm:grid-cols-[10rem_1fr_3rem]">
                       <span className="text-ink-soft">{label}</span>
                       <span className="h-2.5 overflow-hidden rounded-full bg-sand/70">
-                        <span className="block h-full rounded-full bg-[#6250d6]" style={{ width: `${Math.max(n ? 2 : 0, pct(n, totalViews))}%` }} />
+                        <span className="block h-full rounded-full bg-[#6c63ff]" style={{ width: `${Math.max(n ? 2 : 0, pct(n, totalViews))}%` }} />
                       </span>
                       <span className="text-right font-medium text-ink">{n}</span>
                     </li>
@@ -79,7 +79,7 @@ export default async function InvitesPage() {
               const url = `${origin}/invite/${inv.code}`;
               const off = Boolean(inv.revoked_at);
               return (
-                <li key={inv.id} className={`rounded-[24px] border border-line/70 bg-paper/80 p-5 shadow-soft ${off ? "opacity-60" : ""}`}>
+                <li key={inv.id} className={`rounded-[24px] bg-paper shadow-soft p-5 shadow-soft ${off ? "opacity-60" : ""}`}>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                     <div className="min-w-0 flex-1">
                       <p className="text-[15px] font-medium text-ink">{inv.label || m.untitled}</p>
@@ -107,7 +107,7 @@ export default async function InvitesPage() {
                     ) : (
                       <form action={revokeInvite} className="shrink-0">
                         <input type="hidden" name="id" value={inv.id} />
-                        <button className="h-10 rounded-full px-4 text-sm text-ink-soft transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.revoke}</button>
+                        <button className="h-10 rounded-full px-4 text-sm text-ink-soft transition hover:bg-[#ffeeec] hover:text-[#c2453d]">{m.revoke}</button>
                       </form>
                     )}
                   </div>

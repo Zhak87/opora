@@ -16,7 +16,7 @@ export function CreateInvite() {
         name="label"
         maxLength={80}
         placeholder={m.labelPlaceholder}
-        className="h-12 min-w-0 flex-1 rounded-2xl border border-line bg-paper px-4 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-sky focus:ring-4 focus:ring-mist"
+        className="h-12 min-w-0 flex-1 rounded-2xl border border-line bg-paper px-4 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
       />
       <SubmitButton pendingText={m.creating}>{m.create}</SubmitButton>
       {state?.error && <Notice tone="error">{state.error}</Notice>}

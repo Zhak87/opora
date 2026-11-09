@@ -50,7 +50,7 @@ export function Breathe({ onClose }: { onClose: () => void }) {
         <div
           className="absolute inset-0 rounded-full"
           style={{
-            background: "radial-gradient(circle at 40% 35%, #fffdf9, #e7e1f2 40%, #bccfe0 75%, #b4cbaa)",
+            background: "radial-gradient(circle at 40% 35%, #ffffff, #e6e4ff 40%, #c7b2f5 75%, #ffc9b5)",
             transform: `scale(${started ? current.scale : 0.6})`,
             transition: `transform ${current.seconds}s ease-in-out`,
             boxShadow: "0 30px 80px -30px rgb(95 125 152 / 0.5)",

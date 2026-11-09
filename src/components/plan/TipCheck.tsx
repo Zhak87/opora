@@ -33,7 +33,7 @@ export function TipCheck({ planId, index, tip, days, compact = false }: { planId
   };
 
   return (
-    <div className={`flex gap-4 ${compact ? "" : "rounded-[24px] border border-line/70 bg-paper/80 p-5 shadow-soft"}`}>
+    <div className={`flex gap-4 ${compact ? "" : "rounded-[24px] bg-paper shadow-soft p-5 shadow-soft"}`}>
       <button
         onClick={toggle}
         aria-pressed={done}

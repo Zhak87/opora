@@ -63,7 +63,7 @@ export function TrendPanel({
         {stats.map(({ metric, now, before }) => {
           const delta = now !== null && before !== null ? now - before : null;
           return (
-            <div key={metric} className="rounded-2xl border border-line/70 bg-paper/70 px-4 py-3">
+            <div key={metric} className="rounded-2xl bg-paper shadow-soft px-4 py-3">
               <p className="flex items-center gap-1.5 text-xs text-ink-soft">
                 <span className="h-2 w-2 rounded-full" style={{ background: SERIES[metric] }} />
                 {m.checkin.scales[metric].label}
@@ -151,7 +151,7 @@ export function BalancePanel({ list, locale }: { list: Assessment[]; locale: Loc
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-ink-soft">
         <span className="flex items-center gap-1.5">
-          <span className="h-[3px] w-4 rounded-full bg-[#6250d6]" /> {m.current} · {date(now.created_at)}
+          <span className="h-[3px] w-4 rounded-full bg-[#6c63ff]" /> {m.current} · {date(now.created_at)}
         </span>
         {before && (
           <span className="flex items-center gap-1.5">
@@ -166,7 +166,7 @@ export function BalancePanel({ list, locale }: { list: Assessment[]; locale: Loc
           return (
             <li key={a} className="flex justify-between rounded-xl bg-sand/30 px-3 py-1.5">
               <span className="text-ink-soft">{m.areas[a]}</span>
-              <span className={d > 0 ? "text-sage-deep" : d < 0 ? "text-[#a0614f]" : "text-ink-faint"}>{prev ? `${prev[i]} → ${cur[i]}` : cur[i]}</span>
+              <span className={d > 0 ? "text-sage-deep" : d < 0 ? "text-[#c2453d]" : "text-ink-faint"}>{prev ? `${prev[i]} → ${cur[i]}` : cur[i]}</span>
             </li>
           );
         })}
@@ -190,7 +190,7 @@ export function GoalList({ goals, locale, editable = false }: { goals: Goal[]; l
   const open = goals.filter((g) => g.status === "active" || g.status === "paused");
   const closed = goals.filter((g) => g.status === "done" || g.status === "dropped");
   const card = (g: Goal) => (
-    <li key={g.id} className="rounded-2xl border border-line/70 bg-paper/80 p-4 sm:p-5">
+    <li key={g.id} className="rounded-2xl bg-paper shadow-soft p-4 sm:p-5">
       <div className="flex flex-wrap items-start gap-2">
         <p className="mr-auto text-[16px] font-medium text-ink">{g.title}</p>
         <span className={`rounded-full px-2.5 py-0.5 text-xs ${STATUS_TONE[g.status]}`}>{m.status[g.status]}</span>
@@ -205,7 +205,7 @@ export function GoalList({ goals, locale, editable = false }: { goals: Goal[]; l
           aria-valuemax={100}
           aria-label={m.progress}
         >
-          <div className="h-full rounded-full bg-[#6250d6]" style={{ width: `${g.progress}%` }} />
+          <div className="h-full rounded-full bg-[#6c63ff]" style={{ width: `${g.progress}%` }} />
         </div>
         <span className="w-10 text-right text-sm text-ink">{g.progress}%</span>
       </div>
@@ -230,7 +230,7 @@ export function GoalList({ goals, locale, editable = false }: { goals: Goal[]; l
             {g.status !== "active" && <StatusButton goal={g.id} status="active" label={m.resume} />}
             {g.status !== "dropped" && g.status !== "done" && <StatusButton goal={g.id} status="dropped" label={m.drop} />}
             <ConfirmForm action={deleteGoal} question={m.removeConfirm} hidden={{ goal: g.id }}>
-              <button className="h-9 rounded-full px-3 text-sm text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.remove}</button>
+              <button className="h-9 rounded-full px-3 text-sm text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">{m.remove}</button>
             </ConfirmForm>
           </div>
         </div>

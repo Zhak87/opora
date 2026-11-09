@@ -61,7 +61,7 @@ export function renderDailyEmail(opts: {
 
   // Полоска пути: по клетке на каждый день, пройденные — зелёные, сегодняшний — лавандовый.
   const cells = Array.from({ length }, (_, i) => {
-    const color = i < opts.state.done ? "#9db894" : i === n - 1 ? "#b9aed6" : "#ebe4d8";
+    const color = i < opts.state.done ? "#7ccfaa" : i === n - 1 ? "#aaa4ff" : "#e6e8f0";
     return `<td style="width:${(100 / length).toFixed(2)}%;padding:0 1px;"><div style="height:6px;border-radius:3px;background:${color};font-size:0;line-height:0;">&nbsp;</div></td>`;
   }).join("");
 
@@ -81,39 +81,39 @@ export function renderDailyEmail(opts: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
         <tr>
           <td align="center" style="padding-bottom:24px;">
-            <div style="width:52px;height:52px;border-radius:50%;background:#c9d8e6;background-image:radial-gradient(circle at 35% 30%,#fffdf9 0%,#e7e1f2 35%,#bccfe0 70%,#b4cbaa 100%);margin:0 auto 12px auto;"></div>
-            <div style="font-family:${SERIF};font-size:20px;color:#34373c;">${locale === "en" ? "Opora" : "Опора"}</div>
+            <div style="width:52px;height:52px;border-radius:50%;background:#aab4ff;background-image:radial-gradient(circle at 35% 30%,#ffffff 0%,#e6e4ff 35%,#c7b2f5 70%,#ffc9b5 100%);margin:0 auto 12px auto;"></div>
+            <div style="font-family:${SERIF};font-size:20px;color:#1d1e2c;">${locale === "en" ? "Opora" : "Опора"}</div>
           </td>
         </tr>
         <tr>
-          <td style="background:#fffdf9;border:1px solid #ebe4d8;border-radius:28px;padding:36px 32px;">
+          <td style="background:#ffffff;border:1px solid #e6e8f0;border-radius:28px;padding:36px 32px;">
             <p style="margin:0 0 6px 0;font-family:${SANS};font-size:14px;color:#6c6f75;">${esc(m.hello(opts.name ?? ""))}</p>
-            <p style="margin:0 0 18px 0;font-family:${SANS};font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#7f71a8;">${esc(m.dayOf(n, length))} · ${esc(week?.title ?? "")}</p>
+            <p style="margin:0 0 18px 0;font-family:${SANS};font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#6c63ff;">${esc(m.dayOf(n, length))} · ${esc(week?.title ?? "")}</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;"><tr>${cells}</tr></table>
-            <h1 style="margin:0 0 14px 0;font-family:${SERIF};font-weight:normal;font-size:28px;line-height:1.25;color:#34373c;">${esc(day.title)}</h1>
-            ${returning ? `<p style="margin:0 0 14px 0;font-family:${SANS};font-size:16px;line-height:1.65;color:#34373c;">${esc(m.returnLead)}</p>` : ""}
+            <h1 style="margin:0 0 14px 0;font-family:${SERIF};font-weight:normal;font-size:28px;line-height:1.25;color:#1d1e2c;">${esc(day.title)}</h1>
+            ${returning ? `<p style="margin:0 0 14px 0;font-family:${SANS};font-size:16px;line-height:1.65;color:#1d1e2c;">${esc(m.returnLead)}</p>` : ""}
             <p style="margin:0 0 24px 0;font-family:${SANS};font-size:16px;line-height:1.65;color:#6c6f75;">${esc(day.focus)}</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
               <tr>
-                <td style="background:#e3ecdf;border-radius:20px;padding:18px 20px;">
+                <td style="background:#d6f2e6;border-radius:20px;padding:18px 20px;">
                   <p style="margin:0 0 6px 0;font-family:${SANS};font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:#6a8a62;">${esc(m.step)}</p>
-                  <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.55;color:#34373c;">${esc(day.task)}</p>
+                  <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.55;color:#1d1e2c;">${esc(day.task)}</p>
                 </td>
               </tr>
             </table>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
               <tr>
-                <td align="center" style="border-radius:999px;background:#34373c;">
-                  <a href="${link}" style="display:inline-block;padding:15px 34px;font-family:${SANS};font-size:15px;font-weight:600;color:#fffdf9;text-decoration:none;border-radius:999px;">${esc(m.open(n))}</a>
+                <td align="center" style="border-radius:999px;background:#1d1e2c;">
+                  <a href="${link}" style="display:inline-block;padding:15px 34px;font-family:${SANS};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:999px;">${esc(m.open(n))}</a>
                 </td>
               </tr>
             </table>
-            <p style="margin:14px 0 0 0;font-family:${SANS};font-size:13px;color:#a3a4a8;text-align:center;">${esc(m.minutes(day.minutes))} · ${pct}%</p>
+            <p style="margin:14px 0 0 0;font-family:${SANS};font-size:13px;color:#9fa2b5;text-align:center;">${esc(m.minutes(day.minutes))} · ${pct}%</p>
             ${opts.state.streak >= 2 ? `<p style="margin:24px 0 0 0;font-family:${SANS};font-size:14px;line-height:1.6;color:#6c6f75;text-align:center;">${esc(m.streak(opts.state.streak))}</p>` : ""}
           </td>
         </tr>
         <tr>
-          <td align="center" style="padding:26px 24px 0 24px;font-family:${SANS};font-size:12px;line-height:1.6;color:#a3a4a8;">
+          <td align="center" style="padding:26px 24px 0 24px;font-family:${SANS};font-size:12px;line-height:1.6;color:#9fa2b5;">
             ${esc(m.notMedical)}<br><br>
             ${esc(m.why(plan.title))}<br>
             <a href="${unsub}" style="color:#6c6f75;">${esc(m.unsubscribe)}</a>
@@ -178,21 +178,21 @@ export function renderSessionReminder(opts: { locale: Locale; name?: string | nu
     <td align="center" style="padding:40px 16px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
         <tr>
-          <td style="background:#fffdf9;border:1px solid #ebe4d8;border-radius:28px;padding:36px 32px;">
+          <td style="background:#ffffff;border:1px solid #e6e8f0;border-radius:28px;padding:36px 32px;">
             <p style="margin:0 0 14px 0;font-family:${SANS};font-size:14px;color:#6c6f75;">${esc(m.hello(opts.name ?? ""))}</p>
-            <h1 style="margin:0 0 14px 0;font-family:${SERIF};font-weight:normal;font-size:26px;line-height:1.3;color:#34373c;">${esc(opts.when)}</h1>
+            <h1 style="margin:0 0 14px 0;font-family:${SERIF};font-weight:normal;font-size:26px;line-height:1.3;color:#1d1e2c;">${esc(opts.when)}</h1>
             <p style="margin:0 0 26px 0;font-family:${SANS};font-size:16px;line-height:1.65;color:#6c6f75;">${esc(m.text(opts.peer, opts.when))}</p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
               <tr>
-                <td align="center" style="border-radius:999px;background:#34373c;">
-                  <a href="${opts.link}" style="display:inline-block;padding:15px 34px;font-family:${SANS};font-size:15px;font-weight:600;color:#fffdf9;text-decoration:none;border-radius:999px;">${esc(m.open)}</a>
+                <td align="center" style="border-radius:999px;background:#1d1e2c;">
+                  <a href="${opts.link}" style="display:inline-block;padding:15px 34px;font-family:${SANS};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:999px;">${esc(m.open)}</a>
                 </td>
               </tr>
             </table>
           </td>
         </tr>
         <tr>
-          <td align="center" style="padding:26px 24px 0 24px;font-family:${SANS};font-size:12px;line-height:1.6;color:#a3a4a8;">${esc(m.why)}</td>
+          <td align="center" style="padding:26px 24px 0 24px;font-family:${SANS};font-size:12px;line-height:1.6;color:#9fa2b5;">${esc(m.why)}</td>
         </tr>
       </table>
     </td>

@@ -7,8 +7,8 @@ const STATUS_TONE: Record<PsyStatus, string> = {
   draft: "bg-sand text-[#8a7458]",
   pending: "bg-mist text-sky-deep",
   approved: "bg-sage-soft text-sage-deep",
-  rejected: "bg-[#fbf1ec] text-[#a0614f]",
-  suspended: "bg-[#fbf1ec] text-[#a0614f]",
+  rejected: "bg-[#ffeeec] text-[#c2453d]",
+  suspended: "bg-[#ffeeec] text-[#c2453d]",
 };
 
 export function StatusPill({ status, label }: { status: PsyStatus; label: string }) {

@@ -46,7 +46,7 @@ export function DayPreparing({ courseId, day }: { courseId: string; day: number 
 
   if (error && !pending)
     return (
-      <div className="rounded-[28px] border border-line/70 bg-paper/80 p-7 text-center shadow-soft">
+      <div className="rounded-[28px] bg-paper shadow-soft p-7 text-center shadow-soft">
         <p className="text-[15px] leading-relaxed text-ink-soft">{error}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button onClick={() => run()} className={buttonStyles.primary}>
@@ -146,7 +146,7 @@ export function DayFlow(props: {
           <article className="relative overflow-hidden rounded-[30px] border border-line/70 bg-gradient-to-b from-paper to-sand/40 p-7 shadow-soft sm:p-10">
             <span className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-lilac-soft/70 blur-2xl" aria-hidden />
             <p className="relative text-xs uppercase tracking-[0.14em] text-ink-faint">{m.letter}</p>
-            <div className="relative mt-4 space-y-4 font-serif text-[19px] leading-[1.7] text-ink sm:text-[21px]">
+            <div className="relative mt-4 space-y-4 text-[19px] leading-[1.7] text-ink sm:text-[21px]">
               {content.letter.split(/\n+/).map((p, k) => (
                 <p key={k}>{p}</p>
               ))}
@@ -177,7 +177,7 @@ export function DayFlow(props: {
               maxLength={4000}
               autoFocus
               placeholder={m.reflectPlaceholder}
-              className="mt-6 w-full resize-none rounded-[24px] border border-line bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+              className="mt-6 w-full resize-none rounded-[24px] border border-line bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
             />
             <p className="mt-2 text-xs text-ink-faint">{m.reflectHint}</p>
           </>
@@ -228,7 +228,7 @@ export function DayFlow(props: {
           </button>
         )}
       </div>
-      {error && <p className="mt-3 text-right text-sm text-[#94594a]">{error}</p>}
+      {error && <p className="mt-3 text-right text-sm text-[#b23b33]">{error}</p>}
     </div>
   );
 }
@@ -431,7 +431,7 @@ function DayDone(props: {
       )}
 
       {props.content.takeaway && (
-        <figure className="mx-auto mt-10 max-w-md rounded-[26px] border border-line/70 bg-paper/80 px-6 py-6 shadow-soft">
+        <figure className="mx-auto mt-10 max-w-md rounded-[26px] bg-paper shadow-soft px-6 py-6 shadow-soft">
           <figcaption className="text-xs uppercase tracking-[0.14em] text-lilac-deep">{m.takeaway}</figcaption>
           <blockquote className="mt-3 font-serif text-[21px] leading-snug text-ink">{props.content.takeaway}</blockquote>
         </figure>

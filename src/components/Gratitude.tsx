@@ -50,7 +50,7 @@ export function Gratitude() {
             onChange={(e) => setItems((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))}
             placeholder={m.placeholders[i]}
             maxLength={300}
-            className="h-12 flex-1 rounded-2xl border border-line/80 bg-paper/90 px-4 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-sage focus:ring-4 focus:ring-sage-soft"
+            className="h-12 flex-1 rounded-2xl bg-paper shadow-soft px-4 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-sage focus:ring-4 focus:ring-sage-soft"
           />
         </label>
       ))}
@@ -59,7 +59,7 @@ export function Gratitude() {
           {m.save}
         </SubmitButton>
       </div>
-      {state && "error" in state && <p className="text-right text-sm text-[#94594a]">{state.error}</p>}
+      {state && "error" in state && <p className="text-right text-sm text-[#b23b33]">{state.error}</p>}
     </form>
   );
 }

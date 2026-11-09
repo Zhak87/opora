@@ -86,7 +86,7 @@ export function CareChat({
   const lastMine = [...messages].reverse().find((x) => x.sender_id === me)?.id;
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-[28px] border border-line/70 bg-paper/80 shadow-soft">
+    <div className="flex flex-col overflow-hidden rounded-[28px] bg-paper shadow-soft shadow-soft">
       <div ref={box} className="h-[min(60dvh,560px)] space-y-1.5 overflow-y-auto px-4 py-5 sm:px-6" aria-live="polite">
         {messages.length === 0 && <p className="mx-auto mt-10 max-w-sm text-center text-sm leading-relaxed text-ink-soft">{empty}</p>}
         {messages.map((x, i) => {
@@ -123,7 +123,7 @@ export function CareChat({
           }}
           className="border-t border-line/60 bg-paper p-3 sm:p-4"
         >
-          {error && <p className="mb-2 px-2 text-sm text-[#a0614f]">{error}</p>}
+          {error && <p className="mb-2 px-2 text-sm text-[#c2453d]">{error}</p>}
           <div className="flex items-end gap-2">
             <textarea
               ref={area}
@@ -140,13 +140,13 @@ export function CareChat({
               maxLength={4000}
               placeholder={m.placeholder}
               aria-label={m.placeholder}
-              className="max-h-40 min-h-[48px] flex-1 resize-none rounded-[22px] border border-line bg-milk px-4 py-3 text-[15px] leading-relaxed text-ink outline-none transition [field-sizing:content] placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+              className="max-h-40 min-h-[48px] flex-1 resize-none rounded-[18px] border-2 border-transparent bg-milk px-4 py-3 focus:border-lilac-deep/50 text-[15px] leading-relaxed text-ink outline-none transition [field-sizing:content] placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
             />
             <button
               type="submit"
               disabled={!text.trim() || pending}
               aria-label={m.send}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-paper transition hover:bg-ink/90 disabled:opacity-40"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-ink text-paper transition hover:bg-lilac-deep active:scale-90 disabled:opacity-40"
             >
               <SendIcon className="h-5 w-5" />
             </button>

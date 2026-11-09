@@ -39,11 +39,11 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
   const c = useMsg(common);
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[88px] flex-col items-center border-r border-line/60 bg-paper/70 py-6 backdrop-blur-xl md:flex lg:w-[248px] lg:items-stretch lg:px-5">
+      <aside className="fixed inset-y-3 left-3 z-30 hidden w-[76px] flex-col items-center rounded-[30px] bg-paper/90 py-5 shadow-soft backdrop-blur-xl md:flex lg:w-[236px] lg:items-stretch lg:px-4">
         <Link href="/pro" className="mb-2 flex items-center gap-3 lg:px-2">
-          <Orb size={36} still />
+          <Orb size={40} face />
           <span className="hidden flex-col lg:flex">
-            <span className="font-serif text-xl leading-tight text-ink">{c.brand}</span>
+            <span className="font-display text-[19px] font-semibold lowercase leading-tight tracking-[-0.03em] text-ink">{c.brand}</span>
             <span className="text-[11px] uppercase tracking-[0.14em] text-lilac-deep">{m.cabinet}</span>
           </span>
         </Link>
@@ -55,7 +55,7 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
                 key={href}
                 href={href}
                 title={m.nav[key]}
-                className={`flex h-12 items-center gap-3 rounded-2xl px-3 transition-all duration-300 lg:px-3.5 ${
+                className={`flex h-12 items-center gap-3 rounded-[18px] px-3 transition-all duration-300 lg:px-3.5 ${
                   active ? "bg-lilac-soft text-ink" : "text-ink-soft hover:bg-sand/40 hover:text-ink"
                 }`}
               >
@@ -80,7 +80,7 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
         <p className="mt-6 hidden px-3 text-xs leading-relaxed text-ink-faint lg:block">{m.navTagline}</p>
       </aside>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line/60 bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 rounded-[26px] bg-paper/90 shadow-lift backdrop-blur-xl md:hidden">
         <div className="mx-auto flex max-w-md items-stretch justify-around px-2">
           {ITEMS.filter((i) => i.mobile).map(({ href, key, Icon }) => {
             const active = isActive(path, href);
@@ -88,9 +88,9 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
               <Link
                 key={href}
                 href={href}
-                className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${active ? "text-ink" : "text-ink-faint"}`}
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-medium transition-colors ${active ? "text-ink" : "text-ink-faint"}`}
               >
-                <span className={`relative flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300 ${active ? "bg-lilac-soft" : ""}`}>
+                <span className={`relative flex h-9 w-12 items-center justify-center rounded-[14px] transition-all duration-500 ease-[cubic-bezier(0.3,1.5,0.5,1)] ${active ? "scale-100 bg-ink text-paper" : "scale-90"}`}>
                   <Icon className="h-[21px] w-[21px]" />
                   {key === "messages" && <Badge n={unread} className="absolute -top-1 right-1" />}
                 </span>

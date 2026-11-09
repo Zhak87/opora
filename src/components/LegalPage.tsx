@@ -17,7 +17,7 @@ export async function LegalPage({ kind }: { kind: "privacy" | "terms" }) {
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
-        <Link href="/" className="font-serif text-xl text-ink">{c.brand}</Link>
+        <Link href="/" className="font-display text-[19px] font-semibold lowercase tracking-[-0.03em] text-ink">{c.brand}</Link>
         <LanguageSwitcher />
       </header>
       <main className="mx-auto w-full max-w-3xl px-5 pb-20 sm:px-8">

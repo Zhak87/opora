@@ -9,7 +9,7 @@ import { proMessages, proLabels, SPECIALIZATIONS, SESSION_LANGUAGES, FORMATS, CU
 import type { Psychologist } from "@/lib/pro";
 
 const area =
-  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-sky focus:ring-4 focus:ring-mist";
+  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
 
 function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
@@ -85,7 +85,7 @@ export function PhotoForm({ name, photo }: { name: string; photo: string | null 
         <button type="button" disabled={pending} onClick={() => input.current?.click()} className={`${buttonStyles.soft} mt-3 h-10 px-5 text-sm disabled:opacity-60`}>
           {m.upload}
         </button>
-        {state?.error && <p className="mt-2 text-sm text-[#a0614f]">{state.error}</p>}
+        {state?.error && <p className="mt-2 text-sm text-[#c2453d]">{state.error}</p>}
       </div>
     </div>
   );
@@ -119,7 +119,7 @@ export function DocumentUpload() {
       <button type="button" disabled={pending} onClick={() => input.current?.click()} className={`${buttonStyles.soft} h-10 px-5 text-sm disabled:opacity-60`}>
         {m.upload}
       </button>
-      {(tooBig || state?.error) && <p className="mt-2 text-sm text-[#a0614f]">{tooBig ? m.errors.tooBig : state?.error}</p>}
+      {(tooBig || state?.error) && <p className="mt-2 text-sm text-[#c2453d]">{tooBig ? m.errors.tooBig : state?.error}</p>}
     </div>
   );
 }
@@ -177,7 +177,7 @@ export function ProfileForm({ p }: { p: Psychologist }) {
         <Field label={m.price} name="price" type="number" min={0} step={500} defaultValue={p.price ?? ""} />
         <label className="block">
           <span className="mb-2 block text-sm text-ink-soft">{m.currency}</span>
-          <select name="currency" defaultValue={p.currency} className="h-12 w-full rounded-2xl border border-line bg-paper px-4 text-[15px] text-ink outline-none focus:border-sky focus:ring-4 focus:ring-mist">
+          <select name="currency" defaultValue={p.currency} className="h-12 w-full rounded-2xl border border-line bg-paper px-4 text-[15px] text-ink outline-none focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft">
             {CURRENCIES.map((c) => (
               <option key={c}>{c}</option>
             ))}

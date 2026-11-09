@@ -3,7 +3,7 @@ import { METRICS, type Metric } from "@/i18n/wellbeing";
 
 // Графики «Моего состояния». Цвета проверены на различимость (в том числе при дальтонизме);
 // у светлого бирюзового контраст ниже 3:1, поэтому у каждого графика есть подписи и таблица.
-export const SERIES: Record<Metric, string> = { mood: "#6250d6", energy: "#1baf7a", calm: "#eb6834", sleep: "#2a78d6" };
+export const SERIES: Record<Metric, string> = { mood: "#6c63ff", energy: "#1baf7a", calm: "#eb6834", sleep: "#2a78d6" };
 
 const W = 640;
 const H = 220;
@@ -44,15 +44,15 @@ export function TrendChart({
       <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full overflow-visible" role="img" aria-label={metrics.map((k) => labels[k]).join(", ")}>
         {[1, 2, 3, 4, 5].map((v) => (
           <g key={v}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} stroke="#ebe4d8" strokeWidth={1} />
-            <text x={PAD.l - 10} y={y(v) + 4} textAnchor="end" fontSize={11} fill="#a3a4a8">
+            <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} stroke="#e6e8f0" strokeWidth={1} />
+            <text x={PAD.l - 10} y={y(v) + 4} textAnchor="end" fontSize={11} fill="#9fa2b5">
               {v}
             </text>
           </g>
         ))}
         {days.map((d, i) =>
           i % step === 0 || i === days.length - 1 ? (
-            <text key={d} x={x(i)} y={H - 6} textAnchor="middle" fontSize={11} fill="#a3a4a8">
+            <text key={d} x={x(i)} y={H - 6} textAnchor="middle" fontSize={11} fill="#9fa2b5">
               {dayLabel(d)}
             </text>
           ) : null,
@@ -80,7 +80,7 @@ export function TrendChart({
                 if (typeof v !== "number") return null;
                 return (
                   <g key={d}>
-                    {dot && <circle cx={x(i)} cy={y(v)} r={4} fill={SERIES[k]} stroke="#fffdf9" strokeWidth={2} />}
+                    {dot && <circle cx={x(i)} cy={y(v)} r={4} fill={SERIES[k]} stroke="#ffffff" strokeWidth={2} />}
                     {/* Широкая невидимая зона для подсказки при наведении */}
                     <circle cx={x(i)} cy={y(v)} r={10} fill="transparent">
                       <title>{`${dayLabel(d)} · ${labels[k]}: ${v}`}</title>
@@ -110,19 +110,19 @@ export function BalanceWheel({ labels, now, before }: { labels: string[]; now: n
   return (
     <svg viewBox={`-120 -14 ${S + 240} ${S + 28}`} className="mx-auto h-auto w-full max-w-[560px]" role="img" aria-label={labels.join(", ")}>
       {[2, 4, 6, 8, 10].map((r) => (
-        <polygon key={r} points={poly(Array(n).fill(r))} fill="none" stroke="#ebe4d8" strokeWidth={1} />
+        <polygon key={r} points={poly(Array(n).fill(r))} fill="none" stroke="#e6e8f0" strokeWidth={1} />
       ))}
       {labels.map((_, i) => {
         const [x2, y2] = pt(i, 10);
-        return <line key={i} x1={c} y1={c} x2={x2} y2={y2} stroke="#ebe4d8" strokeWidth={1} />;
+        return <line key={i} x1={c} y1={c} x2={x2} y2={y2} stroke="#e6e8f0" strokeWidth={1} />;
       })}
-      {before && <polygon points={poly(before)} fill="none" stroke="#a3a4a8" strokeWidth={2} strokeDasharray="5 4" />}
-      <polygon points={poly(now)} fill="#6250d6" fillOpacity={0.14} stroke="#6250d6" strokeWidth={2} strokeLinejoin="round" />
+      {before && <polygon points={poly(before)} fill="none" stroke="#9fa2b5" strokeWidth={2} strokeDasharray="5 4" />}
+      <polygon points={poly(now)} fill="#6c63ff" fillOpacity={0.14} stroke="#6c63ff" strokeWidth={2} strokeLinejoin="round" />
       {now.map((v, i) => {
         const [px, py] = pt(i, v);
         return (
           <g key={i}>
-            <circle cx={px} cy={py} r={4} fill="#6250d6" stroke="#fffdf9" strokeWidth={2} />
+            <circle cx={px} cy={py} r={4} fill="#6c63ff" stroke="#ffffff" strokeWidth={2} />
             <circle cx={px} cy={py} r={10} fill="transparent">
               <title>{`${labels[i]}: ${v}${before ? ` (${before[i]})` : ""}`}</title>
             </circle>

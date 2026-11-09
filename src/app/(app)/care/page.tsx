@@ -160,7 +160,7 @@ export default async function CarePage({
               </div>
 
               <ConfirmForm action={endLink} question={m.care.endConfirm} hidden={{ link: link.id }} className="mt-5">
-                <button className="h-11 rounded-full px-4 text-sm text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.care.end}</button>
+                <button className="h-11 rounded-full px-4 text-sm text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">{m.care.end}</button>
               </ConfirmForm>
             </div>
           </Card>

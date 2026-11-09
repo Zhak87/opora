@@ -35,7 +35,7 @@ export function JournalComposer({ question }: { question?: string }) {
   }, [question]);
 
   return (
-    <form action={action} className="rounded-[28px] border border-line/70 bg-paper/85 p-4 shadow-soft sm:p-6">
+    <form action={action} className="rounded-[28px] bg-paper shadow-soft p-4 shadow-soft sm:p-6">
       <div className="no-scrollbar -mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1">
         {(Object.keys(kinds) as JournalKind[]).map((k) => (
           <button
@@ -61,11 +61,11 @@ export function JournalComposer({ question }: { question?: string }) {
         onChange={(e) => setText(e.target.value)}
         placeholder={m.placeholders[kind]}
         rows={5}
-        className="w-full resize-none rounded-2xl bg-transparent px-2 py-2 font-serif text-[17px] leading-[1.7] text-ink outline-none placeholder:text-ink-faint"
+        className="w-full resize-none rounded-2xl bg-transparent px-2 py-2 text-[17px] leading-[1.7] text-ink outline-none placeholder:text-ink-faint"
       />
       <div className="mt-2 flex items-center justify-between gap-3">
         <p className="px-2 text-sm text-sage-deep" aria-live="polite">
-          {saved ? m.saved : state && "error" in state ? <span className="text-[#94594a]">{state.error}</span> : ""}
+          {saved ? m.saved : state && "error" in state ? <span className="text-[#b23b33]">{state.error}</span> : ""}
         </p>
         <SubmitButton pendingText={m.saving} className="h-11">
           {m.save}

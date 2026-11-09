@@ -62,13 +62,13 @@ export default async function CourseDayPage({ params }: { params: Promise<{ n: s
         <h1 className="font-serif text-[30px] leading-tight text-ink sm:text-[36px]">{plan.title}</h1>
         <div className="stagger mt-8 space-y-5">
           {c?.letter && (
-            <section className="rounded-[28px] border border-line/70 bg-paper/80 p-6 shadow-soft sm:p-8">
+            <section className="rounded-[28px] bg-paper shadow-soft p-6 shadow-soft sm:p-8">
               <p className="text-xs uppercase tracking-[0.14em] text-ink-faint">{m.letter}</p>
-              <p className="mt-3 whitespace-pre-line font-serif text-[18px] leading-relaxed text-ink">{c.letter}</p>
+              <p className="mt-3 whitespace-pre-line text-[18px] leading-relaxed text-ink">{c.letter}</p>
             </section>
           )}
           {c?.insight && (
-            <section className="rounded-[28px] border border-line/60 bg-paper/60 p-6 sm:p-8">
+            <section className="rounded-[28px] bg-paper shadow-soft p-6 sm:p-8">
               <p className="text-xs uppercase tracking-[0.14em] text-ink-faint">{c.insight.title || m.insight}</p>
               <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-ink-soft">{c.insight.text}</p>
             </section>
@@ -111,7 +111,7 @@ export default async function CourseDayPage({ params }: { params: Promise<{ n: s
     return (
       <>
         {back}
-        <div className="rounded-[30px] border border-line/70 bg-paper/80 p-8 text-center shadow-soft">
+        <div className="rounded-[30px] bg-paper shadow-soft p-8 text-center shadow-soft">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-faint">{m.label(n)}</p>
           <p className="mt-3 font-serif text-[26px] text-ink">{state.lockedUntilTomorrow && n === state.current ? t.overview.lockedTitle(n) : m.lockedTitle}</p>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-ink-soft">{m.lockedText}</p>

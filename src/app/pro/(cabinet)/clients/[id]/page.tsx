@@ -157,7 +157,7 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
             <AuditList rows={log} locale={locale} me={user!.id} empty={care.care.logEmpty} />
           </Card>
           <ConfirmForm action={endLink} question={m.endConfirm} hidden={{ link: client.link.id, back: "pro" }} className="text-center">
-            <button className="h-11 rounded-full px-5 text-sm text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.end}</button>
+            <button className="h-11 rounded-full px-5 text-sm text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">{m.end}</button>
           </ConfirmForm>
         </aside>
       </div>

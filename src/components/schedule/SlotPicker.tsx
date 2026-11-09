@@ -127,7 +127,7 @@ export function BookForm({
             <p className="mt-0.5 text-sm text-ink-faint">{care.invite.shareHint}</p>
             <div className="mt-3 space-y-2">
               {SCOPES.map((s) => (
-                <label key={s} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line/70 bg-paper px-4 py-3 transition has-[:checked]:border-sage has-[:checked]:bg-sage-soft/50">
+                <label key={s} className="flex cursor-pointer items-start gap-3 rounded-2xl bg-paper shadow-soft px-4 py-3 transition has-[:checked]:border-sage has-[:checked]:bg-sage-soft/50">
                   <input type="checkbox" name="scopes" value={s} className="mt-[3px] h-[18px] w-[18px] shrink-0 accent-ink" />
                   <span>
                     <span className="block text-[15px] text-ink">{care.scopes[s].title}</span>

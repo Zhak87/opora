@@ -78,7 +78,7 @@ export function Strengths() {
             onChange={(e) => setDraft(e.target.value)}
             rows={4}
             placeholder={m.placeholder}
-            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+            className="w-full resize-none rounded-[22px] border border-line bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft"
           />
         </label>
         <button onClick={next} className={`${buttonStyles.primary} mt-5`}>

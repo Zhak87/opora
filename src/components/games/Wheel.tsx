@@ -6,7 +6,7 @@ import { useMsg } from "@/i18n/client";
 import { wheelMessages } from "@/i18n/game-wheel";
 
 // Цвета сфер; названия — в src/i18n/game-wheel.ts в том же порядке.
-const AREAS = ["#9db894", "#b9aed6", "#d8b98f", "#8fa8bf", "#a9c7c0", "#c6b0d8", "#c9bfa3", "#9fb4cf"].map((color) => ({ color }));
+const AREAS = ["#7ccfaa", "#aaa4ff", "#d8b98f", "#8db4ea", "#a9c7c0", "#c6b0d8", "#c9bfa3", "#9fb4cf"].map((color) => ({ color }));
 
 const C = 160;
 const R = 140;
@@ -35,12 +35,12 @@ export function Wheel() {
       <div className="mx-auto w-full max-w-[340px]">
         <svg viewBox="0 0 320 320" className="w-full" role="img" aria-label={m.aria}>
           {[2, 4, 6, 8, 10].map((r) => (
-            <circle key={r} cx={C} cy={C} r={(R * r) / 10} fill="none" stroke="#ebe4d8" strokeWidth={1} />
+            <circle key={r} cx={C} cy={C} r={(R * r) / 10} fill="none" stroke="#e6e8f0" strokeWidth={1} />
           ))}
           {AREAS.map((a, i) => (
             <path key={i} d={wedge(i, values[i])} fill={a.color} fillOpacity={0.75} style={{ transition: "d 0.5s cubic-bezier(0.2,0.7,0.2,1)" }} />
           ))}
-          <circle cx={C} cy={C} r={4} fill="#fffdf9" />
+          <circle cx={C} cy={C} r={4} fill="#ffffff" />
         </svg>
       </div>
 

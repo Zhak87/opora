@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { Orb } from "./Orb";
 import type { AmbientEngine } from "@/lib/ambient";
 import { speech } from "@/lib/speech";
 import { useMsg } from "@/i18n/client";
@@ -165,17 +166,8 @@ function Gate({ onEnter }: { onEnter: () => void }) {
       onClick={onEnter}
       className="ambient fixed inset-0 z-[60] flex animate-fade cursor-pointer flex-col items-center justify-center px-6 text-center"
     >
-      <div className="relative h-40 w-40" aria-hidden>
-        <div className="absolute inset-0 animate-breathe rounded-full opacity-70 blur-2xl" style={{ background: "radial-gradient(circle at 40% 40%, #ebe6f4, #c9d8e6 50%, #d6e5cf 80%)" }} />
-        <div
-          className="absolute inset-[14%] animate-breathe rounded-full"
-          style={{
-            background: "radial-gradient(circle at 35% 30%, #fffdf9 0%, #e7e1f2 35%, #bccfe0 70%, #b4cbaa 100%)",
-            boxShadow: "0 20px 50px -20px rgb(95 125 152 / 0.45)",
-          }}
-        />
-      </div>
-      <p className="mt-10 font-serif text-[30px] text-ink">{brand}</p>
+      <Orb size={170} face />
+      <p className="mt-10 font-display text-[30px] font-semibold lowercase tracking-[-0.03em] text-ink">{brand}</p>
       <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-ink-soft">{m.intro}</p>
       <button
         type="button"

@@ -122,7 +122,7 @@ export default async function ProOverview() {
           </Link>
         </div>
         {upcoming.length ? (
-          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-line/70 bg-paper/75">
+          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
             {upcoming.map((s) => (
               <li key={s.id}>
                 <Link href={`/pro/sessions/${s.id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">
@@ -150,7 +150,7 @@ export default async function ProOverview() {
             </Link>
           </div>
           {newMessages.length ? (
-            <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-line/70 bg-paper/75">
+            <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
               {newMessages.slice(0, 5).map(({ peer, n, msg }) => (
                 <li key={peer}>
                   <Link href={`/pro/messages/${peer}`} className="group flex items-center gap-3 px-5 py-4 transition hover:bg-sand/40">
@@ -201,7 +201,7 @@ export default async function ProOverview() {
           )}
         </div>
         {clients.length ? (
-          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-line/70 bg-paper/75">
+          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
             {clients.slice(0, 5).map((c) => (
               <li key={c.link.id}>
                 <Link href={`/pro/clients/${c.link.client_id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">

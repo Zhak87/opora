@@ -202,13 +202,13 @@ export function Chat({
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="sticky top-0 z-20 border-b border-line/50 bg-milk/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 bg-milk/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-3xl items-center gap-2 px-3 sm:px-6">
           <Link href="/talk" aria-label={t.back} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink">
             <BackIcon className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] text-ink">{title}</p>
+            <p className="truncate text-[15px] font-semibold text-ink">{title}</p>
             <p className="text-xs text-ink-faint">{label}</p>
           </div>
           <button
@@ -245,7 +245,7 @@ export function Chat({
           >
             <input type="hidden" name="id" value={conversationId} />
             <input type="hidden" name="redirect" value="1" />
-            <button type="submit" aria-label={t.delete} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">
+            <button type="submit" aria-label={t.delete} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">
               <TrashIcon className="h-[18px] w-[18px]" />
             </button>
           </form>
@@ -256,7 +256,7 @@ export function Chat({
         <div className="mx-auto max-w-2xl px-5 pb-8 pt-8 sm:px-8">
           {empty && (
             <div className="flex animate-fade flex-col items-center pt-[8vh] text-center">
-              <Orb size={140} />
+              <Orb size={150} face />
               <p className="mt-8 font-serif text-[26px] leading-snug text-ink">{t.emptyTitle}</p>
               <p className="mt-2 max-w-sm text-[15px] text-ink-soft">{t.emptyHint}</p>
               <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -264,7 +264,7 @@ export function Chat({
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="rounded-full border border-line bg-paper/80 px-4 py-2 text-sm text-ink-soft transition hover:border-sand-deep hover:text-ink"
+                    className="rounded-full border-2 border-sand-deep bg-paper/60 px-4 py-2 text-sm text-ink transition hover:-translate-y-0.5 hover:border-lilac hover:bg-paper"
                   >
                     {s}
                   </button>
@@ -277,7 +277,7 @@ export function Chat({
             {messages.map((m) =>
               m.role === "user" ? (
                 <div key={m.id} className="flex animate-rise flex-col items-end">
-                  <p className="max-w-[85%] whitespace-pre-wrap rounded-[24px] rounded-br-lg bg-sand px-5 py-3.5 text-[15.5px] leading-relaxed text-ink">
+                  <p className="max-w-[85%] whitespace-pre-wrap rounded-[24px] rounded-br-[8px] bg-lilac-deep px-5 py-3.5 text-[15.5px] leading-relaxed text-paper shadow-soft">
                     {m.content}
                   </p>
                   {m.id === lastUser?.id && !m.pending && (
@@ -298,14 +298,10 @@ export function Chat({
                 </div>
               ) : (
                 <div key={m.id} className="flex animate-rise gap-3.5">
-                  <span
-                    className="mt-1.5 h-3 w-3 shrink-0 rounded-full"
-                    style={{ background: "radial-gradient(circle at 35% 30%, #fffdf9, #c9d8e6 55%, #b4cbaa)" }}
-                    aria-hidden
-                  />
+                  <Orb size={34} still face className="-mt-1 hidden sm:block" />
                   {m.content ? (
-                    <div className="min-w-0">
-                      <p className="whitespace-pre-wrap font-serif text-[17px] leading-[1.7] text-ink">{m.content}</p>
+                    <div className="min-w-0 max-w-[92%]">
+                      <p className="whitespace-pre-wrap rounded-[24px] rounded-bl-[8px] bg-paper px-5 py-3.5 text-[16px] leading-[1.6] text-ink shadow-soft">{m.content}</p>
                       {!(busy && m.id === messages[messages.length - 1]?.id) && (
                         <SpeakButton id={m.id} text={m.content} voice={voice} className="-ml-3 mt-1.5" />
                       )}
@@ -339,7 +335,7 @@ export function Chat({
             <div className="mt-6 flex justify-end animate-rise">
               <button
                 onClick={() => send(t.calmAfter)}
-                className="rounded-full border border-line bg-paper/80 px-4 py-2 text-sm text-ink-soft transition hover:border-sand-deep hover:text-ink"
+                className="rounded-full border-2 border-sand-deep bg-paper/60 px-4 py-2 text-sm text-ink transition hover:-translate-y-0.5 hover:border-lilac hover:bg-paper"
               >
                 {t.calmAfter}
               </button>
@@ -366,7 +362,7 @@ export function Chat({
         </div>
       </div>
 
-      <div className="border-t border-line/40 bg-gradient-to-t from-milk via-milk to-milk/70 pb-[env(safe-area-inset-bottom)]">
+      <div className="bg-gradient-to-t from-milk via-milk/95 to-milk/0 pb-[env(safe-area-inset-bottom)]">
         <form onSubmit={submit} className="mx-auto flex max-w-2xl items-end gap-2 px-4 py-3 sm:px-8 sm:py-5">
           <label className="sr-only" htmlFor="chat-input">{t.inputLabel}</label>
           <textarea
@@ -378,14 +374,14 @@ export function Chat({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={t.placeholder}
-            className="max-h-[200px] min-h-[52px] flex-1 resize-none rounded-[26px] border border-line bg-paper px-5 py-[14px] text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-sky focus:ring-4 focus:ring-mist"
+            className="max-h-[200px] min-h-[52px] flex-1 resize-none rounded-[20px] border-2 border-transparent bg-paper px-5 py-[13px] text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/50 focus:ring-4 focus:ring-lilac-soft"
           />
           {input.trim() ? (
             <button
               type="submit"
               disabled={busy}
               aria-label={t.send}
-              className="flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-full bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-ink/90 disabled:bg-sand-deep disabled:text-paper"
+              className="flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-[18px] bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-lilac-deep active:scale-90 disabled:bg-sand-deep disabled:text-paper"
             >
               <SendIcon className="h-5 w-5" />
             </button>
@@ -399,10 +395,9 @@ export function Chat({
               }}
               aria-label={t.voice}
               title={t.voice}
-              className="relative flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-full text-paper shadow-soft transition-all duration-300 hover:scale-105 disabled:opacity-50"
-              style={{ background: "radial-gradient(circle at 35% 30%, #c9d8e6, #7f71a8 70%)" }}
+              className="relative flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-[18px] bg-ink text-paper shadow-soft transition-all duration-300 hover:scale-105 hover:bg-lilac-deep active:scale-90 disabled:opacity-50"
             >
-              <span className="absolute inset-0 animate-breathe rounded-full bg-lilac/40 [animation-duration:4s]" aria-hidden />
+              <span className="absolute inset-0 animate-breathe rounded-[18px] bg-lilac-deep/30 [animation-duration:4s]" aria-hidden />
               <svg viewBox="0 0 24 24" className="relative h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M4 12h1M8 8v8M12 5v14M16 8v8M20 12h-1" />
               </svg>

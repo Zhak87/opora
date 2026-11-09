@@ -12,7 +12,7 @@ export default async function Loading() {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="h-24 animate-pulse rounded-[26px] border border-line/50 bg-paper/70"
+            className="h-24 animate-pulse rounded-[26px] bg-paper shadow-soft"
             style={{ animationDelay: `${i * 120}ms` }}
           />
         ))}

@@ -60,14 +60,14 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
               {items.map((e) => {
                 const kind = kinds[e.kind as JournalKind] ?? kinds.thought;
                 return (
-                  <li key={e.id} className="group rounded-[24px] border border-line/70 bg-paper/75 p-5 sm:p-6">
+                  <li key={e.id} className="group rounded-[24px] bg-paper shadow-soft p-5 sm:p-6">
                     <div className="mb-3 flex items-center gap-2">
                       <span className={`rounded-full px-3 py-1 text-xs text-ink ${toneBg[kind.tone]}`}>{kind.label}</span>
                       <span className="text-xs text-ink-faint">
                         {new Date(e.created_at).toLocaleTimeString(INTL[locale], { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" })}
                       </span>
                     </div>
-                    <p className="whitespace-pre-wrap font-serif text-[16.5px] leading-[1.7] text-ink">{e.content}</p>
+                    <p className="whitespace-pre-wrap text-[16.5px] leading-[1.7] text-ink">{e.content}</p>
                     <div className="mt-4 flex items-center gap-1 sm:opacity-60 sm:transition sm:group-hover:opacity-100">
                       <form action={reflectOnJournal}>
                         <input type="hidden" name="id" value={e.id} />
@@ -77,7 +77,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                       </form>
                       <form action={deleteJournalEntry} className="ml-auto">
                         <input type="hidden" name="id" value={e.id} />
-                        <button aria-label={m.deleteEntry} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">
+                        <button aria-label={m.deleteEntry} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">
                           <TrashIcon className="h-4 w-4" />
                         </button>
                       </form>

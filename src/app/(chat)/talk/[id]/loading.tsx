@@ -6,7 +6,7 @@ export default async function Loading() {
   const m = await getMsg(welcomeMessages);
   return (
     <div className="flex h-dvh items-center justify-center" aria-busy="true" aria-label={m.loading}>
-      <Orb size={96} />
+      <Orb size={96} face />
     </div>
   );
 }
