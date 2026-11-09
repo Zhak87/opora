@@ -173,9 +173,4 @@ export function formatPrice(price: number | null, currency: string, locale: stri
   return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(price);
 }
 
-export function siteOrigin(headers: Headers) {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  const host = headers.get("x-forwarded-host") ?? headers.get("host") ?? "localhost:3000";
-  const proto = headers.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
+export { siteOrigin } from "@/lib/site-origin";
