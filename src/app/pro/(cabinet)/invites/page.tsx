@@ -7,7 +7,10 @@ import { relativeDate } from "@/lib/format";
 import { getLocale } from "@/i18n/server";
 import { proMessages } from "@/i18n/pro";
 import { Card, PageHeader } from "@/components/ui";
-import { CopyLink, CreateInvite } from "@/components/pro/Invites";
+import { CreateInvite } from "@/components/pro/Invites";
+import { ShareLink } from "@/components/pro/ShareLink";
+import { shareMessages } from "@/i18n/share";
+import { inviteEmailEnabled } from "@/lib/invite-email";
 
 export default async function InvitesPage() {
   const { supabase, user } = await requireUser();
@@ -32,6 +35,10 @@ export default async function InvitesPage() {
   ] as const;
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
   const origin = siteOrigin(await headers());
+  const sm = shareMessages[locale];
+  const approved = me.status === "approved";
+  const emailEnabled = inviteEmailEnabled();
+  const joinUrl = `${origin}/pro/join?from=${encodeURIComponent(me.slug)}`;
 
   return (
     <>
@@ -98,21 +105,32 @@ export default async function InvitesPage() {
                     {off ? (
                       <span className="text-sm text-ink-faint">{m.revoked}</span>
                     ) : (
-                      <div className="flex shrink-0 items-center gap-2">
-                        <CopyLink url={url} />
-                        <form action={revokeInvite}>
-                          <input type="hidden" name="id" value={inv.id} />
-                          <button className="h-10 rounded-full px-4 text-sm text-ink-soft transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.revoke}</button>
-                        </form>
-                      </div>
+                      <form action={revokeInvite} className="shrink-0">
+                        <input type="hidden" name="id" value={inv.id} />
+                        <button className="h-10 rounded-full px-4 text-sm text-ink-soft transition hover:bg-[#fbf1ec] hover:text-[#a0614f]">{m.revoke}</button>
+                      </form>
                     )}
                   </div>
+                  {!off && approved && (
+                    <div className="mt-4 border-t border-line/60 pt-4">
+                      <ShareLink url={url} text={sm.clientText(me.full_name)} kind="client" invite={inv.id} emailEnabled={emailEnabled} mailSubject={sm.clientEmail.subject(me.full_name)} />
+                    </div>
+                  )}
                 </li>
               );
             })}
           </ul>
         ) : (
           <p className="rounded-[24px] border border-dashed border-line px-6 py-10 text-center text-[15px] text-ink-soft">{m.empty}</p>
+        )}
+
+        {approved && (
+          <Card className="bg-gradient-to-br from-paper to-lilac-soft/50 p-5 sm:p-6">
+            <h2 className="text-[17px] font-medium text-ink">{sm.colleague.title}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{sm.colleague.lead}</p>
+            <p className="mb-4 mt-2 truncate font-mono text-xs text-ink-faint">{joinUrl}</p>
+            <ShareLink url={joinUrl} text={sm.colleagueText(me.full_name)} kind="colleague" emailEnabled={emailEnabled} mailSubject={sm.colleagueEmail.subject(me.full_name)} />
+          </Card>
         )}
       </div>
     </>

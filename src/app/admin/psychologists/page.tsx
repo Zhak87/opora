@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { requireUser } from "@/lib/supabase/server";
-import { isAdmin, type Psychologist, type PsyStatus } from "@/lib/pro";
+import { isAdmin, siteOrigin, type Psychologist, type PsyStatus } from "@/lib/pro";
+import { shareMessages } from "@/i18n/share";
+import { inviteEmailEnabled } from "@/lib/invite-email";
+import { ShareLink } from "@/components/pro/ShareLink";
 import { reviewPsychologist } from "@/lib/pro-actions";
 import { INTL } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
@@ -42,9 +46,18 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
     }),
   );
 
+  const sm = shareMessages[locale];
+  const joinUrl = `${siteOrigin(await headers())}/pro/join`;
+
   return (
     <PublicShell home="/">
       <PageHeader title={m.title}>{m.intro}</PageHeader>
+      <Card className="mb-6 bg-gradient-to-br from-paper to-lilac-soft/50 p-5 sm:p-6">
+        <h2 className="text-[17px] font-medium text-ink">{sm.colleague.title}</h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink-soft">{sm.colleague.adminLead}</p>
+        <p className="mb-4 mt-2 truncate font-mono text-xs text-ink-faint">{joinUrl}</p>
+        <ShareLink url={joinUrl} text={sm.teamText} kind="colleague" emailEnabled={inviteEmailEnabled()} mailSubject={sm.colleagueEmail.subject(sm.team)} />
+      </Card>
       <nav className="mb-6 flex flex-wrap gap-2">
         {TABS.map((t) => (
           <Link

@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
+import { shareMessages } from "@/i18n/share";
+import { OG_IMAGE } from "@/lib/og";
 import { PUBLIC_COLUMNS, type Psychologist } from "@/lib/pro";
 import { getLocale } from "@/i18n/server";
 import { careMessages } from "@/i18n/care";
@@ -7,6 +10,28 @@ import { ButtonLink, Card } from "@/components/ui";
 import { PublicShell } from "@/components/pro/PublicShell";
 import { PsychologistProfile } from "@/components/pro/PsychologistProfile";
 import { AcceptInvite, InviteView } from "@/components/pro/AcceptInvite";
+
+// Превью ссылки в WhatsApp и Telegram: имя специалиста и его фото, если оно есть.
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  const { code } = await params;
+  const m = shareMessages[await getLocale()].meta;
+  if (!/^[A-Za-z0-9_-]{8,32}$/.test(code)) return {};
+  const { supabase } = await requireUser();
+  const { data: info } = await supabase.rpc("invite_info", { p_code: code });
+  const found = (info as { psychologist_id: string }[] | null)?.[0];
+  if (!found) return {};
+  const { data: p } = await supabase.from("psychologists").select("full_name, headline, photo_url").eq("user_id", found.psychologist_id).maybeSingle();
+  if (!p) return {};
+  const title = m.invite(p.full_name);
+  const description = [p.headline, m.inviteText].filter(Boolean).join(". ");
+  return {
+    title,
+    description,
+    robots: { index: false },
+    openGraph: { title, description, images: [p.photo_url ? { url: p.photo_url, width: 400, height: 400 } : OG_IMAGE] },
+    twitter: { card: p.photo_url ? "summary" : "summary_large_image", title, description },
+  };
+}
 
 // Ссылка-приглашение психолога: профиль, вход или регистрация, выбор, чем делиться, и подключение.
 export default async function InvitePage({ params }: { params: Promise<{ code: string }> }) {

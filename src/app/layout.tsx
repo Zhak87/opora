@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Lora } from "next/font/google";
 import "./globals.css";
+import { OG_IMAGE } from "@/lib/og";
 import { MusicProvider } from "@/components/Music";
 import { LocaleProvider } from "@/i18n/client";
 import { getLocale } from "@/i18n/server";
@@ -13,9 +14,14 @@ const lora = Lora({ variable: "--font-lora", subsets: ["latin", "cyrillic"], sty
 
 export async function generateMetadata(): Promise<Metadata> {
   const m = common[await getLocale()];
+  // Абсолютные адреса для превью ссылок в WhatsApp и Telegram строятся от адреса сайта.
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
   return {
+    metadataBase: new URL(site),
     title: m.metaTitle,
     description: m.metaDescription,
+    openGraph: { type: "website", siteName: m.brand, title: m.metaTitle, description: m.metaDescription, images: [OG_IMAGE] },
+    twitter: { card: "summary_large_image" },
     appleWebApp: { title: m.brand, statusBarStyle: "default" },
   };
 }
