@@ -1,0 +1,71 @@
+# Выкладка на свой сервер после каждого изменения в main.
+# Образ собирается здесь, на GitHub, и уходит на сервер по SSH: на сервере ничего не собирается,
+# пароли от реестров не нужны. Что настроить в GitHub: deploy/README.md.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Пока сервер не подключён (нет переменной DEPLOY_HOST), выкладка пропускается.
+    if: ${{ vars.DEPLOY_HOST != '' }}
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ vars.DEPLOY_HOST }}
+      SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Собрать образ
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ vars.NEXT_PUBLIC_SUPABASE_URL }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            --build-arg NEXT_PUBLIC_SITE_URL="$SITE_URL" \
+            -t opora:${{ github.sha }} .
+
+      - name: Подготовить SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -t ed25519 "$HOST" > ~/.ssh/known_hosts; fi
+          printf 'Host prod\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n  ServerAliveInterval 30\n' "$HOST" > ~/.ssh/config
+
+      - name: Отправить образ и настройки на сервер
+        env:
+          PROD_ENV: ${{ secrets.PROD_ENV }}
+        run: |
+          docker save opora:${{ github.sha }} | gzip -1 | ssh prod 'gunzip | docker load'
+          scp deploy/docker-compose.yml deploy/Caddyfile prod:/opt/opora/
+          # Секреты сайта хранятся в GitHub (секрет PROD_ENV) и при каждой выкладке записываются на сервер.
+          if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV" | ssh prod 'umask 077 && cat > /opt/opora/.env'; fi
+
+      - name: Перезапустить сайт
+        run: |
+          ssh prod "set -e
+            cd /opt/opora
+            test -f .env || { echo 'Нет /opt/opora/.env: добавьте секрет PROD_ENV в GitHub'; exit 1; }
+            docker tag opora:${{ github.sha }} opora:latest
+            OPORA_TAG=${{ github.sha }} docker compose up -d --remove-orphans
+            docker images opora --format '{{.Tag}}' | grep -v '^latest$' | tail -n +4 | xargs -r -I{} docker rmi opora:{} >/dev/null || true
+            docker image prune -f >/dev/null"
+
+      - name: Проверить, что сайт открывается
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS -o /dev/null "$SITE_URL/welcome"; then echo "Сайт работает: $SITE_URL"; exit 0; fi
+            sleep 6
+          done
+          echo "Сайт не ответил за 2 минуты"
+          ssh prod 'cd /opt/opora && docker compose ps && docker compose logs --tail 80 app caddy'
+          exit 1
