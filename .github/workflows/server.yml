@@ -36,7 +36,8 @@ jobs:
         run: |
           test -n "$SSH_KEY" || { echo "Добавьте секрет DEPLOY_SSH_KEY (см. deploy/README.md)"; exit 1; }
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null || { echo "::error::Секрет DEPLOY_SSH_KEY не похож на ключ: вставьте весь файл opora_deploy, от -----BEGIN до -----END"; exit 1; }
           if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -t ed25519 "$HOST" > ~/.ssh/known_hosts; fi
           echo "Отпечаток ключа сервера (сверьте с панелью хостинга, если она его показывает):"
           ssh-keygen -lf ~/.ssh/known_hosts
