@@ -36,10 +36,10 @@ export function unsubscribeUrl(userId: string, oneClick = false) {
   return oneClick ? `${siteUrl()}/api/email/unsubscribe?${q}` : `${siteUrl()}/email/unsubscribe?${q}`;
 }
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-const SANS = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const SERIF = "Georgia,'Times New Roman',serif";
+export const SANS = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+export const SERIF = "Georgia,'Times New Roman',serif";
 
 export function renderDailyEmail(opts: {
   course: Pick<Course, "plan" | "length" | "locale">;
@@ -148,7 +148,7 @@ export function renderDailyEmail(opts: {
   return { subject, html, text, unsubscribe: unsubscribeUrl(opts.userId, true) };
 }
 
-export async function sendEmail(msg: { to: string; subject: string; html: string; text: string; unsubscribe?: string }) {
+export async function sendEmail(msg: { to: string; subject: string; html: string; text: string; unsubscribe?: string; replyTo?: string }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
@@ -158,6 +158,7 @@ export async function sendEmail(msg: { to: string; subject: string; html: string
       subject: msg.subject,
       html: msg.html,
       text: msg.text,
+      reply_to: msg.replyTo || undefined,
       headers: msg.unsubscribe ? { "List-Unsubscribe": `<${msg.unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined,
     }),
   });

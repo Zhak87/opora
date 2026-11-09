@@ -17,6 +17,11 @@ async function origin() {
   return h.get("origin") ?? `https://${h.get("host")}`;
 }
 
+async function callbackUrl(nextRaw: string | null) {
+  const next = safeNext(nextRaw);
+  return `${await origin()}/auth/callback${next === "/" ? "" : `?next=${encodeURIComponent(next)}`}`;
+}
+
 async function translate(message: string) {
   const { errors } = await getMsg(authMessages);
   const m = message.toLowerCase();
@@ -44,10 +49,11 @@ export async function signIn(_: State, formData: FormData): Promise<State> {
 
 export async function resendConfirmation(_: State, formData: FormData): Promise<State> {
   const supabase = await createClient();
+  // Повторное письмо тоже возвращает человека туда, откуда он пришёл (например, к приглашению психолога).
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: String(formData.get("email")).trim(),
-    options: { emailRedirectTo: `${await origin()}/auth/callback` },
+    options: { emailRedirectTo: await callbackUrl(formData.get("next") as string | null) },
   });
   if (error) return { error: await translate(error.message) };
   return { ok: (await getMsg(authMessages)).notices.resent };
@@ -70,7 +76,7 @@ export async function signUp(_: State, formData: FormData): Promise<State> {
     password,
     options: {
       data: { name: String(formData.get("name") || "").trim().slice(0, 60), consent: consentRecord(await getLocale()) },
-      emailRedirectTo: `${await origin()}/auth/callback${next === "/" ? "" : `?next=${encodeURIComponent(next)}`}`,
+      emailRedirectTo: await callbackUrl(next),
     },
   });
   if (error) return { error: await translate(error.message) };

@@ -86,3 +86,9 @@ export const CopyIcon = ({ className }: P) => (
 export const CalendarIcon = ({ className }: P) => (
   <svg {...base} className={className}><rect x="4.5" y="5.5" width="15" height="14" rx="3" /><path d="M8.5 3.5v4M15.5 3.5v4M4.5 10h15" /></svg>
 );
+export const TelegramIcon = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M20.5 4.5 3.5 11.2l5.6 2 2 5.8 3.1-3.6 4.4 3.1Z" /><path d="m9.1 13.2 8.4-6.2" /></svg>
+);
+export const MailIcon = ({ className }: P) => (
+  <svg {...base} className={className}><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>
+);

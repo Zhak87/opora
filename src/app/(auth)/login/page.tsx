@@ -10,12 +10,13 @@ import { DemoNote } from "@/components/DemoNote";
 import { useMsg } from "@/i18n/client";
 import { authMessages } from "@/i18n/auth";
 
-function ResendForm({ email }: { email?: string }) {
+function ResendForm({ email, next }: { email?: string; next?: string }) {
   const [state, action] = useActionState(resendConfirmation, undefined);
   const m = useMsg(authMessages);
   if (state?.ok) return <Notice>{state.ok}</Notice>;
   return (
     <form action={action} className="space-y-3 rounded-2xl bg-sand/60 p-4">
+      {next && <input type="hidden" name="next" value={next} />}
       <p className="text-sm leading-relaxed text-ink-soft">{m.login.resendText}</p>
       {email ? (
         <input type="hidden" name="email" value={email} />
@@ -55,7 +56,7 @@ function LoginForm() {
           {state?.error && <Notice tone="error">{state.error}</Notice>}
           <SubmitButton className="w-full" pendingText={m.login.submitting}>{m.login.submit}</SubmitButton>
         </form>
-        {(state?.unconfirmed || expired) && <ResendForm email={state?.unconfirmed} />}
+        {(state?.unconfirmed || expired) && <ResendForm email={state?.unconfirmed} next={next} />}
       </div>
       <div className="mt-6 flex flex-col items-center gap-2 text-sm text-ink-soft">
         <Link href="/forgot" className="hover:text-ink">{m.login.forgot}</Link>

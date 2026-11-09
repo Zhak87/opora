@@ -21,7 +21,8 @@ export async function updateSession(request: NextRequest) {
   if ((searchParams.get("error_code") || searchParams.get("error")) && pathname !== "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = "?link=expired";
+    const next = safeNext(searchParams.get("next"));
+    url.search = next === "/" ? "?link=expired" : `?link=expired&next=${encodeURIComponent(next)}`;
     return NextResponse.redirect(url);
   }
 

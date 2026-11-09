@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
   }
 
-  const target = ok ? (type === "recovery" ? "/reset" : next) : "/login?link=expired";
+  // Если ссылка устарела, адрес «куда вернуться» не теряем: после входа человек попадёт туда же.
+  const expired = next === "/" ? "/login?link=expired" : `/login?link=expired&next=${encodeURIComponent(next)}`;
+  const target = ok ? (type === "recovery" ? "/reset" : next) : expired;
   return NextResponse.redirect(new URL(target, origin));
 }
