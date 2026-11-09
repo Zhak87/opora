@@ -49,15 +49,21 @@ jobs:
           ROOT_PASSWORD: ${{ secrets.ROOT_PASSWORD }}
         run: |
           PUB=$(ssh-keygen -y -f ~/.ssh/id_deploy)
-          # Если хостинг выдал только пароль root: он лежит в секрете ROOT_PASSWORD, по нему один раз
-          # кладётся ключ, дальше вход по паролю выключается. Секрет после этого можно удалить.
-          if [ -n "$ROOT_PASSWORD" ]; then
-            sudo apt-get -qq install -y sshpass >/dev/null
-            echo "$PUB" | SSHPASS="$ROOT_PASSWORD" sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no "root@$HOST" \
-              'install -d -m 700 /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'
+          if ssh -o BatchMode=yes -o ConnectTimeout=15 prod true 2>/dev/null; then
+            # Пользователь deploy уже есть (повторный запуск): настраиваем через sudo
+            T=prod; RUN="sudo bash"
+          else
+            T=prod-root; RUN=bash
+            # Если хостинг выдал только пароль root: он лежит в секрете ROOT_PASSWORD, по нему один раз
+            # кладётся ключ, дальше вход по паролю выключается. Секрет после этого можно удалить.
+            if [ -n "$ROOT_PASSWORD" ]; then
+              sudo apt-get -qq install -y sshpass >/dev/null
+              echo "$PUB" | SSHPASS="$ROOT_PASSWORD" sshpass -e ssh -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no "root@$HOST" \
+                'install -d -m 700 /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'
+            fi
           fi
-          scp deploy/server-setup.sh prod-root:/root/server-setup.sh
-          ssh prod-root "bash /root/server-setup.sh '$PUB'"
+          scp deploy/server-setup.sh $T:/tmp/server-setup.sh
+          ssh $T "$RUN /tmp/server-setup.sh '$PUB'"
           ssh prod 'docker --version && echo "Вход deploy по ключу работает"'
 
       - name: status
