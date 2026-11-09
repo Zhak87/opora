@@ -18,6 +18,8 @@ import { scheduleMessages } from "@/i18n/schedule";
 import { wellbeingMessages } from "@/i18n/wellbeing";
 import { getTimeZone } from "@/lib/tz";
 import { dayKey } from "@/lib/time";
+import { intakeSeen } from "@/lib/intake";
+import { IntakeCard } from "@/components/IntakeCard";
 
 export default async function HomePage() {
   const { supabase, user } = await requireUser();
@@ -25,7 +27,7 @@ export default async function HomePage() {
   const m = home[locale];
   const today = dayKey(new Date(), await getTimeZone());
   const [{ data: profile }, { data: recent }, stored, course, care, { data: checkin }] = await Promise.all([
-    supabase.from("profiles").select("name").eq("id", user!.id).single(),
+    supabase.from("profiles").select("name, intake").eq("id", user!.id).single(),
     supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
     latestPlan(supabase),
     currentCourse(supabase),
@@ -37,6 +39,7 @@ export default async function HomePage() {
   const tipIndex = stored ? Math.floor(Date.now() / 86_400_000) % stored.plan.tips.length : 0;
   const question = pickForDay(dailyQuestions(locale));
   const name = profile?.name;
+  const showIntake = profile && !intakeSeen(profile.intake);
 
   return (
     <div className="stagger">
@@ -66,6 +69,8 @@ export default async function HomePage() {
         <ActionLink href="/explore" title={m.explore} hint={m.exploreHint} tone="bg-mist" Icon={CompassIcon} />
         <ActionLink href="/journal" title={m.journal} hint={m.journalHint} tone="bg-sage-soft" Icon={PenIcon} />
       </section>
+
+      {showIntake && <IntakeCard />}
 
       <Link
         href="/wellbeing"

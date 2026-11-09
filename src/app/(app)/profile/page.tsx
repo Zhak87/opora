@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { isFilled } from "@/lib/intake";
+import { clearIntake } from "@/lib/intake-actions";
+import { intakeMessages } from "@/i18n/intake";
 import { requireUser } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/pro";
 import { signOut } from "@/lib/actions";
@@ -27,12 +30,14 @@ export default async function ProfilePage({
   const a = aboutMessages[locale];
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { count: talks }, { count: notes }, { count: pro }] = await Promise.all([
-    supabase.from("profiles").select("name, created_at, voice").eq("id", user!.id).single(),
+    supabase.from("profiles").select("name, created_at, voice, intake").eq("id", user!.id).single(),
     supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
     supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
     supabase.from("psychologists").select("user_id", { count: "exact", head: true }).eq("user_id", user!.id),
   ]);
   const admin = await isAdmin(supabase);
+  const q = intakeMessages[locale];
+  const filled = isFilled(profile?.intake);
   const since = new Date(profile?.created_at ?? Date.now()).toLocaleDateString(INTL[locale], {
     month: "long",
     year: "numeric",
@@ -69,6 +74,25 @@ export default async function ProfilePage({
           <h2 className="text-[15px] font-medium text-ink">{m.languageTitle}</h2>
           <p className="mt-1 text-sm leading-relaxed text-ink-soft">{m.languageHint}</p>
           <LanguageSwitcher full className="mt-4" />
+        </Card>
+
+        <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">
+          <div className="flex-1">
+            <h2 className="text-[15px] font-medium text-ink">{q.profileTitle}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{filled ? q.profileFilled : q.profileEmpty}</p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+            <Link href="/intake" className={buttonStyles.soft}>
+              {filled ? q.profileEdit : q.profileFill}
+            </Link>
+            {filled && (
+              <form action={clearIntake}>
+                <button type="submit" className="px-2 text-xs text-ink-faint transition hover:text-[#a0614f]">
+                  {q.profileClear}
+                </button>
+              </form>
+            )}
+          </div>
         </Card>
 
         <Card className="p-6 sm:p-8">

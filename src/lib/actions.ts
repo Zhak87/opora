@@ -53,6 +53,41 @@ export async function deleteConversation(formData: FormData) {
   if (formData.get("redirect")) redirect("/talk");
 }
 
+// Отмена отправленного сообщения: удаляем последнюю реплику человека и всё, что пришло после неё
+// (ответ собеседника). Текст возвращаем, чтобы его можно было поправить и отправить заново.
+export async function undoLastMessage(conversationId: string): Promise<{ content: string } | { error: string }> {
+  const { supabase } = await authed();
+  const t = chatMessages[await getLocale()];
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return { error: t.undoFailed };
+  const { data: last } = await supabase
+    .from("messages")
+    .select("id, content, created_at")
+    .eq("conversation_id", conversationId)
+    .eq("role", "user")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!last) return { error: t.undoFailed };
+  const { error } = await supabase
+    .from("messages")
+    .delete()
+    .eq("conversation_id", conversationId)
+    .gte("created_at", last.created_at);
+  if (error) return { error: t.undoFailed };
+
+  // Если это было первое сообщение обычного разговора, его название больше не подходит.
+  const { count } = await supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("conversation_id", conversationId)
+    .eq("role", "user");
+  if (!count) {
+    await supabase.from("conversations").update({ title: t.newConversation }).eq("id", conversationId).eq("mode", "talk");
+  }
+  revalidatePath("/talk");
+  return { content: last.content };
+}
+
 export async function deleteAllHistory() {
   const { supabase, user } = await authed();
   await supabase.from("conversations").delete().eq("user_id", user.id);

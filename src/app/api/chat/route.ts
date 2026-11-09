@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
+import { intakeNote } from "@/lib/intake";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { HOUR, tooMany } from "@/lib/rate-limit";
@@ -39,10 +40,15 @@ export async function POST(req: Request) {
     .single();
   if (!conversation) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  // id сохранённой реплики: если человек отменит её, пока собеседник отвечает, ответ не сохраняем.
+  let userMessageId: string | null = null;
   if (message) {
-    const { error } = await supabase
+    const { data: inserted, error } = await supabase
       .from("messages")
-      .insert({ conversation_id: conversationId, role: "user", content: message });
+      .insert({ conversation_id: conversationId, role: "user", content: message })
+      .select("id")
+      .single();
+    userMessageId = inserted?.id ?? null;
     if (error) {
       console.error(error);
       return NextResponse.json({ error: "save failed" }, { status: 500 });
@@ -65,7 +71,7 @@ export async function POST(req: Request) {
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })
       .limit(HISTORY_LIMIT),
-    supabase.from("profiles").select("name").eq("id", user.id).single(),
+    supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
   ]);
 
   const messages = normalize(((history ?? []) as ChatMessage[]).reverse());
@@ -75,6 +81,10 @@ export async function POST(req: Request) {
 
   const save = async (content: string) => {
     if (!content.trim()) return;
+    if (userMessageId) {
+      const { data: still } = await supabase.from("messages").select("id").eq("id", userMessageId).maybeSingle();
+      if (!still) return;
+    }
     await supabase
       .from("messages")
       .insert({ conversation_id: conversationId, role: "assistant", content: content.trim() });
@@ -93,7 +103,14 @@ export async function POST(req: Request) {
   try {
     upstream = await streamReply({
       system:
-        buildSystemPrompt({ mode: conversation.mode, topic: conversation.topic, name: profile?.name, locale }) +
+        buildSystemPrompt({
+          mode: conversation.mode,
+          topic: conversation.topic,
+          name: profile?.name,
+          locale,
+          calmTools: !body?.voice,
+          intake: intakeNote(profile?.intake),
+        }) +
         (body?.voice ? VOICE_NOTE : ""),
       messages,
     });
