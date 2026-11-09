@@ -10,7 +10,7 @@ GitHub (main) ──► GitHub Actions: проверка и сборка обр�
 ```
 
 - **CI** (`.github/workflows/ci.yml`): на каждый pull request и в main проверяет линтер, типы и сборку.
-- **CD** (`.github/workflows/deploy.yml`): после каждого слияния в main собирает Docker-образ на GitHub, отправляет его на сервер по SSH и перезапускает сайт, потом проверяет, что сайт открывается. Пока не задана переменная `DEPLOY_HOST`, выкладка пропускается.
+- **CD** (`.github/workflows/deploy.yml`): после каждого слияния в main собирает Docker-образ на GitHub, отправляет его на сервер по SSH и перезапускает сайт, потом проверяет, что сайт открывается. Пока в GitHub нет секретов `DEPLOY_SSH_KEY` и `PROD_ENV`, выкладка пропускается.
 - **Server** (`.github/workflows/server.yml`): ручные действия без входа на сервер: `setup` (первая настройка), `status`, `logs`, `restart`.
 - SSL: Caddy сам получает сертификат Let's Encrypt для домена и `www`, сам продлевает. Платить и что-то настраивать не нужно.
 
@@ -47,18 +47,11 @@ ssh-keygen -t ed25519 -C opora-deploy -f $HOME/.ssh/opora_deploy
 | `PROD_ENV` | содержимое файла `deploy/env.example`, заполненное значениями (те же, что сейчас в Vercel → Settings → Environment Variables) |
 | `ROOT_PASSWORD` | только если хостинг дал пароль root, а ключ добавить было нельзя. После настройки сервера этот секрет удалите |
 
-Вкладка **Variables** → **New repository variable**:
-
-| Имя | Значение |
-|---|---|
-| `DEPLOY_HOST` | IP-адрес сервера |
-| `NEXT_PUBLIC_SITE_URL` | `https://opora.kz` (ваш домен) |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://tjvavsizvmjoaieankmy.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | публичный ключ Supabase (тот же, что в Vercel) |
+Открытые настройки (IP сервера, адрес сайта, публичный ключ базы) уже записаны в `deploy/site.env`, в GitHub их добавлять не нужно.
 
 ## 4. Первая настройка и выкладка
 
-1. **Actions → Server → Run workflow**, действие **setup**. Скрипт `deploy/server-setup.sh` обновит систему, поставит Docker, создаст пользователя `deploy`, выключит вход по паролю и вход root, включит файрвол (открыты только 22, 80, 443), fail2ban и автообновления безопасности.
+1. **Actions → Server → Run workflow**, действие **setup**. Скрипт `deploy/server-setup.sh` обновит систему, поставит Docker, создаст пользователя `deploy`, выключит вход по паролю и вход root, включит файрвол (открыты только 22, 80, 443), fail2ban и автообновления безопасности, заблокирует пароль root. Запускается один раз: после него вход root закрыт.
 2. **Actions → Deploy → Run workflow**. Через 3–5 минут сайт откроется на `https://ваш-домен` с замком SSL.
 3. Supabase → **Authentication → URL Configuration**: **Site URL** = `https://ваш-домен`, в **Redirect URLs** добавьте `https://ваш-домен/**`. Иначе ссылки из писем будут вести на старый адрес.
 4. Когда новый адрес работает, в Vercel удалите переменную `CRON_SECRET` (или отключите проект), чтобы письма дня не уходили дважды.

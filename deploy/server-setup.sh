@@ -41,8 +41,18 @@ cat > /etc/ssh/sshd_config.d/10-opora.conf <<'CONF'
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin no
+AllowUsers deploy
+MaxAuthTries 3
+LoginGraceTime 30
+X11Forwarding no
+AllowAgentForwarding no
 CONF
+sshd -t
 systemctl reload ssh || systemctl reload sshd
+
+# Пароль root, выданный хостингом, больше не работает (вход только по ключу, root по SSH закрыт).
+# Для аварийного входа через консоль в панели hoster.kz пароль можно сбросить там же.
+passwd -l root
 
 # Файрвол
 ufw default deny incoming
@@ -53,7 +63,18 @@ ufw allow 443/tcp
 ufw allow 443/udp
 ufw --force enable
 
-systemctl enable --now fail2ban
+# fail2ban: 5 неудачных входов за 10 минут — бан IP на сутки
+cat > /etc/fail2ban/jail.d/opora.local <<'CONF'
+[sshd]
+enabled = true
+backend = systemd
+maxretry = 5
+findtime = 10m
+bantime = 1d
+CONF
+apt-get -y install python3-systemd >/dev/null || true
+systemctl enable fail2ban
+systemctl restart fail2ban
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
 # Подкачка 2 ГБ: сборки и пики памяти не уронят сервер

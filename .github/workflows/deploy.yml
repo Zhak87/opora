@@ -1,6 +1,6 @@
 # Выкладка на свой сервер после каждого изменения в main.
 # Образ собирается здесь, на GitHub, и уходит на сервер по SSH: на сервере ничего не собирается,
-# пароли от реестров не нужны. Что настроить в GitHub: deploy/README.md.
+# пароли от реестров не нужны. Открытые настройки: deploy/site.env, секреты: deploy/README.md.
 name: Deploy
 
 on:
@@ -14,24 +14,37 @@ concurrency:
 
 jobs:
   deploy:
-    # Пока сервер не подключён (нет переменной DEPLOY_HOST), выкладка пропускается.
-    if: ${{ vars.DEPLOY_HOST != '' }}
     runs-on: ubuntu-latest
-    env:
-      HOST: ${{ vars.DEPLOY_HOST }}
-      SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Настройки
+        id: cfg
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          PROD_ENV: ${{ secrets.PROD_ENV }}
+        run: |
+          # Открытые настройки (IP сервера, адрес сайта) лежат в deploy/site.env.
+          grep -E '^[A-Z_]+=' deploy/site.env >> "$GITHUB_ENV"
+          echo "HOST=$(grep '^DEPLOY_HOST=' deploy/site.env | cut -d= -f2-)" >> "$GITHUB_ENV"
+          if [ -z "$SSH_KEY" ] || [ -z "$PROD_ENV" ]; then
+            echo "::notice::Выкладка пропущена: в GitHub ещё нет секретов DEPLOY_SSH_KEY и PROD_ENV (см. deploy/README.md)."
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Собрать образ
+        if: steps.cfg.outputs.ready == 'yes'
         run: |
           docker build \
-            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ vars.NEXT_PUBLIC_SUPABASE_URL }}" \
-            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            --build-arg NEXT_PUBLIC_SITE_URL="$SITE_URL" \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+            --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
             -t opora:${{ github.sha }} .
 
       - name: Подготовить SSH
+        if: steps.cfg.outputs.ready == 'yes'
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
@@ -42,6 +55,7 @@ jobs:
           printf 'Host prod\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n  ServerAliveInterval 30\n' "$HOST" > ~/.ssh/config
 
       - name: Отправить образ и настройки на сервер
+        if: steps.cfg.outputs.ready == 'yes'
         env:
           PROD_ENV: ${{ secrets.PROD_ENV }}
         run: |
@@ -51,6 +65,7 @@ jobs:
           if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV" | ssh prod 'umask 077 && cat > /opt/opora/.env'; fi
 
       - name: Перезапустить сайт
+        if: steps.cfg.outputs.ready == 'yes'
         run: |
           ssh prod "set -e
             cd /opt/opora
@@ -61,9 +76,10 @@ jobs:
             docker image prune -f >/dev/null"
 
       - name: Проверить, что сайт открывается
+        if: steps.cfg.outputs.ready == 'yes'
         run: |
           for i in $(seq 1 20); do
-            if curl -fsS -o /dev/null "$SITE_URL/welcome"; then echo "Сайт работает: $SITE_URL"; exit 0; fi
+            if curl -fsS -o /dev/null "$NEXT_PUBLIC_SITE_URL/welcome"; then echo "Сайт работает: $NEXT_PUBLIC_SITE_URL"; exit 0; fi
             sleep 6
           done
           echo "Сайт не ответил за 2 минуты"
