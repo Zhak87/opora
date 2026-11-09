@@ -71,7 +71,7 @@ jobs:
       - name: status
         if: inputs.action == 'status'
         run: |
-          ssh prod 'uptime; echo; free -h; echo; df -h /; echo; cd /opt/opora 2>/dev/null && ./dc.sh ps || echo "Сайт ещё не выложен"; echo; echo "Резервные копии:"; ls -lh /opt/opora/backups 2>/dev/null | tail -6'
+          ssh prod 'uptime; echo; free -h; echo; df -h /; echo; cd /opt/opora 2>/dev/null && ./dc.sh ps || echo "Сайт ещё не выложен"; echo; echo "Резервные копии:"; ls -lh /opt/opora/backups 2>/dev/null | tail -6; echo; echo "Сайт видит свою базу:"; ./dc.sh exec -T app wget -qO- -T 10 https://$(grep ^DOMAIN= .env | cut -d= -f2)/auth/v1/health || echo "НЕТ: приложение не достучалось до своей базы по адресу сайта"'
           if [ -n "$NEXT_PUBLIC_SITE_URL" ]; then
             D=$(echo "$NEXT_PUBLIC_SITE_URL" | sed -E 's#https?://##; s#/.*##')
             echo; echo "DNS для $D:"; getent hosts "$D" || echo "домен ещё не виден в интернете"

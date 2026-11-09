@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { checkUnsubscribeToken } from "@/lib/email";
+import { siteOrigin } from "@/lib/site-origin";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
   const url = new URL(req.url);
   const u = url.searchParams.get("u") ?? "";
   const t = url.searchParams.get("t") ?? "";
-  const back = new URL("/email/unsubscribe", url);
+  const back = new URL("/email/unsubscribe", siteOrigin(req.headers));
   if (!checkUnsubscribeToken(u, t) || !adminConfigured()) {
     back.searchParams.set("status", "invalid");
     return NextResponse.redirect(back, 303);
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const page = new URL("/email/unsubscribe", url);
+  const page = new URL("/email/unsubscribe", siteOrigin(req.headers));
   page.search = url.search;
   return NextResponse.redirect(page);
 }
