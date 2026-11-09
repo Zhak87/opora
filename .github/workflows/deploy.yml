@@ -33,15 +33,6 @@ jobs:
             echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Собрать образ
-        if: steps.cfg.outputs.ready == 'yes'
-        run: |
-          docker build \
-            --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
-            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-            --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
-            -t opora:${{ github.sha }} .
-
       - name: Подготовить SSH
         if: steps.cfg.outputs.ready == 'yes'
         env:
@@ -53,6 +44,22 @@ jobs:
           ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null || { echo "::error::Секрет DEPLOY_SSH_KEY не похож на ключ: вставьте весь файл opora_deploy, от -----BEGIN до -----END"; exit 1; }
           if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -t ed25519 "$HOST" > ~/.ssh/known_hosts; fi
           printf 'Host prod\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n  ServerAliveInterval 30\n' "$HOST" > ~/.ssh/config
+
+      - name: Собрать образ
+        if: steps.cfg.outputs.ready == 'yes'
+        run: |
+          # «server» в site.env: открытый ключ своей базы берётся с сервера (он создаётся там при первой выкладке)
+          if [ "$NEXT_PUBLIC_SUPABASE_ANON_KEY" = "server" ]; then
+            K=$(ssh prod "grep '^SB_ANON_KEY=' /opt/opora/server.env | cut -d= -f2-")
+            [ -n "$K" ] || { echo "::error::На сервере ещё нет ключа своей базы: сначала выложите сайт с облачными настройками"; exit 1; }
+            NEXT_PUBLIC_SUPABASE_ANON_KEY="$K"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$K" >> "$GITHUB_ENV"
+          fi
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+            --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+            -t opora:${{ github.sha }} .
 
       - name: Отправить образ и настройки на сервер
         if: steps.cfg.outputs.ready == 'yes'
@@ -69,7 +76,8 @@ jobs:
           # .env собирается из открытых настроек и секретов GitHub при каждой выкладке.
           # server.env создаётся на сервере один раз (CRON_SECRET, ключи базы) и его не покидает.
           {
-            grep -E '^[A-Z_]+=' deploy/site.env
+            grep -E '^[A-Z_]+=' deploy/site.env | grep -v '^NEXT_PUBLIC_SUPABASE_ANON_KEY='
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY"
             echo "DOMAIN=${NEXT_PUBLIC_SITE_URL#https://}"
             echo "GEMINI_API_KEY=$GEMINI"
             if [ -n "$RESEND" ]; then echo "RESEND_API_KEY=$RESEND"; echo "SMTP_PASS=$RESEND"; fi

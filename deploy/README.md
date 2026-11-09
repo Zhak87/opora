@@ -78,7 +78,7 @@ ssh-keygen -t ed25519 -C opora-deploy -f $HOME/.ssh/opora_deploy
 
 Перенос из облачного Supabase: **Actions → Server → migrate-db** (нужен секрет `SUPABASE_DB_URL`). Переносятся схема, права и правила
 доступа, аккаунты с паролями (людям придётся войти заново), все данные и файлы из открытых корзин. Потом в `deploy/site.env`
-`NEXT_PUBLIC_SUPABASE_URL` меняется на адрес сайта, а `NEXT_PUBLIC_SUPABASE_ANON_KEY` — на ключ из **Server → anon-key**.
+`NEXT_PUBLIC_SUPABASE_URL` меняется на адрес сайта, а `NEXT_PUBLIC_SUPABASE_ANON_KEY` — на слово `server`: выкладка сама возьмёт открытый ключ своей базы с сервера (сделано 09.11.2026).
 
 ## Резервные копии
 
