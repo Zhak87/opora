@@ -6,7 +6,34 @@ www.{$DOMAIN} {
 {$DOMAIN} {
 	encode zstd gzip
 	request_body {
-		max_size 5MB
+		max_size 12MB
 	}
-	reverse_proxy app:3000
+	header -Server
+
+	# Своя база (Supabase): вход, данные и файлы. Сами службы наружу не открыты.
+	handle_path /auth/v1/* {
+		reverse_proxy auth:9999
+	}
+	handle_path /rest/v1/* {
+		reverse_proxy rest:3000
+	}
+	handle_path /storage/v1/* {
+		reverse_proxy storage:5000 {
+			header_up X-Forwarded-Prefix /storage/v1
+		}
+	}
+	# Служебные адреса базы снаружи не нужны
+	handle /rest/v1 {
+		respond 404
+	}
+
+	handle {
+		reverse_proxy app:3000
+	}
+}
+
+# Внутренний адрес только для службы входа: шаблоны писем. Порт 8081 наружу не открыт.
+:8081 {
+	root * /srv/email-templates
+	file_server
 }

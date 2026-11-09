@@ -24,7 +24,6 @@ jobs:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           GEMINI: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # Открытые настройки (IP сервера, адрес сайта) лежат в deploy/site.env.
           grep -E '^[A-Z_]+=' deploy/site.env >> "$GITHUB_ENV"
           echo "HOST=$(grep '^DEPLOY_HOST=' deploy/site.env | cut -d= -f2-)" >> "$GITHUB_ENV"
           if [ -z "$SSH_KEY" ] || [ -z "$GEMINI" ]; then
@@ -59,37 +58,48 @@ jobs:
         if: steps.cfg.outputs.ready == 'yes'
         env:
           GEMINI: ${{ secrets.GEMINI_API_KEY }}
+          RESEND: ${{ secrets.RESEND_API_KEY }}
           PROD_ENV: ${{ secrets.PROD_ENV }}
         run: |
           docker save opora:${{ github.sha }} | gzip -1 | ssh prod 'gunzip | docker load'
-          scp deploy/docker-compose.yml deploy/Caddyfile prod:/opt/opora/
+          ssh prod 'mkdir -p /opt/opora/supabase/templates'
+          scp deploy/docker-compose.yml deploy/Caddyfile deploy/dc.sh prod:/opt/opora/
+          scp deploy/supabase/roles.sql deploy/supabase/jwt.sql deploy/supabase/gen-keys.sh prod:/opt/opora/supabase/
+          scp supabase/templates/*.html prod:/opt/opora/supabase/templates/
           # .env собирается из открытых настроек и секретов GitHub при каждой выкладке.
-          # server.env создаётся на сервере один раз (CRON_SECRET и другие внутренние ключи) и его не покидает.
+          # server.env создаётся на сервере один раз (CRON_SECRET, ключи базы) и его не покидает.
           {
             grep -E '^[A-Z_]+=' deploy/site.env
             echo "DOMAIN=${NEXT_PUBLIC_SITE_URL#https://}"
             echo "GEMINI_API_KEY=$GEMINI"
-            if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV"; fi
+            if [ -n "$RESEND" ]; then echo "RESEND_API_KEY=$RESEND"; echo "SMTP_PASS=$RESEND"; fi
+            if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV" | tr -d '\r'; fi
           } | ssh prod 'umask 077 && cat > /opt/opora/.env'
-          ssh prod 'cd /opt/opora && test -f server.env || (umask 077 && echo "CRON_SECRET=$(openssl rand -hex 32)" > server.env)'
+          ssh prod 'set -e; cd /opt/opora; chmod +x dc.sh supabase/gen-keys.sh
+            test -f server.env || (umask 077 && echo "CRON_SECRET=$(openssl rand -hex 32)" > server.env)
+            bash supabase/gen-keys.sh server.env'
 
       - name: Перезапустить сайт
         if: steps.cfg.outputs.ready == 'yes'
         run: |
           ssh prod "set -e
             cd /opt/opora
+            # Пока сайт смотрит в свою базу, ему нужен её ключ администратора
+            if grep -q '^NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SITE_URL\$' .env; then
+              echo \"APP_SERVICE_ROLE_KEY=\$(grep '^SB_SERVICE_ROLE_KEY=' server.env | cut -d= -f2-)\" >> .env
+            fi
             docker tag opora:${{ github.sha }} opora:latest
-            OPORA_TAG=${{ github.sha }} docker compose up -d --remove-orphans
+            OPORA_TAG=${{ github.sha }} ./dc.sh up -d --remove-orphans
             docker images opora --format '{{.Tag}}' | grep -v '^latest$' | tail -n +4 | xargs -r -I{} docker rmi opora:{} >/dev/null || true
             docker image prune -f >/dev/null"
 
       - name: Проверить, что сайт открывается
         if: steps.cfg.outputs.ready == 'yes'
         run: |
-          for i in $(seq 1 20); do
+          for i in $(seq 1 30); do
             if curl -fsS -o /dev/null "$NEXT_PUBLIC_SITE_URL/welcome"; then echo "Сайт работает: $NEXT_PUBLIC_SITE_URL"; exit 0; fi
             sleep 6
           done
-          echo "Сайт не ответил за 2 минуты"
-          ssh prod 'cd /opt/opora && docker compose ps && docker compose logs --tail 80 app caddy'
+          echo "::warning::Сайт не открылся по адресу $NEXT_PUBLIC_SITE_URL за 3 минуты (если DNS домена ещё не указывает на сервер, это ожидаемо)"
+          ssh prod 'cd /opt/opora && ./dc.sh ps && ./dc.sh logs --tail 60 app caddy auth'
           exit 1

@@ -5,6 +5,12 @@ services:
     image: opora:${OPORA_TAG:-latest}
     restart: unless-stopped
     env_file: [.env, server.env]
+    environment:
+      # Ключ администратора своей базы (берётся из server.env), пока сайт работает со своей базой
+      SUPABASE_SERVICE_ROLE_KEY: ${APP_SERVICE_ROLE_KEY:-}
+    # Запросы сайта к своей базе по адресу домена идут прямо на этот сервер
+    extra_hosts:
+      - "${DOMAIN}:host-gateway"
     expose:
       - "3000"
     logging:
@@ -14,7 +20,7 @@ services:
   caddy:
     image: caddy:2.10-alpine
     restart: unless-stopped
-    depends_on: [app]
+    depends_on: [app, auth, rest, storage]
     ports:
       - "80:80"
       - "443:443"
@@ -23,6 +29,7 @@ services:
       DOMAIN: ${DOMAIN:?укажите DOMAIN в .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./supabase/templates:/srv/email-templates:ro
       - caddy_data:/data
       - caddy_config:/config
     logging:
@@ -43,6 +50,137 @@ services:
         echo "0 3 * * * wget -qO- --header '$$H' http://app:3000/api/cron/daily-email; wget -qO- --header '$$H' http://app:3000/api/cron/session-reminders" > /etc/crontabs/root
         exec crond -f -l 8
 
+  # ── Своя база данных (открытая версия Supabase), целиком на этом сервере ──
+  # Наружу не открыта ни одна из этих служб: к ним ходит только Caddy по внутренней сети.
+  db:
+    image: supabase/postgres:17.6.1.136
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: 5432
+      POSTGRES_PORT: 5432
+      PGPASSWORD: ${SB_DB_PASSWORD:?нет SB_DB_PASSWORD в server.env}
+      POSTGRES_PASSWORD: ${SB_DB_PASSWORD}
+      PGDATABASE: postgres
+      POSTGRES_DB: postgres
+      JWT_EXP: 3600
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c", "log_min_messages=fatal"]
+    volumes:
+      - ./supabase/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+      - ./supabase/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
+      - db_data:/var/lib/postgresql/data
+      - db_config:/etc/postgresql-custom
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    shm_size: 256mb
+    logging: &logs
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  auth:
+    image: supabase/gotrue:v2.197.0
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${NEXT_PUBLIC_SITE_URL}/auth/v1
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${SB_DB_PASSWORD}@db:5432/postgres
+      GOTRUE_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      GOTRUE_URI_ALLOW_LIST: ${NEXT_PUBLIC_SITE_URL}/**
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: ${SB_JWT_SECRET}
+      GOTRUE_JWT_ISSUER: ${NEXT_PUBLIC_SITE_URL}/auth/v1
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: ${SB_MAILER_AUTOCONFIRM:-false}
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_PASSWORD_MIN_LENGTH: 8
+      GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: "true"
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-465}
+      GOTRUE_SMTP_USER: ${SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
+      GOTRUE_SMTP_SENDER_NAME: Опора
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+      # Свои письма на русском (supabase/templates), их раздаёт внутренний сайт caddy:8081
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://caddy:8081/confirm-signup.html
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: http://caddy:8081/reset-password.html
+      GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: http://caddy:8081/change-email.html
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: Подтвердите почту в Опоре
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: Новый пароль для Опоры
+      GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: Подтвердите новую почту в Опоре
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: 30
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *logs
+
+  rest:
+    image: postgrest/postgrest:v14.18
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${SB_DB_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_MAX_ROWS: 1000
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${SB_JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${SB_JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: 3600
+    command: ["postgrest"]
+    logging: *logs
+
+  storage:
+    image: supabase/storage-api:v1.89.12
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      rest: { condition: service_started }
+    environment:
+      ANON_KEY: ${SB_ANON_KEY}
+      SERVICE_KEY: ${SB_SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      AUTH_JWT_SECRET: ${SB_JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${SB_DB_PASSWORD}@db:5432/postgres
+      STORAGE_PUBLIC_URL: ${NEXT_PUBLIC_SITE_URL}
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
+      FILE_SIZE_LIMIT: 10485760
+      STORAGE_BACKEND: file
+      GLOBAL_S3_BUCKET: stub
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    volumes:
+      - storage_data:/var/lib/storage
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *logs
+
 volumes:
+  db_data:
+  db_config:
+  storage_data:
   caddy_data:
   caddy_config:
