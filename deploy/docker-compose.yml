@@ -87,6 +87,8 @@ services:
     image: supabase/postgres:17.6.1.136
     restart: unless-stopped
     depends_on: { db: { condition: service_healthy } }
+    # у образа базы своя проверка здоровья (pg_isready на этом же контейнере), для копий она не нужна
+    healthcheck: { disable: true }
     environment:
       PGPASSWORD: ${SB_DB_PASSWORD}
       KEEP_DAYS: 14
@@ -207,7 +209,7 @@ services:
     volumes:
       - storage_data:/var/lib/storage
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/status"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5000/status"]
       interval: 10s
       timeout: 5s
       retries: 5
