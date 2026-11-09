@@ -6,7 +6,9 @@
 GitHub (main) ──► GitHub Actions: проверка и сборка образа ──SSH──► сервер hoster.kz
                                                                     ├─ app    — сайт (Next.js)
                                                                     ├─ caddy  — HTTPS, бесплатный SSL Let's Encrypt, сам продлевает
-                                                                    └─ cron   — письма дня и напоминания, 08:00 по Астане
+                                                                    ├─ cron   — письма дня и напоминания, 08:00 по Астане
+                                                                    └─ db, auth, rest, storage — своя база (открытый Supabase):
+                                                                       данные, вход и файлы, наружу не открыты
 ```
 
 - **CI** (`.github/workflows/ci.yml`): на каждый pull request и в main проверяет линтер, типы и сборку.
@@ -46,6 +48,8 @@ ssh-keygen -t ed25519 -C opora-deploy -f $HOME/.ssh/opora_deploy
 | `DEPLOY_SSH_KEY` | весь текст секретного ключа `opora_deploy`, вместе со строками `-----BEGIN…` и `-----END…` |
 | `ROOT_PASSWORD` | пароль root из письма хостинга. Нужен один раз для первой настройки, потом секрет можно удалить |
 | `GEMINI_API_KEY` | ключ ИИ (Vercel → Settings → Environment Variables или https://aistudio.google.com/apikey) |
+| `RESEND_API_KEY` | ключ Resend для писем входа (подтверждение почты, новый пароль) и писем дня |
+| `SUPABASE_DB_URL` | только на время переноса: строка подключения к облачной базе Supabase (Project Settings → Database → Connection string, режим Session). После переноса удалить |
 | `PROD_ENV` | необязательно: дополнительные настройки, образец в `deploy/env.example` |
 
 Открытые настройки (IP сервера, адрес сайта, публичный ключ базы) уже записаны в `deploy/site.env`, в GitHub их добавлять не нужно.
@@ -65,3 +69,13 @@ ssh-keygen -t ed25519 -C opora-deploy -f $HOME/.ssh/opora_deploy
 - **Actions → Server → logs**: последние строки журналов.
 - Откатить: **Actions → Deploy**, откройте прошлую удачную выкладку → **Re-run all jobs**.
 - Войти руками: `ssh -i $HOME/.ssh/opora_deploy deploy@IP-сервера`, файлы сайта в `/opt/opora`.
+
+## Своя база данных
+
+На сервере работает открытая версия Supabase: PostgreSQL 17 (`db`), вход (`auth`), API данных (`rest`) и файлы (`storage`).
+Снаружи доступны только через Caddy по адресам `https://домен/auth/v1`, `/rest/v1`, `/storage/v1`. Порт базы наружу закрыт.
+Ключи базы (`SB_*` в `/opt/opora/server.env`) создаются на сервере при первой выкладке и его не покидают.
+
+Перенос из облачного Supabase: **Actions → Server → migrate-db** (нужен секрет `SUPABASE_DB_URL`). Переносятся схема, права и правила
+доступа, аккаунты с паролями (людям придётся войти заново), все данные и файлы из открытых корзин. Потом в `deploy/site.env`
+`NEXT_PUBLIC_SUPABASE_URL` меняется на адрес сайта, а `NEXT_PUBLIC_SUPABASE_ANON_KEY` — на ключ из **Server → anon-key**.
