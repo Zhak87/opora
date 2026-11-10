@@ -61,6 +61,9 @@ ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow 443/udp
+# Голос в «Комнатах» (LiveKit): звук по UDP и запасной путь через TCP
+ufw allow 7881/tcp
+ufw allow 7882/udp
 ufw --force enable
 
 # fail2ban: 5 неудачных входов за 10 минут — бан IP на сутки

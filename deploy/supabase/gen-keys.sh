@@ -3,6 +3,11 @@
 # кроме публичного SB_ANON_KEY (он и так виден в браузере каждому посетителю).
 set -euo pipefail
 F="${1:-server.env}"
+# Ключи медиасервера голоса (LiveKit) для «Комнат»: создаются один раз, отдельно от ключей базы.
+if ! grep -q '^LIVEKIT_API_KEY=' "$F" 2>/dev/null; then
+  (umask 077; { echo "LIVEKIT_API_KEY=opora$(openssl rand -hex 6)"; echo "LIVEKIT_API_SECRET=$(openssl rand -hex 32)"; } >> "$F")
+  echo "Ключи голоса созданы"
+fi
 grep -q '^SB_JWT_SECRET=' "$F" 2>/dev/null && { echo "Ключи базы уже есть"; exit 0; }
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
 jwt() {

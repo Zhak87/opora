@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon, ShieldIcon } from "./icons";
+import { HomeIcon, TalkIcon, UsersIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon, ShieldIcon } from "./icons";
 import { Orb } from "./Orb";
 import { MusicToggle } from "./Music";
 import { Bell } from "./Bell";
@@ -12,6 +12,7 @@ import { common } from "@/i18n/common";
 const BASE = [
   { href: "/", key: "home", Icon: HomeIcon },
   { href: "/talk", key: "talk", Icon: TalkIcon },
+  { href: "/rooms", key: "rooms", Icon: UsersIcon },
   { href: "/journal", key: "journal", Icon: JournalIcon },
   { href: "/hope", key: "hope", Icon: HopeIcon },
   { href: "/profile", key: "profile", Icon: ProfileIcon },
@@ -38,8 +39,9 @@ export function Nav({
   adminPending?: number | null;
 }) {
   const path = usePathname();
-  const ITEMS = care ? [...BASE.slice(0, 4), CARE, BASE[4]] : BASE;
-  const inChat = /^\/talk\/.+/.test(path);
+  const ITEMS = care ? [...BASE.slice(0, 5), CARE, BASE[5]] : BASE;
+  // В разговоре и внутри комнаты нижняя панель прячется: там своё управление внизу экрана.
+  const inChat = /^\/talk\/.+/.test(path) || /^\/rooms\/[0-9a-f-]{36}/.test(path);
   const m = useMsg(common);
 
   return (
@@ -118,19 +120,19 @@ export function Nav({
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-medium transition-colors ${
+                  className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-medium transition-colors ${
                     active ? "text-ink" : "text-ink-faint"
                   }`}
                 >
                   <span
-                    className={`relative flex h-9 w-12 items-center justify-center rounded-[14px] transition-all duration-500 ease-[cubic-bezier(0.3,1.5,0.5,1)] ${
+                    className={`relative flex h-9 w-12 max-w-full items-center justify-center rounded-[14px] transition-all duration-500 ease-[cubic-bezier(0.3,1.5,0.5,1)] ${
                       active ? "scale-100 bg-ink text-paper" : "scale-90"
                     }`}
                   >
                     <Icon className="h-[21px] w-[21px]" />
                     {key === "care" && careUnread > 0 && <span className="absolute right-2.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
                   </span>
-                  {label}
+                  <span className="max-w-full truncate px-0.5">{label}</span>
                 </Link>
               );
             })}

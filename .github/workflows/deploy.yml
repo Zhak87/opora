@@ -70,7 +70,9 @@ jobs:
         run: |
           docker save opora:${{ github.sha }} | gzip -1 | ssh prod 'gunzip | docker load'
           ssh prod 'mkdir -p /opt/opora/supabase/templates'
-          scp deploy/docker-compose.yml deploy/Caddyfile deploy/dc.sh prod:/opt/opora/
+          scp deploy/docker-compose.yml deploy/Caddyfile deploy/dc.sh deploy/migrate.sh prod:/opt/opora/
+          ssh prod 'rm -rf /opt/opora/migrations && mkdir -p /opt/opora/migrations'
+          scp supabase/migrations/*.sql prod:/opt/opora/migrations/
           scp deploy/supabase/roles.sql deploy/supabase/jwt.sql deploy/supabase/gen-keys.sh prod:/opt/opora/supabase/
           scp supabase/templates/*.html prod:/opt/opora/supabase/templates/
           # .env собирается из открытых настроек и секретов GitHub при каждой выкладке.
@@ -83,7 +85,7 @@ jobs:
             if [ -n "$RESEND" ]; then echo "RESEND_API_KEY=$RESEND"; echo "SMTP_PASS=$RESEND"; fi
             if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV" | tr -d '\r'; fi
           } | ssh prod 'umask 077 && cat > /opt/opora/.env'
-          ssh prod 'set -e; cd /opt/opora; chmod +x dc.sh supabase/gen-keys.sh
+          ssh prod 'set -e; cd /opt/opora; chmod +x dc.sh migrate.sh supabase/gen-keys.sh
             test -f server.env || (umask 077 && echo "CRON_SECRET=$(openssl rand -hex 32)" > server.env)
             bash supabase/gen-keys.sh server.env'
 
@@ -96,6 +98,11 @@ jobs:
             if grep -q '^NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SITE_URL\$' .env; then
               echo \"APP_SERVICE_ROLE_KEY=\$(grep '^SB_SERVICE_ROLE_KEY=' server.env | cut -d= -f2-)\" >> .env
             fi
+            # Новые изменения базы (supabase/migrations) — до запуска нового сайта
+            ./dc.sh up -d --wait db
+            ./migrate.sh
+            # Порты голоса «Комнат» (LiveKit); повторный запуск ничего не меняет
+            sudo ufw allow 7881/tcp >/dev/null && sudo ufw allow 7882/udp >/dev/null || echo 'Не удалось открыть порты голоса 7881/tcp и 7882/udp'
             docker tag opora:${{ github.sha }} opora:latest
             OPORA_TAG=${{ github.sha }} ./dc.sh up -d --remove-orphans
             docker images opora --format '{{.Tag}}' | grep -v '^latest$' | tail -n +4 | xargs -r -I{} docker rmi opora:{} >/dev/null || true
