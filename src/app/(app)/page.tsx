@@ -12,8 +12,8 @@ import { courseState } from "@/lib/course";
 import { courseMessages } from "@/i18n/course";
 import { TipCheck } from "@/components/plan/TipCheck";
 import { DemoImport } from "@/components/DemoImport";
-import { TalkIcon, CompassIcon, PenIcon, ArrowIcon, HeartHandIcon } from "@/components/icons";
-import { hasCare } from "@/lib/pro";
+import { TalkIcon, CompassIcon, PenIcon, ArrowIcon, HeartHandIcon, ShieldIcon } from "@/components/icons";
+import { adminPending, hasCare } from "@/lib/pro";
 import { scheduleMessages } from "@/i18n/schedule";
 import { wellbeingMessages } from "@/i18n/wellbeing";
 import { getTimeZone } from "@/lib/tz";
@@ -35,13 +35,14 @@ export default async function HomePage() {
   const locale = await getLocale();
   const m = home[locale];
   const today = dayKey(new Date(), await getTimeZone());
-  const [{ data: profile }, { data: recent }, stored, course, care, { data: checkin }] = await Promise.all([
+  const [{ data: profile }, { data: recent }, stored, course, care, { data: checkin }, pending] = await Promise.all([
     supabase.from("profiles").select("name, intake").eq("id", user!.id).single(),
     supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
     latestPlan(supabase),
     currentCourse(supabase),
     hasCare(supabase, user!.id),
     supabase.from("checkins").select("mood").eq("user_id", user!.id).eq("day", today).maybeSingle(),
+    adminPending(supabase).catch(() => null),
   ]);
   const wb = wellbeingMessages[locale].checkin;
   const suggest = scheduleMessages[locale].catalog;
@@ -53,6 +54,27 @@ export default async function HomePage() {
   return (
     <div className="stagger">
       <DemoImport />
+      {/* Видно только администраторам: вход в проверку анкет психологов */}
+      {pending !== null && (
+        <Link
+          href="/admin/psychologists"
+          className="group mb-6 flex items-center gap-4 rounded-[26px] bg-mist px-5 py-4 shadow-soft transition hover:shadow-lift"
+        >
+          <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-paper text-sky-deep">
+            <ShieldIcon className="h-6 w-6" />
+            {pending > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-lilac-deep px-1 text-[11px] font-semibold text-paper">
+                {pending}
+              </span>
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-medium text-ink">{m.adminTitle}</span>
+            <span className="mt-0.5 block text-sm text-ink-soft">{m.adminHint(pending)}</span>
+          </span>
+          <ArrowIcon className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+        </Link>
+      )}
       {/* Капля смотрит на человека и меняет цвет под сегодняшнее настроение */}
       <section className="mb-8 flex flex-col items-center text-center sm:mb-10">
         <Orb size={168} face mood={checkin?.mood ?? 3} className="sm:hidden" />

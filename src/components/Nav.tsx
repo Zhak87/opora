@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon } from "./icons";
+import { HomeIcon, TalkIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon, ShieldIcon } from "./icons";
 import { Orb } from "./Orb";
 import { MusicToggle } from "./Music";
 import { Bell } from "./Bell";
@@ -24,7 +24,19 @@ function isActive(path: string, href: string) {
   return path === href || path.startsWith(href + "/");
 }
 
-export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: { unread?: number; care?: boolean; pro?: boolean; careUnread?: number }) {
+export function Nav({
+  unread = 0,
+  care = false,
+  pro = false,
+  careUnread = 0,
+  adminPending = null,
+}: {
+  unread?: number;
+  care?: boolean;
+  pro?: boolean;
+  careUnread?: number;
+  adminPending?: number | null;
+}) {
   const path = usePathname();
   const ITEMS = care ? [...BASE.slice(0, 4), CARE, BASE[4]] : BASE;
   const inChat = /^\/talk\/.+/.test(path);
@@ -69,6 +81,24 @@ export function Nav({ unread = 0, care = false, pro = false, careUnread = 0 }: {
           >
             <GridIcon className="h-[22px] w-[22px] shrink-0" />
             <span className="hidden text-[15px] lg:inline">{m.nav.pro}</span>
+          </Link>
+        )}
+        {/* Только для администраторов: проверка анкет психологов, с числом ждущих */}
+        {adminPending !== null && (
+          <Link
+            href="/admin/psychologists"
+            title={m.nav.admin}
+            className="mt-1.5 flex h-12 items-center gap-3 rounded-[18px] px-3 text-sky-deep transition hover:bg-mist lg:px-3.5"
+          >
+            <span className="relative">
+              <ShieldIcon className="h-[22px] w-[22px] shrink-0" />
+              {adminPending > 0 && (
+                <span className="absolute -right-2 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-paper bg-lilac-deep px-1 text-[10px] font-semibold text-paper">
+                  {adminPending}
+                </span>
+              )}
+            </span>
+            <span className="hidden text-[15px] lg:inline">{m.nav.admin}</span>
           </Link>
         )}
         <MusicToggle withLabel className="mt-auto lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
