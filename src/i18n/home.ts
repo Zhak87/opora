@@ -20,6 +20,8 @@ export const home = defineMessages({
     discussPrompt: (q: string) => `Вопрос дня: «${q}». Хочу об этом подумать.`,
     continueTalk: "Продолжить разговор",
     all: "Все",
+    adminTitle: "Проверить анкеты психологов",
+    adminHint: (n: number) => (n > 0 ? `Ждут проверки: ${n}` : "Новых анкет пока нет"),
   },
   kk: {
     howAreYou: "Бүгін қалайсыз?",
@@ -39,6 +41,8 @@ export const home = defineMessages({
     discussPrompt: (q: string) => `Күн сұрағы: «${q}». Осы туралы ойланғым келеді.`,
     continueTalk: "Әңгімені жалғастыру",
     all: "Барлығы",
+    adminTitle: "Психолог сауалнамаларын тексеру",
+    adminHint: (n: number) => (n > 0 ? `Тексеруді күтуде: ${n}` : "Әзірге жаңа сауалнама жоқ"),
   },
   en: {
     howAreYou: "How are you today?",
@@ -58,5 +62,7 @@ export const home = defineMessages({
     discussPrompt: (q: string) => `Question of the day: “${q}” I'd like to think about it.`,
     continueTalk: "Continue a conversation",
     all: "All",
+    adminTitle: "Review psychologist profiles",
+    adminHint: (n: number) => (n > 0 ? `Waiting for review: ${n}` : "No new profiles yet"),
   },
 });
