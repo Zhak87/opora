@@ -141,7 +141,7 @@ export function NewSessionForm({ clients, tz, minutes, formats }: { clients: { i
       )}
       <label>
         <span className="mb-2 block text-sm text-ink-soft">{m.start}</span>
-        <input type="datetime-local" name="local" required step={900} className={`${input} w-full`} />
+        <input type="datetime-local" name="local" required step={60} className={`${input} w-full`} />
       </label>
       <Field label={m.duration} name="minutes" type="number" min={15} max={180} step={5} defaultValue={minutes} />
       {formats.length > 1 && (
@@ -182,7 +182,7 @@ export function MoveSessionForm({ session, tz, value }: { session: string; tz: s
       <input type="hidden" name="back" value="pro" />
       <label className="flex-1">
         <span className="mb-2 block text-sm text-ink-soft">{m.reschedule}</span>
-        <input type="datetime-local" name="local" defaultValue={value} required step={900} className={`${input} w-full`} />
+        <input type="datetime-local" name="local" defaultValue={value} required step={60} className={`${input} w-full`} />
       </label>
       <SubmitButton variant="soft" className="h-11">
         {m.move}
