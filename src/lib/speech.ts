@@ -90,8 +90,9 @@ export function chunks(text: string) {
   const out: string[] = [];
   let cur = "";
   for (const s of sentences) {
-    // Бесплатный лимит озвучки считается по запросам, поэтому части крупные: обычно весь ответ — один запрос.
-    const limit = 850;
+    // Первая часть короткая (одна-две фразы), чтобы голос начинал говорить быстро,
+    // пока остальное озвучивается в фоне. Дальше части крупные, чтобы запросов было немного.
+    const limit = out.length === 0 ? 220 : 850;
     if (cur && (cur + s).length > limit) {
       out.push(cur.trim());
       cur = "";
