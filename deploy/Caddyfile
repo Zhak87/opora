@@ -4,7 +4,9 @@ www.{$DOMAIN} {
 }
 
 {$DOMAIN} {
-	encode zstd gzip
+	# Живые события комнат (text/event-stream) не сжимаем, чтобы они приходили сразу
+	@compress not path_regexp ^/api/rooms/(.+/)?events$
+	encode @compress zstd gzip
 	request_body {
 		max_size 12MB
 	}
@@ -25,6 +27,11 @@ www.{$DOMAIN} {
 	# Служебные адреса базы снаружи не нужны
 	handle /rest/v1 {
 		respond 404
+	}
+
+	# Голос в «Комнатах»: служебное соединение браузера с медиасервером LiveKit
+	handle /rtc* {
+		reverse_proxy livekit:7880
 	}
 
 	handle {
