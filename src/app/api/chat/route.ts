@@ -25,93 +25,125 @@ const VOICE_NOTE =
 
 export async function POST(req: Request) {
   const started = Date.now();
-  const { supabase, user } = await requireUser();
+  const [{ supabase, user }, body, locale] = await Promise.all([
+    requireUser(),
+    req.json().catch(() => null) as Promise<{ conversationId?: string; message?: string; voice?: boolean } | null>,
+    getLocale(),
+  ]);
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => null)) as { conversationId?: string; message?: string; voice?: boolean } | null;
   const conversationId = body?.conversationId;
-  const message = body?.message?.trim().slice(0, MAX_INPUT);
-  if (!conversationId || !UUID.test(conversationId)) return NextResponse.json({ error: "bad request" }, { status: 400 });
-  const locale = await getLocale();
+  const message = typeof body?.message === "string" ? body.message.trim().slice(0, MAX_INPUT) : "";
+  if (typeof conversationId !== "string" || !UUID.test(conversationId)) {
+    return NextResponse.json({ error: "bad request" }, { status: 400 });
+  }
   const t = chatMessages[locale];
   const { notConfigured: NOT_CONFIGURED, busy: BUSY, keyProblem: KEY_PROBLEM, failed: FAILED } = t;
-  if (tooMany(`chat:${user.id}`, PER_HOUR, HOUR)) return textResponse(BUSY, 429);
+  if (tooMany(`chat:${user.id}`, PER_HOUR, HOUR)) {
+    return NextResponse.json({ error: "rate limited" }, { status: 429 });
+  }
 
-  const [{ data: conversation }, { data: profile }] = await Promise.all([
-    supabase.from("conversations").select("mode, topic").eq("id", conversationId).single(),
+  // Назначаем id заранее, чтобы читать историю параллельно с записью новой реплики.
+  // Политика RLS разрешает вставку только в собственный разговор.
+  const userMessageId = message ? crypto.randomUUID() : null;
+  const historyQuery = supabase.from("messages").select("id, role, content, step").eq("conversation_id", conversationId);
+  if (userMessageId) historyQuery.neq("id", userMessageId);
+  const [conversationResult, { data: profile }, historyResult, savedUser] = await Promise.all([
+    supabase.from("conversations").select("mode, topic").eq("id", conversationId).maybeSingle(),
     supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
+    historyQuery.order("created_at", { ascending: false }).limit(userMessageId ? HISTORY_LIMIT - 1 : HISTORY_LIMIT),
+    userMessageId
+      ? supabase.from("messages").insert({ id: userMessageId, conversation_id: conversationId, role: "user", content: message })
+      : null,
   ]);
+  const { data: conversation, error: conversationError } = conversationResult;
+  const { data: history, error: historyError } = historyResult;
+  const persistedId = savedUser && !savedUser.error ? userMessageId : null;
+  if (conversationError) {
+    console.error(conversationError);
+    return persistedId
+      ? textResponse(FAILED, 502, persistedId)
+      : NextResponse.json({ error: "load failed" }, { status: 500 });
+  }
   if (!conversation) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  // id сохранённой реплики: если человек отменит её, пока собеседник отвечает, ответ не сохраняем.
-  let userMessageId: string | null = null;
-  let updateConversation: PromiseLike<void> | undefined;
-  if (message) {
-    const { data: inserted, error } = await supabase
-      .from("messages")
-      .insert({ conversation_id: conversationId, role: "user", content: message })
-      .select("id")
-      .single();
-    userMessageId = inserted?.id ?? null;
-    if (error) {
-      console.error(error);
-      return NextResponse.json({ error: "save failed" }, { status: 500 });
-    }
-
-    const updatedAt = new Date().toISOString();
-    updateConversation = supabase
-      .from("messages")
-      .select("id", { count: "exact", head: true })
-      .eq("conversation_id", conversationId)
-      .eq("role", "user")
-      .then(async ({ count }) => {
-        const update: { updated_at: string; title?: string } = { updated_at: updatedAt };
-        if (count === 1 && conversation.mode === "talk") update.title = makeTitle(message);
-        await supabase.from("conversations").update(update).eq("id", conversationId);
-      });
-    after(async () => { await updateConversation; });
+  if (savedUser?.error) {
+    console.error(savedUser.error);
+    return NextResponse.json({ error: "save failed" }, { status: 500 });
   }
 
-  const { data: history } = await supabase
-    .from("messages")
-    .select("role, content, step")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: false })
-    .limit(HISTORY_LIMIT);
+  let updateConversation: Promise<void> | undefined;
+  if (persistedId) {
+    const updatedAt = new Date().toISOString();
+    updateConversation = (async () => {
+      const update: { updated_at: string; title?: string } = { updated_at: updatedAt };
+      if (conversation.mode === "talk" && !history?.some((m) => m.role === "user")) {
+        const { data: users } = await supabase
+          .from("messages")
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .eq("role", "user")
+          .limit(2);
+        if (users?.length === 1 && users[0].id === persistedId) update.title = makeTitle(message);
+      }
+      await supabase.from("conversations").update(update).eq("id", conversationId);
+    })().catch(console.error);
+  }
+  // undefined означает, что ответ не сохранился, null — что в сохранённом ответе нет шага.
+  let savedStep: ReturnType<typeof splitStep>["step"] | undefined;
+  after(async () => {
+    const trackedStep = savedStep ? track("step_offered", { step: savedStep }) : undefined;
+    await updateConversation;
+    if (savedStep === undefined) return;
+    await Promise.all([
+      trackedStep,
+      supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId),
+    ]);
+  });
+
+  if (historyError) {
+    console.error(historyError);
+    return textResponse(persistedId ? FAILED : t.connectionLost, 502, persistedId);
+  }
 
   // Собеседнику возвращаем его прошлые метки, чтобы он помнил, что уже предлагал.
-  const messages = normalize(
-    ((history ?? []) as (ChatMessage & { step?: string | null })[])
-      .reverse()
-      .map((m) => ({ role: m.role, content: m.step ? `${m.content}\n[[step:${m.step}]]` : m.content })),
-  );
-  if (!messages.length || messages[messages.length - 1].role !== "user") {
+  const latest = history?.[0];
+  const replyTo = persistedId ?? (latest?.role === "user" ? latest.id : null);
+  if (!replyTo) {
     return NextResponse.json({ error: "nothing to answer" }, { status: 400 });
   }
+  const turns: ChatMessage[] = (history ?? []).reverse().map((m) => ({
+    role: m.role as ChatMessage["role"],
+    content: m.step ? `${m.content}\n[[step:${m.step}]]` : m.content,
+  }));
+  if (persistedId) turns.push({ role: "user", content: message });
+  const messages = normalize(turns);
+  const prepared = Date.now();
 
   // Метку «следующий шаг» в текст не сохраняем: шаг лежит отдельно, а текст остаётся чистым
   // (его могут читать вслух, видеть в истории и, с согласия человека, его психолог).
+  let cancelled = false;
   const save = async (raw: string) => {
     const { text: content, step } = splitStep(raw);
-    if (!content.trim()) return;
-    await updateConversation;
-    if (userMessageId) {
-      const { data: still } = await supabase.from("messages").select("id").eq("id", userMessageId).maybeSingle();
-      if (!still) return;
-    }
-    await supabase
+    if (!content || req.signal.aborted || cancelled) return;
+    const { data: still, error: lookupError } = await supabase.from("messages").select("id").eq("id", replyTo).maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!still || req.signal.aborted || cancelled) return;
+    const { error } = await supabase
       .from("messages")
-      .insert({ conversation_id: conversationId, role: "assistant", content: content.trim(), step });
-    if (step) await track("step_offered", { step });
-    await supabase
-      .from("conversations")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", conversationId);
+      .insert({ conversation_id: conversationId, role: "assistant", content, step });
+    if (error) throw error;
+    savedStep = step;
   };
 
   if (!aiConfigured()) {
-    await save(NOT_CONFIGURED);
-    return textResponse(NOT_CONFIGURED);
+    try {
+      await save(NOT_CONFIGURED);
+      return textResponse(NOT_CONFIGURED, 200, persistedId);
+    } catch (e) {
+      console.error(e);
+      return textResponse(FAILED, 502, persistedId);
+    }
   }
 
   let upstream: ReadableStream<string>;
@@ -137,14 +169,13 @@ export async function POST(req: Request) {
     console.error(e);
     const status = e instanceof AIError ? e.status : 0;
     const text = status === 429 ? BUSY : status === 401 ? KEY_PROBLEM : FAILED;
-    return textResponse(text, 502);
+    return textResponse(text, 502, persistedId);
   }
 
   const tracking = track("chat_reply");
   after(() => tracking);
 
   let full = "";
-  let cancelled = false;
   const encoder = new TextEncoder();
   const reader = upstream.getReader();
   const stream = new ReadableStream<Uint8Array>({
@@ -153,23 +184,28 @@ export async function POST(req: Request) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          if (!full) console.log(`[chat] first chunk in ${Date.now() - started} ms`);
+          if (!full) {
+            const firstChunk = Date.now();
+            console.log(`[chat] first chunk in ${firstChunk - started} ms (prepare: ${prepared - started} ms, provider: ${firstChunk - prepared} ms)`);
+          }
           full += value;
           controller.enqueue(encoder.encode(value));
         }
+        if (cancelled) return;
+        if (req.signal.aborted) {
+          controller.close();
+          return;
+        }
+        if (full.trim()) await save(full);
+        else controller.enqueue(encoder.encode(FAILED));
+        if (!cancelled) controller.close();
       } catch (e) {
-        if (!cancelled && !req.signal.aborted) console.error(e);
+        if (cancelled) return;
+        if (!req.signal.aborted) console.error(e);
+        controller.error(new Error("Reply interrupted"));
       } finally {
         reader.releaseLock();
       }
-      if (cancelled) return;
-      if (req.signal.aborted) {
-        controller.close();
-        return;
-      }
-      if (full.trim()) await save(full);
-      else controller.enqueue(encoder.encode(FAILED));
-      if (!cancelled) controller.close();
     },
     async cancel(reason) {
       cancelled = true;
@@ -178,12 +214,18 @@ export async function POST(req: Request) {
   });
 
   return new Response(stream, {
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-transform" },
+    headers: responseHeaders(persistedId),
   });
 }
 
-function textResponse(text: string, status = 200) {
-  return new Response(text, { status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+function responseHeaders(messageId: string | null) {
+  const headers = new Headers({ "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-transform" });
+  if (messageId) headers.set("X-Opora-Message-Id", messageId);
+  return headers;
+}
+
+function textResponse(text: string, status: number, messageId: string | null) {
+  return new Response(text, { status, headers: responseHeaders(messageId) });
 }
 
 function makeTitle(text: string) {

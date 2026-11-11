@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MicRecorder } from "@/lib/recorder";
 import { speech } from "@/lib/speech";
 import { getVoice, voiceLabel, type VoiceSettings } from "@/lib/voices";
@@ -26,12 +26,13 @@ export function VoiceMode({
   onClose,
 }: {
   voice: VoiceSettings;
-  ask: (text: string) => Promise<string | null>;
+  ask: (text: string, onReply: (text: string, complete: boolean) => void) => Promise<string | null>;
   onClose: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>("starting");
   const [heard, setHeard] = useState("");
   const [answer, setAnswer] = useState("");
+  const [waitingForText, setWaitingForText] = useState(false);
   const [error, setError] = useState("");
   const rec = useRef<MicRecorder | null>(null);
   const level = useRef(0);
@@ -39,6 +40,7 @@ export function VoiceMode({
   const alive = useRef(true);
   const finishing = useRef(false);
   const s = useSpeech();
+  const replyId = useId();
   const locale = useLocale();
   const m = voiceMessages[locale].mode;
   // Тексты нужны внутри колбэков — берём их через ref, чтобы не перезапускать микрофон.
@@ -90,7 +92,7 @@ export function VoiceMode({
     }
   }, []);
 
-  // Человек замолчал (или нажал на шарик): распознаём речь, ждём ответ и озвучиваем его.
+  // После распознавания показываем и озвучиваем ответ по мере поступления текста.
   const finish = useCallback(async () => {
     if (finishing.current || phaseRef.current !== "listening") return;
     finishing.current = true;
@@ -121,31 +123,35 @@ export function VoiceMode({
       return listen();
     }
     setHeard(text);
-    const reply = await ask(text);
+    setWaitingForText(true);
+    let playReply: ReturnType<typeof speech.stream> | undefined;
+    const reply = await ask(text, (partial, complete) => {
+      if (!alive.current) return;
+      setAnswer(partial);
+      if (!playReply) {
+        playReply = speech.stream(replyId, voice, localeRef.current);
+        go("speaking");
+      }
+      playReply(partial, complete);
+    });
     if (!alive.current) return;
+    setWaitingForText(false);
     if (!reply) {
       setAnswer(mRef.current.connectionLost);
       return listen();
     }
-    setAnswer(reply);
-    go("speaking");
-    speech.speak(`voice-${Date.now()}`, reply, voice, localeRef.current);
-  }, [ask, listen, voice]);
+  }, [ask, listen, replyId, voice]);
 
   useEffect(() => {
     finishRef.current = finish;
   }, [finish]);
 
-  // Когда голос договорил — снова слушаем.
-  const wasSpeaking = useRef(false);
+  // Следующую реплику принимаем после завершения текста и озвучки.
   useEffect(() => {
-    if (phase !== "speaking") return;
-    if (s.status !== "idle") wasSpeaking.current = true;
-    else if (wasSpeaking.current) {
-      wasSpeaking.current = false;
+    if (phase === "speaking" && !waitingForText && s.id !== replyId) {
       listen();
     }
-  }, [s.status, phase, listen]);
+  }, [s.id, phase, waitingForText, replyId, listen]);
 
   useEffect(() => {
     alive.current = true;
@@ -187,14 +193,17 @@ export function VoiceMode({
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const blocked = phase === "speaking" && s.status === "blocked";
+  const blocked = s.id === replyId && s.status === "blocked";
+  const preparing = phase === "speaking" && s.status !== "playing" && !blocked;
+  const interrupt = () => {
+    speech.stop();
+    if (!waitingForText) listen();
+  };
   const tapOrb = () => {
     if (blocked) speech.resume();
     else if (phase === "listening") finish();
-    else if (phase === "speaking") {
-      wasSpeaking.current = false;
-      listen();
-    } else if (phase === "paused" || phase === "error") {
+    else if (phase === "speaking") interrupt();
+    else if (phase === "paused" || phase === "error") {
       setError("");
       listen();
     }
@@ -246,7 +255,7 @@ export function VoiceMode({
         </button>
 
         <p key={phase} className="mt-10 animate-fade text-center font-serif text-[22px] text-ink">
-          {phase === "error" ? m.micUnavailable : blocked ? m.tapToHear : LABEL[phase]}
+          {phase === "error" ? m.micUnavailable : blocked ? m.tapToHear : preparing ? m.thinking : LABEL[phase]}
           
         </p>
         <div className="mt-4 min-h-[96px] max-w-md text-center">
@@ -268,19 +277,20 @@ export function VoiceMode({
 
       <div className="flex items-center justify-center gap-4 px-6 pb-8 pt-2">
         <button
+          disabled={phase === "thinking"}
           onClick={() => {
             if (phase === "listening" || phase === "starting") {
               rec.current?.cancel();
               rec.current = null;
               go("paused");
-            } else {
-              speech.stop();
+            } else if (phase === "speaking") interrupt();
+            else {
               setError("");
               listen();
             }
           }}
           aria-label={phase === "listening" ? m.micOff : m.micOn}
-          className={`flex h-14 w-14 items-center justify-center rounded-full shadow-soft transition ${
+          className={`flex h-14 w-14 items-center justify-center rounded-full shadow-soft transition disabled:opacity-50 ${
             phase === "listening" ? "bg-paper text-ink" : "bg-ink text-paper"
           }`}
         >
