@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { greeting, relativeDate } from "@/lib/format";
 import { dailyQuestions, pickForDay } from "@/lib/content";
@@ -20,6 +22,7 @@ import { getTimeZone } from "@/lib/tz";
 import { dayKey } from "@/lib/time";
 import { intakeSeen } from "@/lib/intake";
 import { IntakeCard } from "@/components/IntakeCard";
+import { GUIDE_COOKIE, guideSeen } from "@/lib/guide";
 
 // Плитки настроения 1–5 на главной: ведут к отметке дня.
 const MOOD_TILES = [
@@ -32,6 +35,9 @@ const MOOD_TILES = [
 
 export default async function HomePage() {
   const { supabase, user } = await requireUser();
+  // При первом входе сначала показываем знакомство с Опорой.
+  const { data: session } = await supabase.auth.getClaims();
+  if (user && !guideSeen(session?.claims, (await cookies()).get(GUIDE_COOKIE)?.value)) redirect("/guide");
   const locale = await getLocale();
   const m = home[locale];
   const today = dayKey(new Date(), await getTimeZone());

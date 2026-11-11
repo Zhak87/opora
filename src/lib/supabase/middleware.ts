@@ -4,7 +4,7 @@ import { hasConsent } from "@/lib/consent";
 import { safeNext } from "@/lib/safe-next";
 
 const PUBLIC_PATHS = [
-  "/welcome", "/demo", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email",
+  "/welcome", "/demo", "/guide", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email",
   // Открытые страницы специалистов: профиль, приглашение по ссылке, страница «Для психологов».
   "/p", "/invite", "/pro/join", "/specialists",
 ];

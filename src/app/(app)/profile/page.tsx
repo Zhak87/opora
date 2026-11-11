@@ -15,6 +15,7 @@ import { getLocale } from "@/i18n/server";
 import { profileMessages } from "@/i18n/profile";
 import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
+import { guideMessages } from "@/i18n/guide";
 import { PhoneIcon, WhatsAppIcon } from "@/components/icons";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
@@ -68,6 +69,14 @@ export default async function ProfilePage({
           <div className="mt-8">
             <NameForm name={profile?.name ?? ""} />
           </div>
+        </Card>
+
+        <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">
+          <div className="flex-1">
+            <h2 className="text-[15px] font-medium text-ink">{guideMessages[locale].profileTitle}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{guideMessages[locale].profileHint}</p>
+          </div>
+          <Link href="/guide" className={`${buttonStyles.soft} shrink-0`}>{guideMessages[locale].profileOpen}</Link>
         </Card>
 
         <Card className="p-6 sm:p-8">

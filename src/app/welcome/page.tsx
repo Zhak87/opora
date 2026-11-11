@@ -9,6 +9,7 @@ import { welcomeMessages } from "@/i18n/welcome";
 import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
 import { profileMessages } from "@/i18n/profile";
+import { guideMessages } from "@/i18n/guide";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
 const BUBBLES = [
@@ -25,6 +26,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const legal = await getMsg(legalMessages);
   const a = await getMsg(aboutMessages);
   const pm = await getMsg(profileMessages);
+  const g = await getMsg(guideMessages);
   return (
     <div className="relative flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
@@ -63,6 +65,12 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
               <ButtonLink href="/signup" variant="soft" className="h-14 whitespace-nowrap px-8">{m.createAccount}</ButtonLink>
             </div>
             <p className="mt-4 animate-fade text-sm text-ink-faint [animation-delay:300ms]">{m.noEmail}</p>
+            <Link href="/guide" className="group mt-5 inline-flex animate-fade items-center gap-2 rounded-full bg-paper/80 py-2 pl-2 pr-4 text-sm font-medium text-ink shadow-soft transition hover:shadow-lift [animation-delay:380ms]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-lilac-deep text-paper">
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 translate-x-px" fill="currentColor" aria-hidden><path d="M8 5.5v13l11-6.5-11-6.5Z" /></svg>
+              </span>
+              {g.welcomeLink}
+            </Link>
           </div>
         </div>
       </main>
