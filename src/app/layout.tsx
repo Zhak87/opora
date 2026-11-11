@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: m.metaTitle,
     description: m.metaDescription,
     openGraph: { type: "website", siteName: m.brand, title: m.metaTitle, description: m.metaDescription, images: [OG_IMAGE] },
-    twitter: { card: "summary_large_image" },
+    twitter: { card: "summary_large_image", images: [OG_IMAGE.url] },
     verification: {
       google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
       yandex: process.env.YANDEX_SITE_VERIFICATION || undefined,
