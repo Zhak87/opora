@@ -105,6 +105,8 @@ jobs:
             sudo ufw allow 7881/tcp >/dev/null && sudo ufw allow 7882/udp >/dev/null || echo 'Не удалось открыть порты голоса 7881/tcp и 7882/udp'
             docker tag opora:${{ github.sha }} opora:latest
             OPORA_TAG=${{ github.sha }} ./dc.sh up -d --remove-orphans
+            # Caddy сам не замечает новый Caddyfile: без этого новые адреса (например /rtc для голоса «Комнат») не работают
+            ./dc.sh exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || ./dc.sh restart caddy
             docker images opora --format '{{.Tag}}' | grep -v '^latest$' | tail -n +4 | xargs -r -I{} docker rmi opora:{} >/dev/null || true
             docker image prune -f >/dev/null"
 

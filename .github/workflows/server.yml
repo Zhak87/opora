@@ -3,6 +3,7 @@
 #   status  — что запущено, память, диск, срок SSL
 #   logs    — последние строки журналов сайта и Caddy
 #   voice   — проверка голоса «Комнат»: медиасервер LiveKit, его журнал и порты (ничего не меняет)
+#   reload-caddy — перечитать Caddyfile без остановки сайта (если новые адреса не заработали после выкладки)
 #   restart — перезапустить сайт
 #   migrate-db — перенести данные и аккаунты из облачного Supabase в свою базу (нужен секрет SUPABASE_DB_URL)
 #   anon-key — показать публичный ключ своей базы (он не секретный, его видит каждый браузер)
@@ -14,7 +15,7 @@ on:
       action:
         description: Что сделать
         type: choice
-        options: [status, logs, voice, restart, setup, migrate-db, anon-key]
+        options: [status, logs, voice, reload-caddy, restart, setup, migrate-db, anon-key]
         default: status
 
 concurrency:
@@ -100,6 +101,16 @@ jobs:
           curl -s -o /dev/null -w "%{http_code}\n" -m 10 "$NEXT_PUBLIC_SITE_URL/rtc/validate" || true
           echo "== Снаружи: порт 7881/tcp"
           timeout 8 bash -c "exec 3<>/dev/tcp/$HOST/7881" && echo "открыт" || echo "ЗАКРЫТ снаружи"
+
+      - name: reload-caddy
+        if: inputs.action == 'reload-caddy'
+        run: |
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile'
+          sleep 3
+          echo "Служебный адрес голоса (ждём не 307 и не 404):"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 10 "$NEXT_PUBLIC_SITE_URL/rtc/validate" || true
+          echo "Сайт:"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 10 "$NEXT_PUBLIC_SITE_URL/welcome" || true
 
       - name: restart
         if: inputs.action == 'restart'
