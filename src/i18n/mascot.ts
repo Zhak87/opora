@@ -1,8 +1,9 @@
 import { defineMessages } from "./config";
 
 // Маскот Опоры: капля, которая встречает человека в приложении и ведёт рубрики в соцсетях.
-// Имя персонажа задаётся здесь, в одном месте.
-export const MASCOT_NAME = "Тамшы";
+// Имя персонажа задаётся здесь, в одном месте: «Опи», коротко от «Опора».
+export const MASCOT_NAME = "Опи";
+const NAME_EN = "Opi";
 
 export const mascotMessages = defineMessages({
   ru: {
@@ -19,7 +20,7 @@ export const mascotMessages = defineMessages({
     night: "Тсс… поздно уже. Побережём силы?",
     eyebrow: "Персонаж Опоры",
     title: `Знакомьтесь, это ${MASCOT_NAME}`,
-    lead: `«Тамшы» по-казахски значит «капля». Капля маленькая, но именно из капель собирается река. ${MASCOT_NAME} напоминает: чтобы стало легче, не нужен подвиг. Достаточно одного небольшого шага.`,
+    lead: `${MASCOT_NAME} это капля, а имя у него от слова «Опора». Капля маленькая, но именно из капель собирается река. ${MASCOT_NAME} напоминает: чтобы стало легче, не нужен подвиг. Достаточно одного небольшого шага.`,
     traitsTitle: "Какой у него характер",
     traits: [
       { title: "Слушает и не оценивает", text: "Не спорит, не стыдит и не говорит «соберись». Сначала понять, потом всё остальное." },
@@ -54,7 +55,7 @@ export const mascotMessages = defineMessages({
     night: "Тсс… кеш болды. Күшімізді сақтайық па?",
     eyebrow: "Опора кейіпкері",
     title: `Танысыңыз, бұл ${MASCOT_NAME}`,
-    lead: `Тамшы кішкентай, бірақ өзен тамшылардан құралады. ${MASCOT_NAME} еске салады: жеңілдеу үшін ерлік қажет емес. Бір шағын қадам жеткілікті.`,
+    lead: `${MASCOT_NAME} деген тамшы, ал есімі «Опора» сөзінен шыққан. Тамшы кішкентай, бірақ өзен тамшылардан құралады. ${MASCOT_NAME} еске салады: жеңілдеу үшін ерлік қажет емес. Бір шағын қадам жеткілікті.`,
     traitsTitle: "Оның мінезі қандай",
     traits: [
       { title: "Тыңдайды, бағаламайды", text: "Таласпайды, ұялтпайды, «өзіңді қолға ал» демейді. Алдымен түсіну, қалғаны кейін." },
@@ -76,9 +77,9 @@ export const mascotMessages = defineMessages({
     footerLink: `${MASCOT_NAME} деген кім`,
   },
   en: {
-    metaTitle: `${MASCOT_NAME}: the Opora character`,
-    tap: `Say hello to ${MASCOT_NAME}`,
-    hello: `I'm ${MASCOT_NAME}. I'm here.`,
+    metaTitle: `${NAME_EN}: the Opora character`,
+    tap: `Say hello to ${NAME_EN}`,
+    hello: `I'm ${NAME_EN}. I'm here.`,
     phrases: [
       "I'm glad you came.",
       "There's no need to hurry.",
@@ -88,8 +89,8 @@ export const mascotMessages = defineMessages({
     ],
     night: "Shh… it's late. Shall we save some strength?",
     eyebrow: "The Opora character",
-    title: `Meet ${MASCOT_NAME}`,
-    lead: `“Tamshy” means “a drop” in Kazakh. A drop is small, yet rivers are made of drops. ${MASCOT_NAME} is a reminder: feeling better doesn't take a heroic effort. One small step is enough.`,
+    title: `Meet ${NAME_EN}`,
+    lead: `${NAME_EN} is a drop, named after Opora, which means “support”. A drop is small, yet rivers are made of drops. ${NAME_EN} is a reminder: feeling better doesn't take a heroic effort. One small step is enough.`,
     traitsTitle: "What it is like",
     traits: [
       { title: "Listens without judging", text: "No arguing, no shaming, no “pull yourself together”. Understanding comes first." },
@@ -108,6 +109,6 @@ export const mascotMessages = defineMessages({
       sleep: "Resting with you",
     },
     cta: "Meet it in the app",
-    footerLink: `Who is ${MASCOT_NAME}`,
+    footerLink: `Who is ${NAME_EN}`,
   },
 });
