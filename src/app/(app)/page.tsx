@@ -6,7 +6,7 @@ import { greeting, relativeDate } from "@/lib/format";
 import { dailyQuestions, pickForDay } from "@/lib/content";
 import { getLocale } from "@/i18n/server";
 import { home } from "@/i18n/home";
-import { Orb } from "@/components/Orb";
+import { Mascot } from "@/components/Mascot";
 import { StartForm } from "@/components/StartForm";
 import { latestPlan } from "@/lib/plan-data";
 import { currentCourse } from "@/lib/course-data";
@@ -100,8 +100,7 @@ export default async function HomePage() {
       )}
       {/* Капля смотрит на человека и меняет цвет под сегодняшнее настроение */}
       <section className="mb-8 flex flex-col items-center text-center sm:mb-10">
-        <Orb size={168} face mood={checkin?.mood ?? 3} className="sm:hidden" />
-        <Orb size={208} face mood={checkin?.mood ?? 3} className="hidden sm:block" />
+        <Mascot mood={checkin?.mood ?? 3} />
         <p className="mt-3 text-[15px] text-ink-soft">
           {greeting(new Date(), locale)}
           {name ? `, ${name}` : ""}

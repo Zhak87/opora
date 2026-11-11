@@ -18,18 +18,89 @@ const MOUTH: Record<number, string> = {
   5: "M36 61 Q50 74 64 61",
 };
 
+// Выражения маскота: по умолчанию спокойное лицо, рот которого следует за настроением.
+export const EMOTIONS = ["calm", "joy", "wink", "care", "wow", "sleep"] as const;
+export type Emotion = (typeof EMOTIONS)[number];
+
+const INK = "#1d1e2c";
+const line = { stroke: INK, strokeWidth: 3, strokeLinecap: "round" as const, fill: "none" };
+const Dot = ({ x, big = false }: { x: number; big?: boolean }) => <ellipse cx={x} cy="50" rx={big ? 4.2 : 3.4} ry={big ? 5.2 : 4} fill={INK} />;
+// Глаз-дуга: вверх (смеётся) или вниз (спит).
+const Arc = ({ x, up }: { x: number; up: boolean }) => <path d={`M${x - 4.5} ${up ? 52 : 49} Q${x} ${up ? 45 : 54} ${x + 4.5} ${up ? 52 : 49}`} {...line} />;
+
+function Face({ emotion, mood, still }: { emotion: Emotion; mood: number; still: boolean }) {
+  const blink = still ? "" : "[animation:blink_5s_infinite] [transform-box:fill-box] [transform-origin:center]";
+  if (emotion === "joy")
+    return (
+      <>
+        <Arc x={40} up />
+        <Arc x={60} up />
+        <path d="M36 60 Q50 77 64 60" {...line} />
+      </>
+    );
+  if (emotion === "wink")
+    return (
+      <>
+        <Dot x={40} />
+        <Arc x={60} up />
+        <path d={MOUTH[5]} {...line} />
+      </>
+    );
+  if (emotion === "sleep")
+    return (
+      <>
+        <Arc x={40} up={false} />
+        <Arc x={60} up={false} />
+        <path d="M45 65 Q50 67.5 55 65" {...line} />
+      </>
+    );
+  if (emotion === "wow")
+    return (
+      <>
+        <g className={blink}>
+          <Dot x={40} big />
+          <Dot x={60} big />
+        </g>
+        <ellipse cx="50" cy="66" rx="4" ry="5" fill={INK} />
+      </>
+    );
+  if (emotion === "care")
+    return (
+      <>
+        <path d="M34.5 43 L44 40" {...line} strokeWidth={2.4} />
+        <path d="M56 40 L65.5 43" {...line} strokeWidth={2.4} />
+        <g className={blink}>
+          <Dot x={40} />
+          <Dot x={60} />
+        </g>
+        <path d="M42 65 Q50 62 58 65" {...line} />
+      </>
+    );
+  return (
+    <>
+      <g className={blink}>
+        <Dot x={40} />
+        <Dot x={60} />
+      </g>
+      <path d={MOUTH[mood]} {...line} style={{ transition: "d 0.6s ease" }} />
+    </>
+  );
+}
+
 export function Orb({
   size = 160,
   className = "",
   still = false,
   face = false,
   mood = 3,
+  emotion = "calm",
 }: {
   size?: number;
   className?: string;
   still?: boolean;
   face?: boolean;
   mood?: number;
+  emotion?: Emotion;
 }) {
   const m = Math.min(5, Math.max(1, Math.round(mood)));
   const [a, b, c] = MOODS[m];
@@ -57,11 +128,7 @@ export function Orb({
       </div>
       {face && (
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-          <g className={still ? "" : "[animation:blink_5s_infinite] [transform-box:fill-box] [transform-origin:center]"}>
-            <ellipse cx="40" cy="50" rx="3.4" ry="4" fill="#1d1e2c" />
-            <ellipse cx="60" cy="50" rx="3.4" ry="4" fill="#1d1e2c" />
-          </g>
-          <path d={MOUTH[m]} stroke="#1d1e2c" strokeWidth="3" strokeLinecap="round" fill="none" style={{ transition: "d 0.6s ease" }} />
+          <Face emotion={emotion} mood={m} still={still} />
         </svg>
       )}
     </div>

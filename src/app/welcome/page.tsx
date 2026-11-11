@@ -16,6 +16,7 @@ import { TRIAL_MINUTES } from "@/lib/trial";
 import { buttonStyles } from "@/components/ui";
 import { Track } from "@/components/Track";
 import { needsMessages } from "@/i18n/needs";
+import { mascotMessages } from "@/i18n/mascot";
 import { isAudience } from "@/lib/needs";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
@@ -109,6 +110,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <p className="mt-2 flex justify-center gap-4">
           <Link href="/privacy" className="hover:text-ink">{legal.links.privacy}</Link>
           <Link href="/terms" className="hover:text-ink">{legal.links.terms}</Link>
+          <Link href="/mascot" className="hover:text-ink">{(await getMsg(mascotMessages)).footerLink}</Link>
           <Link href="/pro/join" className="hover:text-ink">{pm.proTitle}</Link>
         </p>
       </footer>

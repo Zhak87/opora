@@ -6,7 +6,7 @@ import { VISITOR_COOKIE } from "@/lib/visitor";
 import { closedForGuest, isGuest, trialOver } from "@/lib/trial";
 
 const PUBLIC_PATHS = [
-  "/welcome", "/guide", "/trial", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email",
+  "/welcome", "/guide", "/trial", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email", "/mascot",
   // Открытые страницы специалистов: профиль, приглашение по ссылке, страница «Для психологов».
   "/p", "/invite", "/pro/join", "/specialists",
 ];
