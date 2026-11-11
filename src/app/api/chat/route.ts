@@ -6,6 +6,7 @@ import { intakeNote } from "@/lib/intake";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { HOUR, tooMany } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -120,6 +121,9 @@ export async function POST(req: Request) {
     const text = status === 429 ? BUSY : status === 401 ? KEY_PROBLEM : FAILED;
     return textResponse(text, 502);
   }
+
+  // Собеседник начал отвечать: это «полезное действие» в воронке. Пишем до потока, пока доступны куки запроса.
+  await track("chat_reply");
 
   let full = "";
   const encoder = new TextEncoder();

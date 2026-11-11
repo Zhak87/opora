@@ -8,6 +8,7 @@ import { authMessages } from "@/i18n/auth";
 import { legalMessages } from "@/i18n/legal";
 import { consentRecord } from "@/lib/consent";
 import { safeNext } from "@/lib/safe-next";
+import { track } from "@/lib/track";
 
 type State = { error?: string; ok?: string; unconfirmed?: string } | undefined;
 
@@ -80,7 +81,10 @@ export async function signUp(_: State, formData: FormData): Promise<State> {
     },
   });
   if (error) return { error: await translate(error.message) };
-  if (data.session) redirect(next);
+  if (data.session) {
+    await track("signup_complete", { via: "form" });
+    redirect(next);
+  }
   return { ok: (await getMsg(authMessages)).notices.confirmSent };
 }
 

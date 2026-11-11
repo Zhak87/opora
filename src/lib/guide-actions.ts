@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
+import { track } from "@/lib/track";
 import { GUIDE_COOKIE, GUIDE_DESTINATIONS, type GuideDestination } from "@/lib/guide";
 
 // Человек досмотрел или пропустил знакомство: запоминаем это и ведём туда, куда он выбрал.
@@ -24,6 +25,7 @@ export async function finishGuide(formData: FormData) {
   }
 
   if (to === "talk") {
+    await track("chat_start");
     const t = chatMessages[await getLocale()];
     const { data: conversation } = await supabase
       .from("conversations")

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { hasConsent } from "@/lib/consent";
 import { isGuest } from "@/lib/trial";
+import { track } from "@/lib/track";
 import { getLocale } from "@/i18n/server";
 import { scheduleMessages, TIMEZONES } from "@/i18n/schedule";
 import { careMessages } from "@/i18n/care";
@@ -55,6 +56,7 @@ export async function bookSession(_: State, formData: FormData): Promise<State> 
     p_version: CARE_CONSENT_VERSION,
   });
   if (error) return { error: /slot taken/.test(error.message) ? m.book.taken : m.book.failed };
+  await track("contact_request");
   revalidatePath("/", "layout");
   redirect("/care?booked=1");
 }

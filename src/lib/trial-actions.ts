@@ -12,6 +12,7 @@ import { consentRecord } from "@/lib/consent";
 import { clientIp, tooMany } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-origin";
 import { GUIDE_COOKIE } from "@/lib/guide";
+import { track } from "@/lib/track";
 import { TRIAL_COOKIE, TRIAL_MINUTES, isGuest } from "@/lib/trial";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -44,6 +45,7 @@ export async function startTrial(formData: FormData) {
   }
   // Новый токен уже несёт срок пробного доступа.
   await supabase.auth.refreshSession();
+  await track("trial_start");
   // Кто пришёл из знакомства, второй раз его не смотрит.
   if (formData.get("guide") === "seen") jar.set(GUIDE_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365 * 2, sameSite: "lax" });
   jar.set(TRIAL_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: true });
@@ -82,6 +84,7 @@ export async function convertGuest(_: State, formData: FormData): Promise<State>
   // Если подтверждение почты на сервере выключено, аккаунт готов сразу.
   if (!data.user.is_anonymous) {
     await supabase.auth.refreshSession();
+    await track("signup_complete", { via: "trial" });
     redirect("/");
   }
   return { sent: email };

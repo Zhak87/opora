@@ -1,5 +1,6 @@
 "use server";
 
+import { track } from "@/lib/track";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
@@ -36,6 +37,7 @@ export async function startConversation(formData: FormData) {
     .select("id")
     .single();
   if (error || !data) throw new Error(error?.message ?? t.startFailed);
+  await track("chat_start");
 
   if (topic) {
     await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: topic.opener });
@@ -109,6 +111,7 @@ export async function addJournalEntry(_: unknown, formData: FormData) {
   if (!(kind in JOURNAL_KINDS)) return { error: t.journalUnknownKind };
   const { error } = await supabase.from("journal_entries").insert({ kind, content: content.slice(0, 10000) });
   if (error) return { error: t.journalSaveFailed };
+  await track("journal_entry");
   revalidatePath("/journal");
   return { ok: Date.now() };
 }

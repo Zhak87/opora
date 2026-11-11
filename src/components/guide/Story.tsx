@@ -8,6 +8,7 @@ import { ArrowIcon, BackIcon, CheckIcon, GridIcon, HeartHandIcon, ShieldIcon, Ta
 import { useMsg } from "@/i18n/client";
 import { guideMessages } from "@/i18n/guide";
 import { chime } from "@/lib/chime";
+import { sendEvent } from "@/components/Track";
 import { finishGuide } from "@/lib/guide-actions";
 import { startTrial } from "@/lib/trial-actions";
 import { trialMessages } from "@/i18n/trial";
@@ -54,6 +55,12 @@ export function Story({ authed }: { authed: boolean }) {
     // Кто просил меньше движения, листает сам: без автоперехода.
     setCalm(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }, []);
+
+  // Аналитика: человек начал знакомство и дошёл до конца.
+  useEffect(() => {
+    if (index === 1) sendEvent("guide_start");
+    if (index === total - 1) sendEvent("guide_complete");
+  }, [index, total]);
 
   // Звуки текущей сцены.
   useEffect(() => {

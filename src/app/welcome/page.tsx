@@ -14,6 +14,7 @@ import { trialMessages } from "@/i18n/trial";
 import { startTrial } from "@/lib/trial-actions";
 import { TRIAL_MINUTES } from "@/lib/trial";
 import { buttonStyles } from "@/components/ui";
+import { Track } from "@/components/Track";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
 const BUBBLES = [
@@ -34,6 +35,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const t = await getMsg(trialMessages);
   return (
     <div className="relative flex min-h-dvh flex-col">
+      <Track name="landing_view" />
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
         <span className="flex items-center gap-2"><Orb size={34} still face /><span className="hidden font-display text-[19px] font-semibold lowercase tracking-[-0.03em] text-ink sm:inline">{c.brand}</span></span>
         <div className="flex items-center gap-1.5 sm:gap-2">

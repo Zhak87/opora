@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasConsent } from "@/lib/consent";
 import { safeNext } from "@/lib/safe-next";
+import { VISITOR_COOKIE } from "@/lib/visitor";
 import { closedForGuest, isGuest, trialOver } from "@/lib/trial";
 
 const PUBLIC_PATHS = [
@@ -13,7 +14,20 @@ const PUBLIC_PATHS = [
 // Что остаётся открытым гостю после окончания пробного времени.
 const GUEST_ALWAYS = ["/trial", "/login", "/auth", "/privacy", "/terms"];
 
+// Случайный номер браузера для аналитики воронки (src/lib/track.ts). Ставим его здесь, при первом же заходе,
+// чтобы все шаги одного человека, включая самый первый, связались между собой.
 export async function updateSession(request: NextRequest) {
+  let visitor: string | null = null;
+  if (!request.cookies.get(VISITOR_COOKIE)?.value && !request.nextUrl.pathname.startsWith("/api")) {
+    visitor = crypto.randomUUID();
+    request.cookies.set(VISITOR_COOKIE, visitor);
+  }
+  const response = await handle(request);
+  if (visitor) response.cookies.set(VISITOR_COOKIE, visitor, { path: "/", maxAge: 60 * 60 * 24 * 365 * 2, sameSite: "lax", httpOnly: true });
+  return response;
+}
+
+async function handle(request: NextRequest) {
   const { searchParams, pathname } = request.nextUrl;
 
   // Supabase мог вернуть человека на любой адрес сайта: с кодом входа или с ошибкой ссылки.

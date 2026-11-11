@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-next";
 import { siteOrigin } from "@/lib/site-origin";
+import { track } from "@/lib/track";
 
 function nextFrom(redirectTo: string | null) {
   if (!redirectTo) return null;
@@ -27,6 +28,10 @@ export async function GET(request: NextRequest) {
     ok = !(await supabase.auth.exchangeCodeForSession(code)).error;
   } else if (tokenHash && type) {
     ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
+  }
+  // Почта подтверждена: аккаунт создан (обычная регистрация или гость сохранил свой пробный доступ).
+  if (ok && (type === "signup" || type === "email" || type === "email_change")) {
+    await track("signup_complete", { via: type === "email_change" ? "trial" : "form" });
   }
 
   // Если ссылка устарела, адрес «куда вернуться» не теряем: после входа человек попадёт туда же.

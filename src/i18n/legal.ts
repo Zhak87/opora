@@ -81,6 +81,7 @@ export const legalMessages = defineMessages<{
           "Пока существует ваш аккаунт. Отдельный разговор или запись можно удалить в любой момент.",
           "В «Профиле» можно удалить всю историю или весь аккаунт. Данные удаляются из рабочей базы сразу; в резервных копиях хостинга они могут оставаться ограниченное время, после чего удаляются автоматически.",
           "Пробный доступ без регистрации: на 20 минут создаётся временный гостевой аккаунт. Разговоры и записи гостя хранятся на сервере так же, как у зарегистрированных пользователей. Если гость не создаёт аккаунт, его данные автоматически удаляются в течение суток после окончания пробного времени, а кнопка «Выйти без сохранения» удаляет их сразу.",
+          "Чтобы понимать, какие разделы полезны, мы записываем факт действия (например, «открыл практику» или «начал разговор») и случайный номер браузера в куке. Тексты разговоров, дневника и комнат в эту статистику не попадают.",
         ],
       },
       {
@@ -236,6 +237,7 @@ export const legalMessages = defineMessages<{
           "Аккаунтыңыз бар болғанша. Жеке әңгімені немесе жазбаны кез келген уақытта жоюға болады.",
           "«Профиль» бөлімінде бүкіл тарихты немесе бүкіл аккаунтты жоюға болады. Деректер жұмыс дерекқорынан бірден жойылады; хостингтің резервтік көшірмелерінде олар шектеулі уақыт қалуы мүмкін, содан кейін автоматты түрде жойылады.",
           "Тіркелусіз сынақ кіру: 20 минутқа уақытша қонақ аккаунты жасалады. Қонақтың әңгімелері мен жазбалары тіркелген пайдаланушылардікі сияқты серверде сақталады. Қонақ аккаунт ашпаса, оның деректері сынақ уақыты аяқталғаннан кейін бір тәулік ішінде автоматты түрде жойылады, ал «Сақтамай шығу» түймесі оларды бірден жояды.",
+          "Қай бөлімдер пайдалы екенін түсіну үшін біз әрекет фактісін (мысалы, «тәжірибені ашты» немесе «әңгіме бастады») және кукидегі браузердің кездейсоқ нөмірін жазамыз. Әңгімелердің, күнделіктің және бөлмелердің мәтіні бұл статистикаға түспейді.",
         ],
       },
       {
@@ -389,6 +391,7 @@ export const legalMessages = defineMessages<{
           "For as long as your account exists. You can delete any conversation or entry at any time.",
           "In Profile you can delete all your history or your whole account. Data is removed from the live database immediately; it may remain in hosting backups for a limited time and is then deleted automatically.",
           "Trial access without signing up: a temporary guest account is created for 20 minutes. A guest's conversations and entries are stored on the server the same way as for registered users. If the guest doesn't create an account, their data is deleted automatically within a day after the trial ends, and the “Leave without saving” button deletes it at once.",
+          "To understand which sections are useful, we record the fact of an action (for example, “opened a practice” or “started a conversation”) and a random browser number kept in a cookie. The text of conversations, the journal and rooms never reaches these statistics.",
         ],
       },
       {
