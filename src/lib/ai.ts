@@ -5,6 +5,7 @@
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 type Options = { system: string; messages: ChatMessage[]; maxTokens?: number; temperature?: number };
+type StreamOptions = Options & { signal?: AbortSignal };
 
 export function aiConfigured() {
   const provider = process.env.AI_PROVIDER ?? "gemini";
@@ -12,7 +13,7 @@ export function aiConfigured() {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
-export async function streamReply(opts: Options): Promise<ReadableStream<string>> {
+export async function streamReply(opts: StreamOptions): Promise<ReadableStream<string>> {
   const provider = process.env.AI_PROVIDER ?? "gemini";
   return provider === "openai" ? streamOpenAI(opts) : streamGemini(opts);
 }
@@ -23,6 +24,10 @@ const GEMINI_MODELS = (process.env.GEMINI_MODEL || "gemini-flash-latest,gemini-f
   .split(",")
   .map((m) => m.trim())
   .filter(Boolean);
+// Flash-Lite рассчитана на низкую задержку. Для остальных задач и явной настройки сохраняем порядок моделей.
+const CHAT_MODELS = process.env.GEMINI_MODEL ? GEMINI_MODELS : [...GEMINI_MODELS].reverse();
+const FIRST_WORDS_TIMEOUT = 4_000;
+const CHAT_START_TIMEOUT = 10_000;
 
 // Разговоры о здоровье, отношениях и трудных чувствах не должны блокироваться фильтрами.
 const SAFETY = [
@@ -41,11 +46,22 @@ export class AIError extends Error {
 // Новые модели Flash перед ответом «размышляют», и первые слова приходят с задержкой в несколько секунд.
 // Собеседнику долгие размышления не нужны, поэтому просим минимум. Разные поколения моделей понимают
 // разные настройки, а некоторые не принимают никаких: пробуем по очереди и запоминаем, что подошло.
-const THINKING_VARIANTS: (Record<string, unknown> | null)[] = [{ thinkingLevel: "minimal" }, { thinkingBudget: 0 }, null];
-const thinkingChoice = new Map<string, number>();
-const fastThinking = () => process.env.AI_FAST_THINKING !== "off";
+const MINIMAL_THINKING = { thinkingLevel: "minimal" };
+const LOW_THINKING = { thinkingLevel: "low" };
+const ZERO_THINKING = { thinkingBudget: 0 };
+const THINKING_VARIANTS = [MINIMAL_THINKING, LOW_THINKING, ZERO_THINKING, null];
+const thinkingChoice = new Map<string, (typeof THINKING_VARIANTS)[number]>();
 
-async function streamGemini({ system, messages }: Options) {
+function thinkingOptions(model: string) {
+  if (process.env.AI_FAST_THINKING === "off") return [null];
+  const cached = thinkingChoice.get(model);
+  let preferred = MINIMAL_THINKING;
+  if (/^gemini-(?:flash-latest|3\.[78]-flash)/.test(model)) preferred = LOW_THINKING;
+  const first = cached !== undefined ? cached : /^gemini-2\.5-/.test(model) ? ZERO_THINKING : preferred;
+  return [first, ...THINKING_VARIANTS.filter((option) => option !== first)];
+}
+
+async function streamGemini({ system, messages, signal }: StreamOptions) {
   const started = Date.now();
   const makeBody = (thinking: Record<string, unknown> | null) =>
     JSON.stringify({
@@ -58,60 +74,70 @@ async function streamGemini({ system, messages }: Options) {
       generationConfig: { temperature: 0.8, maxOutputTokens: 4096, ...(thinking ? { thinkingConfig: thinking } : {}) },
     });
 
-  // Порядок попыток: основная модель, запасная, затем ещё по кругу.
-  const queue = [...GEMINI_MODELS, ...GEMINI_MODELS];
+  const queue = [...CHAT_MODELS, ...CHAT_MODELS];
   let last: AIError | null = null;
   for (const [i, model] of queue.entries()) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 700));
-    for (let v = fastThinking() ? thinkingChoice.get(model) ?? 0 : THINKING_VARIANTS.length - 1; v < THINKING_VARIANTS.length; v++) {
-      let res: Response;
-      // Ждём начала ответа не дольше 9 секунд; сам поток после этого не ограничиваем.
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 9_000);
-      try {
-        res = await fetch(
+    if (i === CHAT_MODELS.length) await new Promise((resolve) => setTimeout(resolve, 400));
+    signal?.throwIfAborted();
+    const remaining = CHAT_START_TIMEOUT - (Date.now() - started);
+    if (remaining <= 0) break;
+    const controller = new AbortController();
+    const attemptSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
+    // Дедлайн включает получение первого видимого фрагмента. После него поток может идти дальше.
+    const timer = setTimeout(() => controller.abort(), Math.min(FIRST_WORDS_TIMEOUT, remaining));
+    try {
+      for (const thinking of thinkingOptions(model)) {
+        const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-            body: makeBody(THINKING_VARIANTS[v]),
-            signal: controller.signal,
+            body: makeBody(thinking),
+            signal: attemptSignal,
           },
         );
-      } catch (e) {
-        last = new AIError(504, `Gemini ${model}: ${(e as Error).message}`);
+        if (res.ok && res.body) {
+          if (process.env.AI_FAST_THINKING !== "off") thinkingChoice.set(model, thinking);
+          return await startTextStream(sseToText(res.body, (data) => {
+            const parts = JSON.parse(data)?.candidates?.[0]?.content?.parts ?? [];
+            return parts.map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? "")).join("");
+          }), () => console.log(`[ai] ${model} first words in ${Date.now() - started} ms (thinking: ${JSON.stringify(thinking)})`));
+        }
+        const text = await res.text();
+        last = new AIError(res.status, `Gemini ${model} ${res.status}: ${text.slice(0, 300)}`);
         console.error(last.message);
-        break;
-      } finally {
-        clearTimeout(timer);
+        if (res.status === 401 || res.status === 403 || (res.status === 400 && /API_KEY|API key/i.test(text))) {
+          throw new AIError(401, last.message);
+        }
+        if (!(res.status === 400 && thinking && /think/i.test(text))) break;
       }
-      if (res.ok && res.body) {
-        if (fastThinking()) thinkingChoice.set(model, v);
-        let first = true;
-        return sseToText(res.body, (data) => {
-          const json = JSON.parse(data);
-          const parts = json?.candidates?.[0]?.content?.parts ?? [];
-          const text = parts.map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? "")).join("");
-          if (text && first) {
-            first = false;
-            // Время до первых слов ответа: по этой строке в журнале сервера видно, быстро ли отвечает ИИ.
-            console.log(`[ai] ${model} first words in ${Date.now() - started} ms (thinking: ${JSON.stringify(THINKING_VARIANTS[v])})`);
-          }
-          return text;
-        });
-      }
-      const text = await res.text().catch(() => "");
-      last = new AIError(res.status, `Gemini ${model} ${res.status}: ${text.slice(0, 300)}`);
+    } catch (e) {
+      if (signal?.aborted || e instanceof AIError) throw e;
+      last = new AIError(504, `Gemini ${model}: ${(e as Error).message}`);
       console.error(last.message);
-      // Неверный ключ — повтор не поможет.
-      if (res.status === 401 || res.status === 403 || (res.status === 400 && /API_KEY|API key/i.test(text))) {
-        throw new AIError(401, last.message);
-      }
-      // Модель не приняла настройку размышлений: пробуем следующий вариант. Любая другая ошибка — к следующей модели.
-      if (!(res.status === 400 && THINKING_VARIANTS[v] && /think/i.test(text))) break;
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw last ?? new AIError(500, "Gemini: no models configured");
+}
+
+async function startTextStream(stream: ReadableStream<string>, onFirstChunk: () => void) {
+  const reader = stream.getReader();
+  const first = await reader.read();
+  if (!first.done) onFirstChunk();
+  return new ReadableStream<string>({
+    start(controller) {
+      if (first.done) controller.close();
+      else controller.enqueue(first.value);
+    },
+    async pull(controller) {
+      const { done, value } = await reader.read();
+      if (done) controller.close();
+      else controller.enqueue(value);
+    },
+    cancel: (reason) => reader.cancel(reason),
+  });
 }
 
 // Разовый ответ целиком в виде JSON (для личного плана). Укладываемся примерно в 50 секунд.
@@ -188,11 +214,12 @@ async function completeOpenAI({ system, messages, temperature = 0.9 }: Options) 
   return (await res.json())?.choices?.[0]?.message?.content ?? "";
 }
 
-async function streamOpenAI({ system, messages }: Options) {
+async function streamOpenAI({ system, messages, signal }: StreamOptions) {
   const base = process.env.OPENAI_BASE_URL || "https://openrouter.ai/api/v1";
   const model = process.env.OPENAI_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
   const res = await fetch(`${base}/chat/completions`, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,

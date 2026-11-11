@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
@@ -23,6 +23,7 @@ const VOICE_NOTE =
   "\n\nСейчас вы разговариваете голосом: человек говорит вслух, а ваш ответ будет озвучен. Отвечайте как в живом разговоре: 2–4 коротких предложения, без списков, нумерации, скобок и смайликов. Если нужен совет из нескольких шагов, предложите сначала один шаг и спросите, продолжить ли. Человек говорит вслух, поэтому в его словах могут быть ошибки распознавания речи: понимайте смысл.";
 
 export async function POST(req: Request) {
+  const started = Date.now();
   const { supabase, user } = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -35,15 +36,15 @@ export async function POST(req: Request) {
   const { notConfigured: NOT_CONFIGURED, busy: BUSY, keyProblem: KEY_PROBLEM, failed: FAILED } = t;
   if (tooMany(`chat:${user.id}`, PER_HOUR, HOUR)) return textResponse(BUSY, 429);
 
-  const { data: conversation } = await supabase
-    .from("conversations")
-    .select("id, mode, topic, title")
-    .eq("id", conversationId)
-    .single();
+  const [{ data: conversation }, { data: profile }] = await Promise.all([
+    supabase.from("conversations").select("mode, topic").eq("id", conversationId).single(),
+    supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
+  ]);
   if (!conversation) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // id сохранённой реплики: если человек отменит её, пока собеседник отвечает, ответ не сохраняем.
   let userMessageId: string | null = null;
+  let updateConversation: PromiseLike<void> | undefined;
   if (message) {
     const { data: inserted, error } = await supabase
       .from("messages")
@@ -56,25 +57,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "save failed" }, { status: 500 });
     }
 
-    const { count } = await supabase
+    const updatedAt = new Date().toISOString();
+    updateConversation = supabase
       .from("messages")
       .select("id", { count: "exact", head: true })
       .eq("conversation_id", conversationId)
-      .eq("role", "user");
-    const update: { updated_at: string; title?: string } = { updated_at: new Date().toISOString() };
-    if (count === 1 && conversation.mode === "talk") update.title = makeTitle(message);
-    await supabase.from("conversations").update(update).eq("id", conversationId);
+      .eq("role", "user")
+      .then(async ({ count }) => {
+        const update: { updated_at: string; title?: string } = { updated_at: updatedAt };
+        if (count === 1 && conversation.mode === "talk") update.title = makeTitle(message);
+        await supabase.from("conversations").update(update).eq("id", conversationId);
+      });
+    after(async () => { await updateConversation; });
   }
 
-  const [{ data: history }, { data: profile }] = await Promise.all([
-    supabase
-      .from("messages")
-      .select("role, content, step")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: false })
-      .limit(HISTORY_LIMIT),
-    supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
-  ]);
+  const { data: history } = await supabase
+    .from("messages")
+    .select("role, content, step")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(HISTORY_LIMIT);
 
   // Собеседнику возвращаем его прошлые метки, чтобы он помнил, что уже предлагал.
   const messages = normalize(
@@ -91,6 +93,7 @@ export async function POST(req: Request) {
   const save = async (raw: string) => {
     const { text: content, step } = splitStep(raw);
     if (!content.trim()) return;
+    await updateConversation;
     if (userMessageId) {
       const { data: still } = await supabase.from("messages").select("id").eq("id", userMessageId).maybeSingle();
       if (!still) return;
@@ -125,40 +128,55 @@ export async function POST(req: Request) {
         }) +
         (body?.voice ? VOICE_NOTE : ""),
       messages,
+      signal: req.signal,
     });
   } catch (e) {
+    if (req.signal.aborted) return new Response(null, { status: 499 });
     console.error(e);
     const status = e instanceof AIError ? e.status : 0;
     const text = status === 429 ? BUSY : status === 401 ? KEY_PROBLEM : FAILED;
     return textResponse(text, 502);
   }
 
-  // Собеседник начал отвечать: это «полезное действие» в воронке. Пишем до потока, пока доступны куки запроса.
-  await track("chat_reply");
+  const tracking = track("chat_reply");
+  after(() => tracking);
 
   let full = "";
+  let cancelled = false;
   const encoder = new TextEncoder();
+  const reader = upstream.getReader();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const reader = upstream.getReader();
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          if (!full) console.log(`[chat] first chunk in ${Date.now() - started} ms`);
           full += value;
           controller.enqueue(encoder.encode(value));
         }
       } catch (e) {
-        console.error(e);
+        if (!cancelled && !req.signal.aborted) console.error(e);
+      } finally {
+        reader.releaseLock();
+      }
+      if (cancelled) return;
+      if (req.signal.aborted) {
+        controller.close();
+        return;
       }
       if (full.trim()) await save(full);
       else controller.enqueue(encoder.encode(FAILED));
-      controller.close();
+      if (!cancelled) controller.close();
+    },
+    async cancel(reason) {
+      cancelled = true;
+      await reader.cancel(reason).catch(() => {});
     },
   });
 
   return new Response(stream, {
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-transform" },
   });
 }
 
