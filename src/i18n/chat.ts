@@ -4,7 +4,9 @@ import { defineMessages } from "./config";
 export const chatMessages = defineMessages({
   ru: {
     starters: ["Мне сейчас тревожно", "Я очень устал(а)", "Хочу просто выговориться", "Не знаю, с чего начать"],
-    connectionLost: "Связь ненадолго прервалась. Ваши слова сохранены, попробуйте отправить ещё раз чуть позже.",
+    connectionLost: "Связь прервалась. Проверьте историю разговора, когда она восстановится.",
+    sendFailed: "Не удалось отправить сообщение. Попробуйте ещё раз.",
+    sendBusy: "Сейчас слишком много сообщений. Попробуйте отправить своё чуть позже.",
     back: "К разговорам",
     autoOnTitle: "Ответы читаются вслух. Нажмите, чтобы выключить",
     autoOff: "Выключить чтение вслух",
@@ -72,7 +74,9 @@ export const chatMessages = defineMessages({
   },
   kk: {
     starters: ["Қазір көңілім алаң", "Қатты шаршадым", "Жай ғана ішімді ақтарғым келеді", "Неден бастарымды білмеймін"],
-    connectionLost: "Байланыс біраз уақытқа үзілді. Сөздеріңіз сақталды, сәлден кейін қайта жіберіп көріңіз.",
+    connectionLost: "Байланыс үзілді. Байланыс қалпына келгенде әңгіме тарихын тексеріңіз.",
+    sendFailed: "Хабарламаны жіберу мүмкін болмады. Қайталап көріңіз.",
+    sendBusy: "Қазір хабарлама тым көп. Сәлден кейін қайта жіберіп көріңіз.",
     back: "Әңгімелерге",
     autoOnTitle: "Жауаптар дауыстап оқылады. Өшіру үшін басыңыз",
     autoOff: "Дауыстап оқуды өшіру",
@@ -138,7 +142,9 @@ export const chatMessages = defineMessages({
   },
   en: {
     starters: ["I'm feeling anxious right now", "I'm really tired", "I just want to talk it out", "I don't know where to start"],
-    connectionLost: "The connection dropped for a moment. Your words are saved — please try sending again a little later.",
+    connectionLost: "The connection dropped. Check your conversation history when it comes back.",
+    sendFailed: "Couldn't send your message. Please try again.",
+    sendBusy: "There are too many messages right now. Please try again in a moment.",
     back: "Back to conversations",
     autoOnTitle: "Replies are read aloud. Tap to turn off",
     autoOff: "Turn off reading aloud",
