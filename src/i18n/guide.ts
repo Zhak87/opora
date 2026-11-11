@@ -6,6 +6,7 @@ type Scene = { eyebrow: string; title: string; text: string };
 export const guideMessages = defineMessages({
   ru: {
     metaTitle: "Знакомство с Опорой",
+    metaDescription: "Узнайте, как начать разговор с ИИ, выбрать практику, найти комнату общения или обратиться к психологу в Опоре.",
     skip: "Пропустить",
     next: "Дальше",
     back: "Назад",
@@ -81,6 +82,7 @@ export const guideMessages = defineMessages({
   },
   kk: {
     metaTitle: "Опорамен танысу",
+    metaDescription: "Опорада жасанды интеллектпен қалай сөйлесуге, жаттығу таңдауға, әңгімелесу бөлмесін табуға немесе психологқа жүгінуге болатынын біліңіз.",
     skip: "Өткізіп жіберу",
     next: "Әрі қарай",
     back: "Артқа",
@@ -156,6 +158,7 @@ export const guideMessages = defineMessages({
   },
   en: {
     metaTitle: "Meet Opora",
+    metaDescription: "See how to talk with Opora’s AI companion, choose an exercise, join a room, or find a psychologist.",
     skip: "Skip",
     next: "Next",
     back: "Back",

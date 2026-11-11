@@ -9,6 +9,8 @@ import { PublicShell } from "@/components/pro/PublicShell";
 import { Avatar } from "@/components/pro/bits";
 import { BookForm } from "@/components/schedule/SlotPicker";
 
+export const metadata = { robots: { index: false } };
+
 // Запись к психологу: выбор окна, а при первой записи — что разрешить видеть.
 export default async function BookPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

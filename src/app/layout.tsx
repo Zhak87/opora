@@ -8,6 +8,7 @@ import { getLocale } from "@/i18n/server";
 import { common } from "@/i18n/common";
 import { TimezoneCookie } from "@/components/TimezoneCookie";
 import { savedTimeZone } from "@/lib/tz";
+import { siteUrl } from "@/lib/seo";
 
 // Основной текст — Onest, заголовки — округлый Unbounded. Оба с казахскими буквами (cyrillic-ext).
 const onest = Onest({ variable: "--font-onest", subsets: ["latin", "cyrillic", "cyrillic-ext"] });
@@ -15,14 +16,16 @@ const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin", "
 
 export async function generateMetadata(): Promise<Metadata> {
   const m = common[await getLocale()];
-  // Абсолютные адреса для превью ссылок в WhatsApp и Telegram строятся от адреса сайта.
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
   return {
-    metadataBase: new URL(site),
+    metadataBase: siteUrl,
     title: m.metaTitle,
     description: m.metaDescription,
     openGraph: { type: "website", siteName: m.brand, title: m.metaTitle, description: m.metaDescription, images: [OG_IMAGE] },
     twitter: { card: "summary_large_image" },
+    verification: {
+      google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+      yandex: process.env.YANDEX_SITE_VERIFICATION || undefined,
+    },
     appleWebApp: { title: m.brand, statusBarStyle: "default" },
   };
 }

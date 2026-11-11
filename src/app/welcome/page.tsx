@@ -19,6 +19,7 @@ import { needsMessages } from "@/i18n/needs";
 import { mascotMessages } from "@/i18n/mascot";
 import { isAudience } from "@/lib/needs";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
+import { publicMetadata } from "@/lib/seo";
 
 const BUBBLES = [
   "left-0 top-[12%] bg-peach-soft",
@@ -26,6 +27,11 @@ const BUBBLES = [
   "left-[4%] bottom-[16%] bg-sage-soft",
   "right-[2%] bottom-[8%] bg-mist",
 ];
+
+export async function generateMetadata() {
+  const { metaTitle, metaDescription } = await getMsg(welcomeMessages);
+  return publicMetadata("/welcome", metaTitle, metaDescription);
+}
 
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ deleted?: string; for?: string }> }) {
   const { deleted, for: aud } = await searchParams;
@@ -89,6 +95,9 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 translate-x-px" fill="currentColor" aria-hidden><path d="M8 5.5v13l11-6.5-11-6.5Z" /></svg>
               </span>
               {g.welcomeLink}
+            </Link>
+            <Link href="/specialists" className="mt-4 text-sm font-medium text-lilac-deep underline underline-offset-4">
+              {m.findSpecialist}
             </Link>
           </div>
         </div>
