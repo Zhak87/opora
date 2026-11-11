@@ -2,6 +2,8 @@
 #   setup   — первая настройка чистого сервера (входит как root по тому же ключу, потом root закрывается)
 #   status  — что запущено, память, диск, срок SSL
 #   logs    — последние строки журналов сайта и Caddy
+#   voice   — проверка голоса «Комнат»: медиасервер LiveKit, его журнал и порты (ничего не меняет)
+#   reload-caddy — перечитать Caddyfile без остановки сайта (если новые адреса не заработали после выкладки)
 #   restart — перезапустить сайт
 #   migrate-db — перенести данные и аккаунты из облачного Supabase в свою базу (нужен секрет SUPABASE_DB_URL)
 #   anon-key — показать публичный ключ своей базы (он не секретный, его видит каждый браузер)
@@ -13,7 +15,7 @@ on:
       action:
         description: Что сделать
         type: choice
-        options: [status, logs, restart, setup, migrate-db, anon-key]
+        options: [status, logs, voice, reload-caddy, restart, setup, migrate-db, anon-key]
         default: status
 
 concurrency:
@@ -81,6 +83,34 @@ jobs:
       - name: logs
         if: inputs.action == 'logs'
         run: ssh prod 'cd /opt/opora && ./dc.sh logs --tail 150 app caddy cron auth rest storage backup'
+
+      - name: voice
+        if: inputs.action == 'voice'
+        run: |
+          ssh prod 'cd /opt/opora
+            echo "== Служба"; ./dc.sh ps livekit caddy app
+            echo; echo "== Журнал LiveKit"; ./dc.sh logs --tail 120 livekit 2>&1 | sed -E "s/(secret|token|key)[=:][^ ,}]+/\\1=***/Ig"
+            echo; echo "== Ключи заданы (число строк, без значений)"; grep -c "^LIVEKIT_API_" server.env || true
+            ./dc.sh exec -T app sh -c "env | grep -E \"^LIVEKIT_(URL|API_URL)=\"; env | grep -c \"^LIVEKIT_API_KEY=\"" || true
+            echo; echo "== Сайт видит LiveKit"; ./dc.sh exec -T app wget -qO- -T 5 http://livekit:7880/ || echo "НЕТ"
+            echo; echo "== Порты слушаются"; ss -lntu | grep -E ":(7880|7881|7882) " || echo "порты 7881/7882 не слушаются"
+            echo; echo "== Брандмауэр"; sudo -n ufw status 2>/dev/null | grep -E "Status|788" || echo "ufw: нет доступа или правил нет"
+            echo; echo "== Caddy: обращения к /rtc"; ./dc.sh logs --tail 400 caddy 2>&1 | grep -i "rtc" | tail -15 || true
+            echo; echo "== Сайт: ошибки голоса"; ./dc.sh logs --tail 400 app 2>&1 | grep -iE "voice|livekit" | tail -15 || true'
+          echo; echo "== Снаружи: служебный адрес (ждём 401 или 200, не 404/502)"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 10 "$NEXT_PUBLIC_SITE_URL/rtc/validate" || true
+          echo "== Снаружи: порт 7881/tcp"
+          timeout 8 bash -c "exec 3<>/dev/tcp/$HOST/7881" && echo "открыт" || echo "ЗАКРЫТ снаружи"
+
+      - name: reload-caddy
+        if: inputs.action == 'reload-caddy'
+        run: |
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile'
+          sleep 3
+          echo "Служебный адрес голоса (ждём не 307 и не 404):"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 10 "$NEXT_PUBLIC_SITE_URL/rtc/validate" || true
+          echo "Сайт:"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 10 "$NEXT_PUBLIC_SITE_URL/welcome" || true
 
       - name: restart
         if: inputs.action == 'restart'
