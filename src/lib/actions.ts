@@ -100,6 +100,16 @@ export async function deleteAllHistory() {
   redirect("/profile?cleared=1");
 }
 
+// Оценка разговора: помог ли он (3 — да, 2 — немного, 1 — нет). В аналитику идёт только сама оценка.
+export async function rateConversation(conversationId: string, value: number): Promise<{ ok: boolean }> {
+  const { supabase } = await authed();
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId) || ![1, 2, 3].includes(value)) return { ok: false };
+  const { error } = await supabase.from("conversations").update({ rating: value }).eq("id", conversationId);
+  if (error) return { ok: false };
+  await track("chat_rated", { value: String(value) });
+  return { ok: true };
+}
+
 /* ---------- Дневник ---------- */
 
 export async function addJournalEntry(_: unknown, formData: FormData) {

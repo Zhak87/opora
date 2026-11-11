@@ -13,6 +13,8 @@ type Report = {
   north_star: number;
   retention: { d1_base: number; d1: number; d7_base: number; d7: number };
   events: { name: string; people: number; total: number }[];
+  ratings?: { yes: number; some: number; no: number };
+  next_steps?: { step: string; offered: number; taken: number }[];
   practices: { game: string; started: number; completed: number }[];
   daily: { day: string; people: number; useful: number }[];
 };
@@ -41,6 +43,7 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
   const r = data as Report | null;
   const top = Math.max(1, ...(r ? STEP_KEYS.map((k) => r.steps[k]) : [1]));
   const peak = Math.max(1, ...(r?.daily ?? []).map((d) => d.people));
+  const rated = r?.ratings ? r.ratings.yes + r.ratings.some + r.ratings.no : 0;
   const share = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
   return (
@@ -126,6 +129,36 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
               <span>{r.daily[r.daily.length - 1]?.day}</span>
             </div>
           </Card>
+
+          {rated > 0 && r.ratings && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="text-[15px] font-medium text-ink">{m.ratings}</h2>
+              <p className="mt-1 text-xs text-ink-faint">{m.ratingsHint}</p>
+              <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-sand">
+                <div className="bg-lilac-deep" style={{ width: `${(r.ratings.yes / rated) * 100}%` }} />
+                <div className="bg-lilac" style={{ width: `${(r.ratings.some / rated) * 100}%` }} />
+                <div className="bg-sand-deep" style={{ width: `${(r.ratings.no / rated) * 100}%` }} />
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+                {([r.ratings.yes, r.ratings.some, r.ratings.no] as const).map((value, i) => (
+                  <div key={i}>
+                    <p className="font-serif text-2xl text-ink">{share(value, rated)}%</p>
+                    <p className="text-xs text-ink-faint">{m.ratingNames[i]} · {value}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {(r.next_steps ?? []).length > 0 && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="mb-4 text-[15px] font-medium text-ink">{m.nextSteps}</h2>
+              <Table
+                head={m.nextStepCols}
+                rows={(r.next_steps ?? []).map((s) => [m.places[s.step] ?? getGame(s.step, locale)?.title ?? s.step, s.offered, s.taken])}
+              />
+            </Card>
+          )}
 
           {r.practices.length > 0 && (
             <Card className="p-6 sm:p-8">

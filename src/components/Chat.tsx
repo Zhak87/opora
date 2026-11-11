@@ -9,15 +9,22 @@ import { MusicToggle } from "./Music";
 import { SpeakButton } from "./SpeakButton";
 import { VoiceMode } from "./VoiceMode";
 import { CalmCard, CalmOverlay, type CalmTool } from "./CalmTools";
-import { deleteConversation, saveVoice, undoLastMessage } from "@/lib/actions";
+import { deleteConversation, rateConversation, saveVoice, undoLastMessage } from "@/lib/actions";
 import { speech } from "@/lib/speech";
 import type { VoiceSettings } from "@/lib/voices";
 import { looksAnxious, looksLikeCrisis } from "@/lib/prompt";
 import { useLocale } from "@/i18n/client";
 import { chatMessages } from "@/i18n/chat";
+import { gamesMessages } from "@/i18n/games";
+import { PLACE_STEPS, isStep, splitStep, stepHref, visibleText, type StepCode } from "@/lib/steps";
+import { sendEvent } from "./Track";
 
 // pending: реплика ещё не точно сохранена на сервере, отменять её пока нельзя.
-type Message = { id: string; role: "user" | "assistant"; content: string; pending?: boolean };
+// step: «следующий шаг», который собеседник предложил в этой реплике (кнопка под ответом).
+type Message = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; step?: string | null };
+
+// Оценку разговора спрашиваем, когда собеседник ответил хотя бы столько раз.
+const RATE_AFTER = 3;
 
 export function Chat({
   conversationId,
@@ -25,6 +32,7 @@ export function Chat({
   label,
   topic,
   initialMessages,
+  rating: initialRating,
   voice: initialVoice,
 }: {
   conversationId: string;
@@ -32,6 +40,7 @@ export function Chat({
   topic?: string | null;
   label: string;
   initialMessages: Message[];
+  rating?: number | null;
   voice: VoiceSettings;
 }) {
   const locale = useLocale();
@@ -59,6 +68,10 @@ export function Chat({
   const [calmTool, setCalmTool] = useState<CalmTool | null>(null);
   const [calmDismissed, setCalmDismissed] = useState<string | null>(null);
   const [afterCalm, setAfterCalm] = useState(false);
+  // Оценка разговора: сохранённая раньше, поставленная сейчас или отложенная («не сейчас»).
+  const [rating, setRating] = useState<number | null>(initialRating ?? null);
+  const [justRated, setJustRated] = useState(false);
+  const [rateHidden, setRateHidden] = useState(false);
 
   const scrollDown = useCallback((smooth = true) => {
     bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
@@ -98,11 +111,15 @@ export function Chat({
           const { done, value } = await reader.read();
           if (done) break;
           acc += decoder.decode(value, { stream: true });
-          setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: acc } : m)));
+          // Метку «следующий шаг» человек не видит: показываем текст без неё.
+          const shown = visibleText(acc);
+          setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: shown } : m)));
         }
-        if (!acc.trim()) throw new Error("empty");
-        reply = acc;
-        if (voiceRef.current.auto && !viaVoice) speech.speak(replyId, acc, voiceRef.current, textRef.current.locale);
+        const { text: clean, step } = splitStep(acc);
+        if (!clean) throw new Error("empty");
+        setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: clean, step } : m)));
+        reply = clean;
+        if (voiceRef.current.auto && !viaVoice) speech.speak(replyId, clean, voiceRef.current, textRef.current.locale);
       } catch {
         if (controller.signal.aborted) return null;
         setMessages((prev) =>
@@ -199,6 +216,17 @@ export function Chat({
       ? "topic"
       : null;
   const showCalm = !busy && !!calmKey && calmKey !== calmDismissed;
+  const replies = messages.filter((m) => m.role === "assistant" && m.content).length;
+  const showRate = !busy && !showCalm && !rateHidden && replies >= RATE_AFTER && (rating === null || justRated);
+  const stepLabel = (step: StepCode) =>
+    (PLACE_STEPS as readonly string[]).includes(step)
+      ? t.stepPlaces[step as (typeof PLACE_STEPS)[number]]
+      : gamesMessages[locale].catalog[step as keyof (typeof gamesMessages)[typeof locale]["catalog"]];
+  const rate = (value: number) => {
+    setRating(value);
+    setJustRated(true);
+    rateConversation(conversationId, value);
+  };
 
   return (
     <div className="flex h-dvh flex-col">
@@ -305,6 +333,20 @@ export function Chat({
                       {!(busy && m.id === messages[messages.length - 1]?.id) && (
                         <SpeakButton id={m.id} text={m.content} voice={voice} className="-ml-3 mt-1.5" />
                       )}
+                      {isStep(m.step) && !(busy && m.id === messages[messages.length - 1]?.id) && (
+                        <Link
+                          href={stepHref(m.step)}
+                          onClick={() => sendEvent("step_taken", undefined, m.step ?? undefined)}
+                          className="group mt-2 flex animate-rise items-center gap-3 rounded-[20px] border-2 border-lilac/40 bg-lilac-soft/60 px-4 py-3 transition hover:-translate-y-0.5 hover:border-lilac-deep/60 hover:bg-lilac-soft"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[11px] font-medium uppercase tracking-wide text-lilac-deep">{t.stepLead}</span>
+                            <span className="block text-[15px] font-medium text-ink">{stepLabel(m.step).title}</span>
+                            <span className="block text-[13px] leading-snug text-ink-soft">{stepLabel(m.step).hint}</span>
+                          </span>
+                          <BackIcon className="h-5 w-5 shrink-0 rotate-180 text-lilac-deep transition group-hover:translate-x-0.5" />
+                        </Link>
+                      )}
                     </div>
                   ) : (
                     <p className="flex items-center gap-1.5 pt-1 text-sm text-ink-faint" aria-live="polite">
@@ -339,6 +381,43 @@ export function Chat({
               >
                 {t.calmAfter}
               </button>
+            </div>
+          )}
+
+          {showRate && (
+            <div className="mt-8 animate-rise rounded-[22px] bg-paper/70 px-5 py-4 text-center shadow-soft" aria-live="polite">
+              {justRated ? (
+                <>
+                  <p className="text-[14.5px] text-ink">{rating === 1 ? t.rateSorry : t.rateThanks}</p>
+                  {rating === 1 && (
+                    <Link
+                      href="/specialists"
+                      className="mt-2 inline-block text-sm font-medium text-lilac-deep underline-offset-4 hover:underline"
+                    >
+                      {t.rateSpecialists}
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-[14.5px] text-ink">{t.rateQuestion}</p>
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    {([3, 2, 1] as const).map((value, i) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => rate(value)}
+                        className="rounded-full border-2 border-sand-deep bg-paper px-4 py-1.5 text-sm text-ink transition hover:-translate-y-0.5 hover:border-lilac"
+                      >
+                        {t.rateOptions[i]}
+                      </button>
+                    ))}
+                    <button type="button" onClick={() => setRateHidden(true)} className="px-2 py-1.5 text-xs text-ink-faint hover:text-ink">
+                      {t.rateLater}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

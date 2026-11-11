@@ -7,6 +7,7 @@ import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { HOUR, tooMany } from "@/lib/rate-limit";
 import { track } from "@/lib/track";
+import { splitStep } from "@/lib/steps";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -68,19 +69,27 @@ export async function POST(req: Request) {
   const [{ data: history }, { data: profile }] = await Promise.all([
     supabase
       .from("messages")
-      .select("role, content")
+      .select("role, content, step")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })
       .limit(HISTORY_LIMIT),
     supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
   ]);
 
-  const messages = normalize(((history ?? []) as ChatMessage[]).reverse());
+  // Собеседнику возвращаем его прошлые метки, чтобы он помнил, что уже предлагал.
+  const messages = normalize(
+    ((history ?? []) as (ChatMessage & { step?: string | null })[])
+      .reverse()
+      .map((m) => ({ role: m.role, content: m.step ? `${m.content}\n[[step:${m.step}]]` : m.content })),
+  );
   if (!messages.length || messages[messages.length - 1].role !== "user") {
     return NextResponse.json({ error: "nothing to answer" }, { status: 400 });
   }
 
-  const save = async (content: string) => {
+  // Метку «следующий шаг» в текст не сохраняем: шаг лежит отдельно, а текст остаётся чистым
+  // (его могут читать вслух, видеть в истории и, с согласия человека, его психолог).
+  const save = async (raw: string) => {
+    const { text: content, step } = splitStep(raw);
     if (!content.trim()) return;
     if (userMessageId) {
       const { data: still } = await supabase.from("messages").select("id").eq("id", userMessageId).maybeSingle();
@@ -88,7 +97,8 @@ export async function POST(req: Request) {
     }
     await supabase
       .from("messages")
-      .insert({ conversation_id: conversationId, role: "assistant", content: content.trim() });
+      .insert({ conversation_id: conversationId, role: "assistant", content: content.trim(), step });
+    if (step) await track("step_offered", { step });
     await supabase
       .from("conversations")
       .update({ updated_at: new Date().toISOString() })
@@ -110,6 +120,7 @@ export async function POST(req: Request) {
           name: profile?.name,
           locale,
           calmTools: !body?.voice,
+          steps: !body?.voice,
           intake: intakeNote(profile?.intake),
         }) +
         (body?.voice ? VOICE_NOTE : ""),

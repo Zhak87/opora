@@ -5,12 +5,12 @@ import { useEffect } from "react";
 type Once = "always" | "session" | "day";
 
 // Отправить событие аналитики со страницы. Тексты и личные данные не передаются: только название.
-export function sendEvent(name: string, game?: string) {
+export function sendEvent(name: string, game?: string, step?: string) {
   try {
     fetch("/api/t", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(game ? { name, game } : { name }),
+      body: JSON.stringify({ name, ...(game ? { game } : {}), ...(step ? { step } : {}) }),
       keepalive: true,
     }).catch(() => {});
   } catch {}

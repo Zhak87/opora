@@ -26,7 +26,7 @@ as $f$
 begin
   if p_name not in (
     'landing_view', 'guide_start', 'guide_complete', 'trial_start', 'signup_start', 'signup_complete',
-    'app_open', 'chat_start', 'chat_reply', 'practice_start', 'practice_complete', 'journal_entry',
+    'app_open', 'chat_start', 'chat_reply', 'chat_rated', 'step_offered', 'step_taken', 'practice_start', 'practice_complete', 'journal_entry',
     'room_view', 'room_join', 'room_create', 'psychologist_view', 'contact_request'
   ) then
     return;
@@ -109,6 +109,24 @@ begin
     'events', coalesce((
       select jsonb_agg(jsonb_build_object('name', name, 'people', people, 'total', total) order by total desc)
       from (select name, count(distinct person) as people, count(*) as total from e group by name) t
+    ), '[]'::jsonb),
+    -- Оценки разговоров: 3 — помог, 2 — немного, 1 — нет.
+    'ratings', jsonb_build_object(
+      'yes', (select count(*) from public.product_events where created_at >= v_since and name = 'chat_rated' and props ->> 'value' = '3'),
+      'some', (select count(*) from public.product_events where created_at >= v_since and name = 'chat_rated' and props ->> 'value' = '2'),
+      'no', (select count(*) from public.product_events where created_at >= v_since and name = 'chat_rated' and props ->> 'value' = '1')
+    ),
+    -- Следующий шаг от собеседника: сколько раз предложен и сколько раз человек им воспользовался.
+    'next_steps', coalesce((
+      select jsonb_agg(jsonb_build_object('step', step, 'offered', offered, 'taken', taken) order by offered desc)
+      from (
+        select p.props ->> 'step' as step,
+               count(*) filter (where p.name = 'step_offered') as offered,
+               count(*) filter (where p.name = 'step_taken') as taken
+        from public.product_events p
+        where p.created_at >= v_since and p.name in ('step_offered', 'step_taken') and p.props ? 'step'
+        group by 1
+      ) t
     ), '[]'::jsonb),
     'practices', coalesce((
       select jsonb_agg(jsonb_build_object('game', game, 'started', started, 'completed', completed) order by started desc)
