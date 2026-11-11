@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, streamReply, type ChatMessage } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompt";
 import { intakeNote } from "@/lib/intake";
+import { practiceNote, recentRuns } from "@/lib/practice-memory";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { HOUR, tooMany } from "@/lib/rate-limit";
@@ -125,6 +126,7 @@ export async function POST(req: Request) {
           calmTools: !body?.voice,
           steps: !body?.voice,
           intake: intakeNote(profile?.intake),
+          practices: practiceNote(await recentRuns(supabase, 8)),
         }) +
         (body?.voice ? VOICE_NOTE : ""),
       messages,

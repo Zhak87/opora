@@ -29,7 +29,13 @@ export const speech = {
   stop,
   unlock,
   resume,
+  prefetch,
 };
+
+// Заранее озвучить текст (для практик с голосом: следующая фраза готова, когда до неё дойдёт время).
+function prefetch(text: string, settings: VoiceSettings) {
+  for (const part of chunks(text)) fetchChunk(part, settings).catch(() => {});
+}
 
 let pending: (() => void) | null = null;
 

@@ -111,7 +111,7 @@ export function Nav({
 
       {/* Телефон: нижняя панель */}
       {!inChat && (
-        <nav className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 rounded-[26px] bg-paper/90 shadow-lift backdrop-blur-xl md:hidden">
+        <nav data-mobile-nav className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 rounded-[26px] bg-paper/90 shadow-lift backdrop-blur-xl md:hidden">
           <div className="mx-auto flex max-w-md items-stretch justify-around px-1.5">
             {ITEMS.map(({ href, key, Icon }) => {
               const label = m.nav[key];

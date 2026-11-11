@@ -255,3 +255,53 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
 }
+
+/* Практики: круг по краю «Пустой чаши», когда человек заметил мысль */
+.bowl-ripple { animation: bowl-ripple 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes bowl-ripple {
+  from { opacity: 0.9; transform: translateX(-50%) scale(0.6); }
+  to { opacity: 0; transform: translateX(-50%) scale(1.5); }
+}
+/* Огонёк мысли падает в банку */
+.jar-fly { animation: jar-fly 0.9s cubic-bezier(0.5, 0, 0.3, 1) both; }
+@keyframes jar-fly {
+  0% { opacity: 0; transform: translateY(-120px) scale(1.6); }
+  25% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+/* Огонёк мысли поднимается из банки и тает */
+.jar-free { animation: jar-free 2.2s ease-in both; }
+@keyframes jar-free {
+  0% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-260px) scale(0.3); filter: blur(4px); }
+}
+/* Мягкое парение огоньков в банке */
+.jar-bob { animation: jar-bob 5s ease-in-out infinite; }
+@keyframes jar-bob {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(var(--bx, 3px), var(--by, -6px)); }
+}
+/* Огоньки на карточке «Пустой чаши» в каталоге: медленно едут слева направо */
+.bowl-drift { animation: bowl-drift var(--t, 9s) linear var(--d, 0s) infinite; }
+@keyframes bowl-drift {
+  0% { transform: translateX(-30px); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateX(var(--w, 340px)); opacity: 0; }
+}
+
+/* Режим погружения: пока идёт практика, нижнее меню на телефоне уезжает, чтобы не мешать игре */
+[data-mobile-nav] { transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.4s; }
+body[data-practice] [data-mobile-nav] { transform: translateY(140%); opacity: 0; pointer-events: none; }
+/* Звёзды «Моего неба» и ночных сцен */
+.twinkle { animation: twinkle var(--t, 4s) ease-in-out var(--d, 0s) infinite; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+.star-born { animation: star-born 1.6s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+@keyframes star-born {
+  0% { opacity: 0; transform: scale(0) rotate(-40deg); filter: blur(6px); }
+  60% { opacity: 1; transform: scale(1.5) rotate(8deg); filter: none; }
+  100% { opacity: 1; transform: none; }
+}

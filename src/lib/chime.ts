@@ -1,10 +1,16 @@
 // Короткий мягкий звук для игр: создаётся на лету, без файлов.
 let ctx: AudioContext | null = null;
 
+// Общий звуковой контекст для всех коротких звуков практик.
+export function audioCtx() {
+  ctx ??= new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+
 export function chime(midi = 76, volume = 0.08) {
   try {
-    ctx ??= new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    if (ctx.state === "suspended") ctx.resume();
+    const ctx = audioCtx();
     const t = ctx.currentTime;
     const f = 440 * Math.pow(2, (midi - 69) / 12);
     const gain = ctx.createGain();

@@ -3,6 +3,12 @@ import { defineMessages } from "./config";
 // Игра «Колесо жизни». Сферы во всех языках идут в одном порядке (цвета заданы в компоненте).
 export const wheelMessages = defineMessages({
   ru: {
+    choose: "Какую сферу хочется улучшить?",
+    chooseHint: "Не обязательно самую низкую. Ту, куда сейчас хочется направить силы.",
+    thinking: "Собираю вопросы и первые шаги…",
+    questionsTitle: "Вопросы для размышления",
+    stepsTitle: "Возможные первые шаги",
+    toOneStep: "Выбрать шаг на 24 часа",
     areas: ["Здоровье", "Отношения", "Семья", "Работа и дело", "Отдых", "Развитие", "Финансы", "Внутренний покой"],
     aria: "Колесо жизни",
     see: "Посмотреть итог",
@@ -15,6 +21,12 @@ export const wheelMessages = defineMessages({
     edit: "Изменить оценки",
   },
   kk: {
+    choose: "Қай саланы жақсартқыңыз келеді?",
+    chooseHint: "Ең төменгісі болуы міндетті емес. Қазір күш бағыттағыңыз келетінін.",
+    thinking: "Сұрақтар мен алғашқы қадамдарды жинап жатырмын…",
+    questionsTitle: "Ойлануға сұрақтар",
+    stepsTitle: "Мүмкін алғашқы қадамдар",
+    toOneStep: "24 сағатқа қадам таңдау",
     areas: ["Денсаулық", "Қарым-қатынас", "Отбасы", "Жұмыс пен кәсіп", "Демалыс", "Даму", "Қаржы", "Ішкі тыныштық"],
     aria: "Өмір дөңгелегі",
     see: "Қорытындыны көру",
@@ -27,6 +39,12 @@ export const wheelMessages = defineMessages({
     edit: "Бағаларды өзгерту",
   },
   en: {
+    choose: "Which area would you like to improve?",
+    chooseHint: "Not necessarily the lowest. The one where you want to put your energy now.",
+    thinking: "Gathering questions and first steps…",
+    questionsTitle: "Questions to reflect on",
+    stepsTitle: "Possible first steps",
+    toOneStep: "Pick a step for 24 hours",
     areas: ["Health", "Relationships", "Family", "Work and career", "Rest", "Growth", "Finances", "Inner peace"],
     aria: "Wheel of life",
     see: "See the result",
