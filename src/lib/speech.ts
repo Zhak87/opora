@@ -34,8 +34,16 @@ export const speech = {
 };
 
 // Заранее озвучить текст (для практик с голосом: следующая фраза готова, когда до неё дойдёт время).
+// Режем текст так же, как stream(), чтобы озвучка взяла эти части из кэша.
 function prefetch(text: string, settings: VoiceSettings) {
-  for (const part of chunks(text)) fetchChunk(part, settings).catch(() => {});
+  const signal = new AbortController().signal;
+  let rest = cleanText(text).trimStart();
+  for (let i = 0; rest; i++) {
+    const part = nextChunk(rest, i, true);
+    if (!part) break;
+    fetchChunk(part, settings, signal).catch(() => {});
+    rest = rest.slice(part.length).trimStart();
+  }
 }
 
 let pending: (() => void) | null = null;
