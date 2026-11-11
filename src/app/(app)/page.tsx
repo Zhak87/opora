@@ -23,6 +23,8 @@ import { dayKey } from "@/lib/time";
 import { intakeSeen } from "@/lib/intake";
 import { IntakeCard } from "@/components/IntakeCard";
 import { GUIDE_COOKIE, guideSeen } from "@/lib/guide";
+import { Needs } from "@/components/Needs";
+import { needForMood } from "@/lib/needs";
 
 // Плитки настроения 1–5 на главной: ведут к отметке дня.
 const MOOD_TILES = [
@@ -140,6 +142,9 @@ export default async function HomePage() {
         <ActionLink href="/explore" title={m.explore} hint={m.exploreHint} tone="bg-mist text-sky-deep" Icon={CompassIcon} />
         <ActionLink href="/journal" title={m.journal} hint={m.journalHint} tone="bg-sage-soft text-sage-deep" Icon={PenIcon} />
       </section>
+
+      {/* По потребностям: человек выбирает, что ему нужно, а не раздел приложения */}
+      <Needs initial={needForMood(checkin?.mood)} />
 
       {showIntake && <IntakeCard />}
 

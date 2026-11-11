@@ -4,6 +4,8 @@ import { isAdmin } from "@/lib/pro";
 import { getLocale } from "@/i18n/server";
 import { funnelMessages } from "@/i18n/funnel";
 import { getGame } from "@/lib/games";
+import { needsMessages } from "@/i18n/needs";
+import { isNeed } from "@/lib/needs";
 import { PublicShell } from "@/components/pro/PublicShell";
 import { Card, PageHeader } from "@/components/ui";
 
@@ -13,6 +15,8 @@ type Report = {
   north_star: number;
   retention: { d1_base: number; d1: number; d7_base: number; d7: number };
   events: { name: string; people: number; total: number }[];
+  audiences?: { aud: string; landed: number; started: number; account: number }[];
+  needs?: { need: string; people: number }[];
   ratings?: { yes: number; some: number; no: number };
   next_steps?: { step: string; offered: number; taken: number }[];
   practices: { game: string; started: number; completed: number }[];
@@ -129,6 +133,21 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
               <span>{r.daily[r.daily.length - 1]?.day}</span>
             </div>
           </Card>
+
+          {(r.audiences ?? []).length > 0 && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="text-[15px] font-medium text-ink">{m.audiences}</h2>
+              <p className="mb-4 mt-1 text-xs text-ink-faint">{m.audiencesHint}</p>
+              <Table head={m.audienceCols} rows={(r.audiences ?? []).map((a) => [m.audienceNames[a.aud] ?? a.aud, a.landed, a.started, a.account])} />
+            </Card>
+          )}
+
+          {(r.needs ?? []).length > 0 && (
+            <Card className="p-6 sm:p-8">
+              <h2 className="mb-4 text-[15px] font-medium text-ink">{m.needs}</h2>
+              <Table head={m.needCols} rows={(r.needs ?? []).map((n) => [isNeed(n.need) ? needsMessages[locale].needs[n.need].title : n.need, n.people])} />
+            </Card>
+          )}
 
           {rated > 0 && r.ratings && (
             <Card className="p-6 sm:p-8">

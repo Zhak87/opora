@@ -27,7 +27,7 @@ begin
   if p_name not in (
     'landing_view', 'guide_start', 'guide_complete', 'trial_start', 'signup_start', 'signup_complete',
     'app_open', 'chat_start', 'chat_reply', 'chat_rated', 'step_offered', 'step_taken', 'practice_start', 'practice_complete', 'journal_entry',
-    'room_view', 'room_join', 'room_create', 'psychologist_view', 'contact_request'
+    'need_pick', 'room_view', 'room_join', 'room_create', 'psychologist_view', 'contact_request'
   ) then
     return;
   end if;
@@ -109,6 +109,32 @@ begin
     'events', coalesce((
       select jsonb_agg(jsonb_build_object('name', name, 'people', people, 'total', total) order by total desc)
       from (select name, count(distinct person) as people, count(*) as total from e group by name) t
+    ), '[]'::jsonb),
+    -- Аудитории (ссылки /welcome?for=…): сколько людей пришло по каждой и сколько из них пошли дальше.
+    'audiences', coalesce((
+      select jsonb_agg(jsonb_build_object('aud', aud, 'landed', landed, 'started', started, 'account', account) order by landed desc)
+      from (
+        select l.aud, count(*) as landed,
+               count(*) filter (where exists (select 1 from e where e.person = l.person and e.name in ('trial_start', 'signup_start'))) as started,
+               count(*) filter (where exists (select 1 from e where e.person = l.person and e.name = 'signup_complete')) as account
+        from (
+          select coalesce(visitor, user_id::text) as person, min(props ->> 'aud') as aud
+          from public.product_events
+          where created_at >= v_since and name = 'landing_view' and props ? 'aud'
+          group by 1
+        ) l
+        group by l.aud
+      ) t
+    ), '[]'::jsonb),
+    -- Что людям нужно: какие потребности выбирают на главной.
+    'needs', coalesce((
+      select jsonb_agg(jsonb_build_object('need', need, 'people', people) order by people desc)
+      from (
+        select props ->> 'need' as need, count(distinct coalesce(visitor, user_id::text)) as people
+        from public.product_events
+        where created_at >= v_since and name = 'need_pick' and props ? 'need'
+        group by 1
+      ) t
     ), '[]'::jsonb),
     -- Оценки разговоров: 3 — помог, 2 — немного, 1 — нет.
     'ratings', jsonb_build_object(

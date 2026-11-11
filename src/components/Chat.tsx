@@ -336,7 +336,7 @@ export function Chat({
                       {isStep(m.step) && !(busy && m.id === messages[messages.length - 1]?.id) && (
                         <Link
                           href={stepHref(m.step)}
-                          onClick={() => sendEvent("step_taken", undefined, m.step ?? undefined)}
+                          onClick={() => sendEvent("step_taken", { step: m.step ?? undefined })}
                           className="group mt-2 flex animate-rise items-center gap-3 rounded-[20px] border-2 border-lilac/40 bg-lilac-soft/60 px-4 py-3 transition hover:-translate-y-0.5 hover:border-lilac-deep/60 hover:bg-lilac-soft"
                         >
                           <span className="min-w-0 flex-1">

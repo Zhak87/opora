@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { CLIENT_EVENTS, track, type EventName } from "@/lib/track";
 import { VISITOR_COOKIE } from "@/lib/visitor";
 import { isStep } from "@/lib/steps";
+import { isAudience, isNeed } from "@/lib/needs";
 import { HOUR, clientIp, tooMany } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -10,9 +11,9 @@ export const runtime = "nodejs";
 const GAME = /^[a-z0-9-]{1,24}$/;
 
 // Приём событий со страниц (открыл сайт, начал практику и т. п.). Принимаем только названия из списка
-// и короткую пометку: какая практика или какой шаг. Больше ничего страница передать не может.
+// и короткую пометку: какая практика, какой шаг, какая потребность или аудитория. Больше ничего страница передать не может.
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as { name?: string; game?: string; step?: string } | null;
+  const body = (await req.json().catch(() => null)) as { name?: string; game?: string; step?: string; need?: string; aud?: string } | null;
   const name = body?.name as EventName | undefined;
   if (!name || !CLIENT_EVENTS.includes(name)) return NextResponse.json({ ok: false }, { status: 400 });
   const who = (await cookies()).get(VISITOR_COOKIE)?.value ?? clientIp(req);
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
   const props: Record<string, string> = {};
   if (body?.game && GAME.test(body.game)) props.game = body.game;
   if (isStep(body?.step)) props.step = body.step;
+  if (isNeed(body?.need)) props.need = body.need;
+  if (isAudience(body?.aud)) props.aud = body.aud;
   await track(name, props);
   return NextResponse.json({ ok: true });
 }
