@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { getTopic } from "@/lib/topics";
+import { talkOutMessages } from "@/i18n/game-talk-out";
 import { JOURNAL_KINDS, journalKinds, type JournalKind } from "@/lib/content";
 import { normalizeVoice } from "@/lib/voices";
 import { INTL } from "@/i18n/config";
@@ -29,7 +30,8 @@ export async function startConversation(formData: FormData) {
   const prompt = String(formData.get("prompt") || "").trim();
 
   const title =
-    topic?.title ?? (mode === "hope" ? String(formData.get("title") || t.hopeTitle) : t.newConversation);
+    topic?.title ??
+    (mode === "hope" ? String(formData.get("title") || t.hopeTitle) : formData.get("opener") ? talkOutMessages[locale].convTitle : t.newConversation);
 
   const { data, error } = await supabase
     .from("conversations")
@@ -41,6 +43,12 @@ export async function startConversation(formData: FormData) {
 
   if (topic) {
     await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: topic.opener });
+  }
+  // Практика «Мне нужно выговориться»: разговор начинается с вопроса собеседника под выбранный режим.
+  const opener = String(formData.get("opener") || "");
+  const openers = talkOutMessages[locale].openers;
+  if (!topic && opener in openers) {
+    await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: openers[opener as keyof typeof openers] });
   }
   if (prompt) {
     await supabase.from("messages").insert({ conversation_id: data.id, role: "user", content: prompt.slice(0, 4000) });
@@ -96,6 +104,7 @@ export async function deleteAllHistory() {
   await supabase.from("journal_entries").delete().eq("user_id", user.id);
   await supabase.from("personal_plans").delete().eq("user_id", user.id);
   await supabase.from("courses").delete().eq("user_id", user.id);
+  await supabase.from("practice_runs").delete().eq("user_id", user.id);
   revalidatePath("/", "layout");
   redirect("/profile?cleared=1");
 }

@@ -1,7 +1,10 @@
 // «Следующий шаг» от собеседника (раздел 4.1 стратегии): в конце ответа ИИ может поставить метку
 // [[step:код]]. Человек её не видит: приложение убирает метку из текста и показывает под ответом кнопку,
 // которая ведёт к практике, в комнаты, к психологам или в дневник.
-export const PRACTICE_STEPS = ["breath", "bubbles", "grounding", "light", "jar", "garden", "values", "what-if", "strengths", "letter", "wheel"] as const;
+export const PRACTICE_STEPS = [
+  "breath", "bubbles", "grounding", "light", "jar", "garden", "values", "what-if", "strengths", "letter", "wheel",
+  "empty-bowl", "thought-jar", "emotion", "one-step",
+] as const;
 export const PLACE_STEPS = ["rooms", "specialists", "journal"] as const;
 export type StepCode = (typeof PRACTICE_STEPS)[number] | (typeof PLACE_STEPS)[number];
 

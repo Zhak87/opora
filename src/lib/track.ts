@@ -9,12 +9,12 @@ import { VISITOR_COOKIE } from "@/lib/visitor";
 export type EventName =
   | "landing_view" | "guide_start" | "guide_complete" | "trial_start" | "signup_start" | "signup_complete"
   | "app_open" | "chat_start" | "chat_reply" | "chat_rated" | "step_offered" | "step_taken" | "practice_start" | "practice_complete" | "journal_entry"
-  | "need_pick" | "room_view" | "room_join" | "room_create" | "psychologist_view" | "contact_request";
+  | "need_pick" | "room_view" | "room_join" | "room_create" | "psychologist_view" | "contact_request" | "practice_feel";
 
 // События, которые может прислать сама страница (остальные пишет только сервер).
 export const CLIENT_EVENTS: EventName[] = [
   "landing_view", "guide_start", "guide_complete", "signup_start", "app_open",
-  "practice_start", "practice_complete", "room_view", "room_join", "psychologist_view", "step_taken", "need_pick",
+  "practice_start", "practice_complete", "room_view", "room_join", "psychologist_view", "step_taken", "need_pick", "practice_feel",
 ];
 
 // Случайный номер браузера: связывает шаги одного человека до и после регистрации.

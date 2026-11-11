@@ -22,6 +22,11 @@ type Report = {
   daily: { day: string; people: number; useful: number }[];
 };
 
+type PracticeRow = {
+  game: string; started: number; completed: number; people: number; repeaters: number;
+  before: number | null; after: number | null; useful_yes: number; useful_some: number; useful_no: number; seconds: number | null;
+};
+
 const PERIODS = [7, 30, 90];
 const STEP_KEYS = ["landing", "started", "account", "useful", "returned"] as const;
 const STEP_TONES = ["bg-mist", "bg-lilac-soft", "bg-lilac", "bg-lilac-deep", "bg-ink"];
@@ -34,8 +39,13 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
   const locale = await getLocale();
   const m = funnelMessages[locale];
 
-  const { data } = await supabase.rpc("funnel_report", { p_days: days });
+  const [{ data }, { data: pr }] = await Promise.all([
+    supabase.rpc("funnel_report", { p_days: days }),
+    // Подробности по практикам (миграция 0016). До её применения просто пусто.
+    supabase.rpc("practice_report", { p_days: days }),
+  ]);
   const r = data as Report | null;
+  const practiceRows = (pr ?? []) as PracticeRow[];
   const top = Math.max(1, ...(r ? STEP_KEYS.map((k) => r.steps[k]) : [1]));
   const peak = Math.max(1, ...(r?.daily ?? []).map((d) => d.people));
   const rated = r?.ratings ? r.ratings.yes + r.ratings.some + r.ratings.no : 0;
@@ -175,7 +185,23 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
           {r.practices.length > 0 && (
             <Card className="p-6 sm:p-8">
               <h2 className="mb-4 text-[15px] font-medium text-ink">{m.practices}</h2>
-              <Table head={m.practiceCols} rows={r.practices.map((p) => [getGame(p.game, locale)?.title ?? p.game, p.started, p.completed])} />
+              {practiceRows.length > 0 ? (
+                <Table
+                  head={m.practiceColsFull}
+                  rows={practiceRows.map((p) => [
+                    getGame(p.game, locale)?.title ?? p.game,
+                    p.started,
+                    p.completed,
+                    `${p.repeaters}/${p.people}`,
+                    p.before !== null && p.after !== null ? `${p.before} → ${p.after}` : "—",
+                    p.useful_yes + p.useful_some + p.useful_no > 0 ? `${p.useful_yes}/${p.useful_some}/${p.useful_no}` : "—",
+                    p.seconds !== null ? `${Math.round(p.seconds / 60)} ${m.min}` : "—",
+                  ])}
+                />
+              ) : (
+                <Table head={m.practiceCols} rows={r.practices.map((p) => [getGame(p.game, locale)?.title ?? p.game, p.started, p.completed])} />
+              )}
+              <p className="mt-3 text-[12.5px] text-ink-faint">{m.practiceNote}</p>
             </Card>
           )}
 

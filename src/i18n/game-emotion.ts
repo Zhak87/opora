@@ -1,0 +1,108 @@
+import { defineMessages } from "./config";
+
+// «Назови свою эмоцию»: палитра чувств (семьи по порядку совпадают с цветами в компоненте),
+// сила 1–10, что было перед этим и чего не хватает.
+export const emotionMessages = defineMessages({
+  ru: {
+    step1: "Что ближе всего к тому, что вы чувствуете?",
+    step1Hint: "Коснитесь цвета, потом выберите слово точнее.",
+    families: [
+      { name: "Тревога", words: ["Беспокойство", "Напряжение", "Страх", "Растерянность", "Нервозность"] },
+      { name: "Грусть", words: ["Печаль", "Разочарование", "Одиночество", "Тоска", "Обида"] },
+      { name: "Злость", words: ["Раздражение", "Злость", "Досада", "Возмущение", "Зависть"] },
+      { name: "Усталость", words: ["Опустошённость", "Апатия", "Бессилие", "Вялость", "Скука"] },
+      { name: "Стыд и вина", words: ["Вина", "Стыд", "Неловкость", "Неуверенность", "Сожаление"] },
+      { name: "Тепло", words: ["Радость", "Спокойствие", "Благодарность", "Надежда", "Облегчение"] },
+    ],
+    step2: (w: string) => `Насколько сильно сейчас: «${w}»?`,
+    levels: ["едва заметно", "ощутимо", "сильно", "очень сильно"],
+    step3: "Что произошло перед тем, как это появилось?",
+    step3Placeholder: "Пара слов о том, что было. Можно пропустить.",
+    step4: "Чего вам сейчас больше всего не хватает?",
+    needs: ["Отдыха", "Общения", "Поддержки", "Ясности", "Безопасности", "Движения", "Тишины"],
+    next: "Дальше",
+    skip: "Пропустить",
+    see: "Посмотреть",
+    thinking: "Думаю над тем, что вы отметили…",
+    result: (w: string, n: number) => `${w} · ${n} из 10`,
+    lacking: (list: string) => `Не хватает: ${list.toLowerCase()}.`,
+    fallback:
+      "Любое чувство — это сигнал, а не приговор. Вы его заметили и назвали, и это уже помогает ему стать чуть тише. Подумайте, какой маленький шаг мог бы дать вам немного того, чего не хватает.",
+    stepsTitle: "Маленькие шаги на ближайший час",
+    questionTitle: "Вопрос для себя",
+    try: "Может помочь",
+    restart: "Назвать другое чувство",
+    prompt: (w: string, n: number, before: string, needs: string) =>
+      `Я сейчас чувствую: ${w}, примерно на ${n} из 10.${before ? ` Перед этим было: ${before}.` : ""}${needs ? ` Мне не хватает: ${needs}.` : ""} Помоги мне с этим разобраться.`,
+    journal: (w: string, n: number, before: string, needs: string) =>
+      `${w}, ${n}/10.${before ? ` Перед этим: ${before}.` : ""}${needs ? ` Не хватает: ${needs}.` : ""}`,
+  },
+  kk: {
+    step1: "Сезінетініңізге ең жақыны қайсы?",
+    step1Hint: "Түсті түртіп, содан кейін дәлірек сөзді таңдаңыз.",
+    families: [
+      { name: "Мазасыздық", words: ["Алаңдау", "Қысылу", "Қорқыныш", "Абдырау", "Күйгелектік"] },
+      { name: "Мұң", words: ["Қайғы", "Көңіл қалу", "Жалғыздық", "Сағыныш", "Өкпе"] },
+      { name: "Ашу", words: ["Тітіркену", "Ашу", "Ренжу", "Наразылық", "Қызғаныш"] },
+      { name: "Шаршау", words: ["Босаңсу", "Енжарлық", "Әлсіздік", "Салғырттық", "Зерігу"] },
+      { name: "Ұят пен кінә", words: ["Кінә", "Ұят", "Ыңғайсыздық", "Сенімсіздік", "Өкініш"] },
+      { name: "Жылулық", words: ["Қуаныш", "Тыныштық", "Алғыс", "Үміт", "Жеңілдеу"] },
+    ],
+    step2: (w: string) => `Қазір қаншалықты күшті: «${w}»?`,
+    levels: ["әрең білінеді", "сезіледі", "күшті", "өте күшті"],
+    step3: "Бұл пайда болмас бұрын не болды?",
+    step3Placeholder: "Не болғаны туралы бірнеше сөз. Өткізіп жіберуге болады.",
+    step4: "Қазір сізге ең көп не жетіспейді?",
+    needs: ["Демалыс", "Араласу", "Қолдау", "Айқындық", "Қауіпсіздік", "Қозғалыс", "Тыныштық"],
+    next: "Әрі қарай",
+    skip: "Өткізу",
+    see: "Көру",
+    thinking: "Белгілегеніңіз туралы ойланып жатырмын…",
+    result: (w: string, n: number) => `${w} · 10-нан ${n}`,
+    lacking: (list: string) => `Жетіспейтіні: ${list.toLowerCase()}.`,
+    fallback:
+      "Кез келген сезім — үкім емес, белгі. Сіз оны байқап, атадыңыз, бұл оның сәл басылуына көмектеседі. Жетіспейтін нәрседен аздап беретін қандай кішкентай қадам болар еді, ойлап көріңіз.",
+    stepsTitle: "Жақын бір сағатқа кішкентай қадамдар",
+    questionTitle: "Өзіңізге сұрақ",
+    try: "Көмектесуі мүмкін",
+    restart: "Басқа сезімді атау",
+    prompt: (w: string, n: number, before: string, needs: string) =>
+      `Мен қазір мынаны сезінемін: ${w}, шамамен 10-нан ${n}.${before ? ` Оның алдында: ${before}.` : ""}${needs ? ` Маған жетіспейтіні: ${needs}.` : ""} Осыны түсінуге көмектесші.`,
+    journal: (w: string, n: number, before: string, needs: string) =>
+      `${w}, ${n}/10.${before ? ` Оның алдында: ${before}.` : ""}${needs ? ` Жетіспейтіні: ${needs}.` : ""}`,
+  },
+  en: {
+    step1: "What's closest to what you feel?",
+    step1Hint: "Tap a colour, then pick a more precise word.",
+    families: [
+      { name: "Anxiety", words: ["Worry", "Tension", "Fear", "Confusion", "Nervousness"] },
+      { name: "Sadness", words: ["Sorrow", "Disappointment", "Loneliness", "Longing", "Hurt"] },
+      { name: "Anger", words: ["Irritation", "Anger", "Frustration", "Indignation", "Envy"] },
+      { name: "Tiredness", words: ["Emptiness", "Apathy", "Powerlessness", "Sluggishness", "Boredom"] },
+      { name: "Shame and guilt", words: ["Guilt", "Shame", "Awkwardness", "Self-doubt", "Regret"] },
+      { name: "Warmth", words: ["Joy", "Calm", "Gratitude", "Hope", "Relief"] },
+    ],
+    step2: (w: string) => `How strong is "${w}" right now?`,
+    levels: ["barely there", "noticeable", "strong", "very strong"],
+    step3: "What happened before it appeared?",
+    step3Placeholder: "A few words about what happened. You can skip this.",
+    step4: "What are you missing most right now?",
+    needs: ["Rest", "Company", "Support", "Clarity", "Safety", "Movement", "Quiet"],
+    next: "Next",
+    skip: "Skip",
+    see: "See",
+    thinking: "Thinking about what you marked…",
+    result: (w: string, n: number) => `${w} · ${n} of 10`,
+    lacking: (list: string) => `Missing: ${list.toLowerCase()}.`,
+    fallback:
+      "Every feeling is a signal, not a verdict. You noticed it and named it, and that already helps it get a little quieter. Think about one small step that could give you a bit of what you're missing.",
+    stepsTitle: "Small steps for the next hour",
+    questionTitle: "A question for yourself",
+    try: "Might help",
+    restart: "Name another feeling",
+    prompt: (w: string, n: number, before: string, needs: string) =>
+      `Right now I feel: ${w}, about ${n} out of 10.${before ? ` Before that: ${before}.` : ""}${needs ? ` I'm missing: ${needs}.` : ""} Help me make sense of it.`,
+    journal: (w: string, n: number, before: string, needs: string) =>
+      `${w}, ${n}/10.${before ? ` Before: ${before}.` : ""}${needs ? ` Missing: ${needs}.` : ""}`,
+  },
+});

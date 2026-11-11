@@ -6,6 +6,7 @@ export function StartForm({
   topic,
   prompt,
   title,
+  opener,
   className = "",
   children,
 }: {
@@ -13,6 +14,7 @@ export function StartForm({
   topic?: string;
   prompt?: string;
   title?: string;
+  opener?: string;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -22,6 +24,7 @@ export function StartForm({
       {topic && <input type="hidden" name="topic" value={topic} />}
       {prompt && <input type="hidden" name="prompt" value={prompt} />}
       {title && <input type="hidden" name="title" value={title} />}
+      {opener && <input type="hidden" name="opener" value={opener} />}
       <button type="submit" className={className}>
         {children}
       </button>
