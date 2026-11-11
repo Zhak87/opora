@@ -10,6 +10,8 @@ import { TrialBadge } from "@/components/trial/TrialBadge";
 import { Track } from "@/components/Track";
 import { isGuest, trialUntil } from "@/lib/trial";
 
+export const metadata = { robots: { index: false } };
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user } = await requireUser();
   const { data: session } = await supabase.auth.getClaims();

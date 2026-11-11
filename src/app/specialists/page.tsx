@@ -5,7 +5,7 @@ import { freeSlots } from "@/lib/sessions";
 import { getTimeZone } from "@/lib/tz";
 import { whenLabel } from "@/lib/time";
 import { INTL } from "@/i18n/config";
-import { getLocale } from "@/i18n/server";
+import { getLocale, getMsg } from "@/i18n/server";
 import { scheduleMessages } from "@/i18n/schedule";
 import { careMessages } from "@/i18n/care";
 import { proLabels, SPECIALIZATIONS, SESSION_LANGUAGES, FORMATS } from "@/i18n/pro";
@@ -13,12 +13,18 @@ import { PublicShell } from "@/components/pro/PublicShell";
 import { Avatar, Chip } from "@/components/pro/bits";
 import { ShieldIcon } from "@/components/icons";
 import { buttonStyles } from "@/components/ui";
+import { publicMetadata } from "@/lib/seo";
 
 const PRICES = [10000, 15000, 20000, 30000];
 const select =
   "h-11 w-full rounded-2xl border border-line bg-paper px-3 text-[14px] text-ink outline-none focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
 
 type Search = { spec?: string; price?: string; format?: string; lang?: string; when?: string };
+
+export async function generateMetadata() {
+  const { catalog } = await getMsg(scheduleMessages);
+  return publicMetadata("/specialists", catalog.metaTitle, catalog.intro);
+}
 
 // Каталог проверенных психологов. Открыт и без входа: правило базы отдаёт только опубликованные анкеты.
 export default async function Specialists({ searchParams }: { searchParams: Promise<Search> }) {

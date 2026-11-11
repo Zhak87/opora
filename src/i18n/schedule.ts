@@ -9,7 +9,8 @@ export const scheduleMessages = defineMessages({
     minutes: (n: number) => `${n} мин`,
     catalog: {
       title: "Психологи",
-      intro: "Специалисты, чьё образование мы проверили. Выберите того, с кем вам будет спокойно.",
+      metaTitle: "Психологи онлайн в Казахстане — каталог Опоры",
+      intro: "Выберите психолога с проверенным образованием. Сравните специализации, языки консультаций, стоимость и ближайшее время записи.",
       filters: "Фильтры",
       specialization: "Тема",
       any: "Любая",
@@ -132,7 +133,8 @@ export const scheduleMessages = defineMessages({
     minutes: (n: number) => `${n} мин`,
     catalog: {
       title: "Психологтар",
-      intro: "Білімі тексерілген мамандар. Өзіңізге жайлы адамды таңдаңыз.",
+      metaTitle: "Қазақстандағы онлайн психологтар — Опора каталогі",
+      intro: "Білімі тексерілген психологты таңдаңыз. Мамандану бағыттарын, кеңес беру тілдерін, бағасын және ең жақын бос уақытын салыстырыңыз.",
       filters: "Сүзгілер",
       specialization: "Тақырып",
       any: "Кез келген",
@@ -255,7 +257,8 @@ export const scheduleMessages = defineMessages({
     minutes: (n: number) => `${n} min`,
     catalog: {
       title: "Psychologists",
-      intro: "Specialists whose education we have verified. Choose someone you feel at ease with.",
+      metaTitle: "Find a psychologist online in Kazakhstan — Opora",
+      intro: "Choose a psychologist whose education we have verified. Compare specialties, consultation languages, prices, and availability.",
       filters: "Filters",
       specialization: "Topic",
       any: "Any",

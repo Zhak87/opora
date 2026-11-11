@@ -5,6 +5,8 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getMsg } from "@/i18n/server";
 import { common } from "@/i18n/common";
 
+export const metadata = { robots: { index: false } };
+
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const m = await getMsg(common);
   return (
