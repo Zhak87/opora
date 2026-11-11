@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
-import { isAdmin } from "@/lib/pro";
 import { getLocale } from "@/i18n/server";
 import { funnelMessages } from "@/i18n/funnel";
 import { getGame } from "@/lib/games";
 import { needsMessages } from "@/i18n/needs";
 import { isNeed } from "@/lib/needs";
-import { PublicShell } from "@/components/pro/PublicShell";
+import { AdminFrame } from "@/components/admin/AdminFrame";
 import { Card, PageHeader } from "@/components/ui";
 
 type Report = {
@@ -27,21 +26,13 @@ const PERIODS = [7, 30, 90];
 const STEP_KEYS = ["landing", "started", "account", "useful", "returned"] as const;
 const STEP_TONES = ["bg-mist", "bg-lilac-soft", "bg-lilac", "bg-lilac-deep", "bg-ink"];
 
-// Воронка для администратора. Доступ проверяет база: funnel_report откажет не-администратору.
+// Воронка для сотрудников. Доступ проверяет база: funnel_report откажет постороннему.
 export default async function FunnelPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const { days: raw } = await searchParams;
   const days = PERIODS.includes(Number(raw)) ? Number(raw) : 30;
   const { supabase } = await requireUser();
   const locale = await getLocale();
   const m = funnelMessages[locale];
-
-  if (!(await isAdmin(supabase))) {
-    return (
-      <PublicShell home="/">
-        <p className="pt-10 text-center text-[15px] text-ink-soft">{m.forbidden}</p>
-      </PublicShell>
-    );
-  }
 
   const { data } = await supabase.rpc("funnel_report", { p_days: days });
   const r = data as Report | null;
@@ -51,7 +42,9 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
   const share = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
   return (
-    <PublicShell home="/">
+    <AdminFrame active="funnel">
+      {() => (
+        <>
       <PageHeader eyebrow={m.eyebrow} title={m.title}>{m.intro}</PageHeader>
 
       <div className="mb-6 flex gap-2">
@@ -192,7 +185,9 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
           </Card>
         </div>
       )}
-    </PublicShell>
+      </>
+      )}
+    </AdminFrame>
   );
 }
 

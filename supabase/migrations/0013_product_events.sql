@@ -47,7 +47,16 @@ $f$;
 revoke execute on function public.track_event(text, text, jsonb) from public;
 grant execute on function public.track_event(text, text, jsonb) to anon, authenticated;
 
--- Отчёт для администратора за последние p_days дней. Человек = браузер (visitor), а без него аккаунт.
+-- Кто может смотреть цифры: любой сотрудник (строка в public.admins). Роли сотрудников и то, кто из них
+-- может что-то менять, описаны в 0015_admin_panel.sql.
+create function public.is_staff()
+returns boolean
+language sql stable security definer set search_path = ''
+as $f$ select exists (select 1 from public.admins where user_id = (select auth.uid())) $f$;
+revoke execute on function public.is_staff() from public, anon;
+grant execute on function public.is_staff() to authenticated;
+
+-- Отчёт для сотрудников за последние p_days дней. Человек = браузер (visitor), а без него аккаунт.
 -- «Полезное действие»: получил ответ собеседника, прошёл практику, сделал запись в дневнике,
 -- вошёл в комнату или записался к психологу.
 create function public.funnel_report(p_days int default 30)
@@ -61,7 +70,7 @@ declare
   v_useful text[] := array['chat_reply', 'practice_complete', 'journal_entry', 'room_join', 'contact_request'];
   v_result jsonb;
 begin
-  if not public.is_admin() then
+  if not public.is_staff() then
     raise exception 'forbidden';
   end if;
 

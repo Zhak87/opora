@@ -52,9 +52,10 @@ export async function isAdmin(supabase: SupabaseClient) {
   return data === true;
 }
 
-// Для администратора — сколько анкет ждут проверки; для всех остальных — null.
+// Для сотрудника (любая роль в панели) — сколько анкет ждут проверки; для всех остальных — null.
 export async function adminPending(supabase: SupabaseClient): Promise<number | null> {
-  if (!(await isAdmin(supabase))) return null;
+  const { data: staff } = await supabase.rpc("is_staff");
+  if (staff !== true) return null;
   const { count } = await supabase.from("psychologists").select("user_id", { count: "exact", head: true }).eq("status", "pending");
   return count ?? 0;
 }

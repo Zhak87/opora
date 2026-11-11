@@ -88,7 +88,7 @@ export function Nav({
         {/* Только для администраторов: проверка анкет психологов, с числом ждущих */}
         {adminPending !== null && (
           <Link
-            href="/admin/psychologists"
+            href="/admin"
             title={m.nav.admin}
             className="mt-1.5 flex h-12 items-center gap-3 rounded-[18px] px-3 text-sky-deep transition hover:bg-mist lg:px-3.5"
           >

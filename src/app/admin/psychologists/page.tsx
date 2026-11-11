@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { requireUser } from "@/lib/supabase/server";
-import { isAdmin, siteOrigin, type Psychologist, type PsyStatus } from "@/lib/pro";
+import { siteOrigin, type Psychologist, type PsyStatus } from "@/lib/pro";
 import { shareMessages } from "@/i18n/share";
 import { inviteEmailEnabled } from "@/lib/invite-email";
 import { ShareLink } from "@/components/pro/ShareLink";
@@ -10,7 +10,8 @@ import { INTL } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
 import { adminMessages } from "@/i18n/care";
 import { proLabels, proMessages } from "@/i18n/pro";
-import { PublicShell } from "@/components/pro/PublicShell";
+import { AdminFrame } from "@/components/admin/AdminFrame";
+import { canManage } from "@/lib/admin";
 import { Avatar, Chip, StatusPill } from "@/components/pro/bits";
 import { Card, PageHeader } from "@/components/ui";
 
@@ -25,14 +26,6 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
   const m = adminMessages[locale];
   const pro = proMessages[locale];
   const labels = proLabels[locale];
-
-  if (!(await isAdmin(supabase))) {
-    return (
-      <PublicShell home="/">
-        <p className="pt-10 text-center text-[15px] text-ink-soft">{m.forbidden}</p>
-      </PublicShell>
-    );
-  }
 
   const { data } = await supabase.from("psychologists").select("*").eq("status", status).order("submitted_at", { ascending: true, nullsFirst: false }).limit(50);
   const list = (data ?? []) as Psychologist[];
@@ -50,7 +43,9 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
   const joinUrl = `${siteOrigin(await headers())}/pro/join`;
 
   return (
-    <PublicShell home="/">
+    <AdminFrame active="psychologists">
+      {({ role }) => (
+        <>
       <PageHeader title={m.title}>{m.intro}</PageHeader>
       <Card className="mb-6 bg-gradient-to-br from-paper to-lilac-soft/50 p-5 sm:p-6">
         <h2 className="text-[17px] font-medium text-ink">{sm.colleague.title}</h2>
@@ -117,6 +112,7 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
                 )}
               </div>
             </div>
+            {canManage(role) && (
             <form action={reviewPsychologist} className="mt-5 space-y-3">
               <input type="hidden" name="user" value={p.user_id} />
               <textarea
@@ -138,9 +134,12 @@ export default async function AdminPsychologists({ searchParams }: { searchParam
                 )}
               </div>
             </form>
+            )}
           </Card>
         ))}
       </div>
-    </PublicShell>
+      </>
+      )}
+    </AdminFrame>
   );
 }

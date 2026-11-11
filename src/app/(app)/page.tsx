@@ -14,7 +14,7 @@ import { courseState } from "@/lib/course";
 import { courseMessages } from "@/i18n/course";
 import { TipCheck } from "@/components/plan/TipCheck";
 import { TalkIcon, CompassIcon, PenIcon, ArrowIcon, HeartHandIcon, ShieldIcon, GridIcon } from "@/components/icons";
-import { funnelMessages } from "@/i18n/funnel";
+import { panelMessages } from "@/i18n/admin";
 import { adminPending, hasCare } from "@/lib/pro";
 import { scheduleMessages } from "@/i18n/schedule";
 import { wellbeingMessages } from "@/i18n/wellbeing";
@@ -82,18 +82,18 @@ export default async function HomePage() {
           <ArrowIcon className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
         </Link>
       )}
-      {/* Тоже только администраторам: воронка и цифры */}
+      {/* Тоже только сотрудникам: панель с цифрами, пользователями и ролями */}
       {pending !== null && (
         <Link
-          href="/admin/funnel"
+          href="/admin"
           className="group -mt-3 mb-6 flex items-center gap-4 rounded-[26px] bg-lilac-soft px-5 py-4 shadow-soft transition hover:shadow-lift"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-paper text-lilac-deep">
             <GridIcon className="h-6 w-6" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-medium text-ink">{funnelMessages[locale].link}</span>
-            <span className="mt-0.5 block text-sm text-ink-soft">{funnelMessages[locale].linkHint}</span>
+            <span className="block text-[15px] font-medium text-ink">{panelMessages[locale].homeLink}</span>
+            <span className="mt-0.5 block text-sm text-ink-soft">{panelMessages[locale].homeHint}</span>
           </span>
           <ArrowIcon className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
         </Link>
