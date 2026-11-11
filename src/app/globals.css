@@ -214,3 +214,44 @@ body {
   40% { transform: rotate(-5deg); }
   50% { transform: rotate(2deg); }
 }
+
+/* Знакомство с Опорой: сцены-истории */
+.g-in { animation: guide-in 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0ms) both; }
+.g-pop { animation: pop 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) var(--d, 0ms) both; }
+.guide-paused *, .guide-paused *::before, .guide-paused *::after { animation-play-state: paused !important; }
+@keyframes guide-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes guide-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes guide-drop {
+  0% { opacity: 0; transform: translateY(-60px) scale(0.5); }
+  60% { opacity: 1; transform: translateY(6px) scale(1.06, 0.94); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes guide-typing {
+  0% { opacity: 0; transform: translateY(8px); }
+  15%, 85% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes guide-dot {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(-4px); opacity: 1; }
+}
+@keyframes guide-breath {
+  0%, 100% { transform: scale(0.76); }
+  50% { transform: scale(1.1); }
+}
+/* Подпись «вдох» видна первую половину круга, «выдох» вторую (сдвигом на полцикла) */
+@keyframes guide-in-out {
+  0%, 44% { opacity: 1; }
+  50%, 94% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes guide-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}

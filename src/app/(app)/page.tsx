@@ -1,18 +1,20 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { greeting, relativeDate } from "@/lib/format";
 import { dailyQuestions, pickForDay } from "@/lib/content";
 import { getLocale } from "@/i18n/server";
 import { home } from "@/i18n/home";
-import { Orb } from "@/components/Orb";
+import { Mascot } from "@/components/Mascot";
 import { StartForm } from "@/components/StartForm";
 import { latestPlan } from "@/lib/plan-data";
 import { currentCourse } from "@/lib/course-data";
 import { courseState } from "@/lib/course";
 import { courseMessages } from "@/i18n/course";
 import { TipCheck } from "@/components/plan/TipCheck";
-import { DemoImport } from "@/components/DemoImport";
-import { TalkIcon, CompassIcon, PenIcon, ArrowIcon, HeartHandIcon, ShieldIcon } from "@/components/icons";
+import { TalkIcon, CompassIcon, PenIcon, ArrowIcon, HeartHandIcon, ShieldIcon, GridIcon } from "@/components/icons";
+import { panelMessages } from "@/i18n/admin";
 import { adminPending, hasCare } from "@/lib/pro";
 import { scheduleMessages } from "@/i18n/schedule";
 import { wellbeingMessages } from "@/i18n/wellbeing";
@@ -20,6 +22,9 @@ import { getTimeZone } from "@/lib/tz";
 import { dayKey } from "@/lib/time";
 import { intakeSeen } from "@/lib/intake";
 import { IntakeCard } from "@/components/IntakeCard";
+import { GUIDE_COOKIE, guideSeen } from "@/lib/guide";
+import { Needs } from "@/components/Needs";
+import { needForMood } from "@/lib/needs";
 
 // Плитки настроения 1–5 на главной: ведут к отметке дня.
 const MOOD_TILES = [
@@ -32,6 +37,9 @@ const MOOD_TILES = [
 
 export default async function HomePage() {
   const { supabase, user } = await requireUser();
+  // При первом входе сначала показываем знакомство с Опорой.
+  const { data: session } = await supabase.auth.getClaims();
+  if (user && !guideSeen(session?.claims, (await cookies()).get(GUIDE_COOKIE)?.value)) redirect("/guide");
   const locale = await getLocale();
   const m = home[locale];
   const today = dayKey(new Date(), await getTimeZone());
@@ -53,7 +61,6 @@ export default async function HomePage() {
 
   return (
     <div className="stagger">
-      <DemoImport />
       {/* Видно только администраторам: вход в проверку анкет психологов */}
       {pending !== null && (
         <Link
@@ -75,10 +82,25 @@ export default async function HomePage() {
           <ArrowIcon className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
         </Link>
       )}
+      {/* Тоже только сотрудникам: панель с цифрами, пользователями и ролями */}
+      {pending !== null && (
+        <Link
+          href="/admin"
+          className="group -mt-3 mb-6 flex items-center gap-4 rounded-[26px] bg-lilac-soft px-5 py-4 shadow-soft transition hover:shadow-lift"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-paper text-lilac-deep">
+            <GridIcon className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-medium text-ink">{panelMessages[locale].homeLink}</span>
+            <span className="mt-0.5 block text-sm text-ink-soft">{panelMessages[locale].homeHint}</span>
+          </span>
+          <ArrowIcon className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+        </Link>
+      )}
       {/* Капля смотрит на человека и меняет цвет под сегодняшнее настроение */}
       <section className="mb-8 flex flex-col items-center text-center sm:mb-10">
-        <Orb size={168} face mood={checkin?.mood ?? 3} className="sm:hidden" />
-        <Orb size={208} face mood={checkin?.mood ?? 3} className="hidden sm:block" />
+        <Mascot mood={checkin?.mood ?? 3} />
         <p className="mt-3 text-[15px] text-ink-soft">
           {greeting(new Date(), locale)}
           {name ? `, ${name}` : ""}
@@ -119,6 +141,9 @@ export default async function HomePage() {
         <ActionLink href="/explore" title={m.explore} hint={m.exploreHint} tone="bg-mist text-sky-deep" Icon={CompassIcon} />
         <ActionLink href="/journal" title={m.journal} hint={m.journalHint} tone="bg-sage-soft text-sage-deep" Icon={PenIcon} />
       </section>
+
+      {/* По потребностям: человек выбирает, что ему нужно, а не раздел приложения */}
+      <Needs initial={needForMood(checkin?.mood)} />
 
       {showIntake && <IntakeCard />}
 

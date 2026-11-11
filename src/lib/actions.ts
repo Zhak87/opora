@@ -1,5 +1,6 @@
 "use server";
 
+import { track } from "@/lib/track";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
@@ -36,6 +37,7 @@ export async function startConversation(formData: FormData) {
     .select("id")
     .single();
   if (error || !data) throw new Error(error?.message ?? t.startFailed);
+  await track("chat_start");
 
   if (topic) {
     await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: topic.opener });
@@ -98,6 +100,16 @@ export async function deleteAllHistory() {
   redirect("/profile?cleared=1");
 }
 
+// Оценка разговора: помог ли он (3 — да, 2 — немного, 1 — нет). В аналитику идёт только сама оценка.
+export async function rateConversation(conversationId: string, value: number): Promise<{ ok: boolean }> {
+  const { supabase } = await authed();
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId) || ![1, 2, 3].includes(value)) return { ok: false };
+  const { error } = await supabase.from("conversations").update({ rating: value }).eq("id", conversationId);
+  if (error) return { ok: false };
+  await track("chat_rated", { value: String(value) });
+  return { ok: true };
+}
+
 /* ---------- Дневник ---------- */
 
 export async function addJournalEntry(_: unknown, formData: FormData) {
@@ -109,6 +121,7 @@ export async function addJournalEntry(_: unknown, formData: FormData) {
   if (!(kind in JOURNAL_KINDS)) return { error: t.journalUnknownKind };
   const { error } = await supabase.from("journal_entries").insert({ kind, content: content.slice(0, 10000) });
   if (error) return { error: t.journalSaveFailed };
+  await track("journal_entry");
   revalidatePath("/journal");
   return { ok: Date.now() };
 }
@@ -201,35 +214,4 @@ export async function deleteAccount(formData: FormData) {
   if (error) redirect("/profile?error=1");
   await supabase.auth.signOut();
   redirect("/welcome?deleted=1");
-}
-
-/* ---------- Пробный разговор ---------- */
-
-// Переносит разговор, начатый без аккаунта, в только что созданный аккаунт.
-export async function importDemo(messages: { role: string; content: string }[]): Promise<string | null> {
-  const { supabase } = await authed();
-  const clean = (Array.isArray(messages) ? messages : [])
-    .filter((m) => (m?.role === "user" || m?.role === "assistant") && typeof m.content === "string" && m.content.trim())
-    .slice(0, 40)
-    .map((m) => ({ role: m.role as "user" | "assistant", content: m.content.trim().slice(0, 4000) }));
-  const first = clean.find((m) => m.role === "user");
-  if (!first) return null;
-
-  const words = first.content.replace(/\s+/g, " ");
-  const title = words.length > 48 ? words.slice(0, 46).trimEnd() + "…" : words;
-  const { data, error } = await supabase.from("conversations").insert({ mode: "talk", title }).select("id").single();
-  if (error || !data) return null;
-
-  // Отдельное время для каждой реплики, чтобы порядок сохранился.
-  const start = Date.now() - clean.length * 1000;
-  await supabase.from("messages").insert(
-    clean.map((m, i) => ({
-      conversation_id: data.id,
-      role: m.role,
-      content: m.content,
-      created_at: new Date(start + i * 1000).toISOString(),
-    })),
-  );
-  revalidatePath("/", "layout");
-  return data.id;
 }

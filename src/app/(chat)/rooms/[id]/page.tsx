@@ -1,3 +1,4 @@
+import { Track } from "@/components/Track";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { people, reportList, requestList, roomInfo, roomMessages } from "@/lib/rooms/data";
@@ -34,6 +35,8 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   ]);
 
   return (
+    <>
+    <Track name="room_join" />
     <RoomView
       me={user!.id}
       room={info}
@@ -44,5 +47,6 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
       initialReports={reports}
       voiceReady={voiceConfigured()}
     />
+    </>
   );
 }

@@ -13,6 +13,7 @@ import { ZenGarden } from "@/components/games/ZenGarden";
 import { Strengths } from "@/components/games/Strengths";
 import { Letter } from "@/components/games/Letter";
 import { getLocale } from "@/i18n/server";
+import { PracticeTrack } from "@/components/Track";
 
 const COMPONENTS: Record<string, React.ComponentType> = {
   bubbles: Bubbles,
@@ -35,6 +36,7 @@ export default async function GamePage({ params }: { params: Promise<{ game: str
   if (!meta || !Component) notFound();
   return (
     <GameShell title={meta.title} hint={meta.hint}>
+      <PracticeTrack game={game} />
       <Component />
     </GameShell>
   );

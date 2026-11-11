@@ -1,3 +1,4 @@
+import { Track } from "@/components/Track";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { PUBLIC_COLUMNS, type Psychologist } from "@/lib/pro";
@@ -20,6 +21,7 @@ export default async function PublicProfile({ params }: { params: Promise<{ slug
   const locale = await getLocale();
   return (
     <PublicShell home={user ? "/" : "/welcome"}>
+      <Track name="psychologist_view" />
       {user?.id === p.user_id && p.status !== "approved" && (
         <p className="mb-4 rounded-2xl bg-mist/60 px-5 py-3 text-sm text-sky-deep">{careMessages[locale].invite.ownInvite}</p>
       )}

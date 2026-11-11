@@ -1,5 +1,6 @@
 "use server";
 
+import { track } from "@/lib/track";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -46,6 +47,7 @@ export async function createRoom(_: Result | undefined, form: FormData): Promise
     p_max_speakers: Number(form.get("max_speakers") ?? 5) || 5,
   });
   if (error || !id) return { error: code(error?.message) };
+  await track("room_create");
   catalogChanged();
   redirect(`/rooms/${id}`);
 }

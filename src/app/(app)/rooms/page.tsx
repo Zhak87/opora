@@ -1,3 +1,4 @@
+import { Track } from "@/components/Track";
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
 import { catalog } from "@/lib/rooms/data";
@@ -26,6 +27,7 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
+      <Track name="room_view" />
       <PageHeader eyebrow={m.eyebrow} title={m.title}>
         {m.lead}
       </PageHeader>

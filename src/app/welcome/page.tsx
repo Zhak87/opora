@@ -9,6 +9,15 @@ import { welcomeMessages } from "@/i18n/welcome";
 import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
 import { profileMessages } from "@/i18n/profile";
+import { guideMessages } from "@/i18n/guide";
+import { trialMessages } from "@/i18n/trial";
+import { startTrial } from "@/lib/trial-actions";
+import { TRIAL_MINUTES } from "@/lib/trial";
+import { buttonStyles } from "@/components/ui";
+import { Track } from "@/components/Track";
+import { needsMessages } from "@/i18n/needs";
+import { mascotMessages } from "@/i18n/mascot";
+import { isAudience } from "@/lib/needs";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
 const BUBBLES = [
@@ -18,15 +27,20 @@ const BUBBLES = [
   "right-[2%] bottom-[8%] bg-mist",
 ];
 
-export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
-  const { deleted } = await searchParams;
+export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ deleted?: string; for?: string }> }) {
+  const { deleted, for: aud } = await searchParams;
   const m = await getMsg(welcomeMessages);
   const c = await getMsg(common);
   const legal = await getMsg(legalMessages);
   const a = await getMsg(aboutMessages);
   const pm = await getMsg(profileMessages);
+  const g = await getMsg(guideMessages);
+  const t = await getMsg(trialMessages);
+  // Ссылка для аудитории (/welcome?for=step или share) меняет только слова на первом экране.
+  const hero = isAudience(aud) ? (await getMsg(needsMessages)).audiences[aud] : m;
   return (
     <div className="relative flex min-h-dvh flex-col">
+      <Track name="landing_view" aud={isAudience(aud) ? aud : undefined} />
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-6 sm:px-8">
         <span className="flex items-center gap-2"><Orb size={34} still face /><span className="hidden font-display text-[19px] font-semibold lowercase tracking-[-0.03em] text-ink sm:inline">{c.brand}</span></span>
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -45,7 +59,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           <div className="relative mx-auto flex h-[300px] w-full max-w-[420px] items-center justify-center sm:h-[400px] lg:order-2">
             <Orb size={220} face className="sm:hidden" />
             <Orb size={290} face className="hidden sm:block" />
-            {m.feelings.slice(0, 4).map((f, i) => (
+            {hero.feelings.slice(0, 4).map((f, i) => (
               <span
                 key={f}
                 className={`absolute animate-float whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-ink shadow-soft ${BUBBLES[i]}`}
@@ -56,13 +70,26 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             ))}
           </div>
           <div className="flex flex-col items-center lg:items-start">
-            <h1 className="max-w-2xl animate-rise font-serif text-[34px] leading-[1.08] text-ink sm:text-[54px]">{m.title}</h1>
-            <p className="mt-6 max-w-lg animate-rise text-[17px] leading-relaxed text-ink-soft [animation-delay:120ms]">{m.lead}</p>
+            <h1 className="max-w-2xl animate-rise font-serif text-[34px] leading-[1.08] text-ink sm:text-[54px]">{hero.title}</h1>
+            <p className="mt-6 max-w-lg animate-rise text-[17px] leading-relaxed text-ink-soft [animation-delay:120ms]">{hero.lead}</p>
             <div className="mt-9 flex w-full max-w-xs animate-rise flex-col gap-3 [animation-delay:220ms] sm:max-w-none sm:flex-row sm:justify-center lg:justify-start">
-              <ButtonLink href="/demo" className="h-14 whitespace-nowrap px-8">{m.tryDemo}</ButtonLink>
+              <form action={startTrial} className="contents">
+                <button type="submit" className={`${buttonStyles.primary} h-14 whitespace-nowrap px-8`}>{m.tryDemo}</button>
+              </form>
               <ButtonLink href="/signup" variant="soft" className="h-14 whitespace-nowrap px-8">{m.createAccount}</ButtonLink>
             </div>
-            <p className="mt-4 animate-fade text-sm text-ink-faint [animation-delay:300ms]">{m.noEmail}</p>
+            <p className="mt-4 animate-fade text-sm text-ink-soft [animation-delay:300ms]">{t.startHint(TRIAL_MINUTES)}</p>
+            <p className="mt-1.5 max-w-md animate-fade text-xs leading-relaxed text-ink-faint [animation-delay:300ms]">
+              {t.startNote[0]}
+              <Link href="/terms" className="underline underline-offset-2 hover:text-ink-soft">{t.startNote[1]}</Link>
+              {t.startNote[2]}
+            </p>
+            <Link href="/guide" className="group mt-5 inline-flex animate-fade items-center gap-2 rounded-full bg-paper/80 py-2 pl-2 pr-4 text-sm font-medium text-ink shadow-soft transition hover:shadow-lift [animation-delay:380ms]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-lilac-deep text-paper">
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 translate-x-px" fill="currentColor" aria-hidden><path d="M8 5.5v13l11-6.5-11-6.5Z" /></svg>
+              </span>
+              {g.welcomeLink}
+            </Link>
           </div>
         </div>
       </main>
@@ -83,6 +110,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <p className="mt-2 flex justify-center gap-4">
           <Link href="/privacy" className="hover:text-ink">{legal.links.privacy}</Link>
           <Link href="/terms" className="hover:text-ink">{legal.links.terms}</Link>
+          <Link href="/mascot" className="hover:text-ink">{(await getMsg(mascotMessages)).footerLink}</Link>
           <Link href="/pro/join" className="hover:text-ink">{pm.proTitle}</Link>
         </p>
       </footer>
