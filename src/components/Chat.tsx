@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BackIcon, SendIcon, LeafIcon, TrashIcon } from "./icons";
 import { Orb } from "./Orb";
 import { Breathe } from "./Breathe";
@@ -21,7 +21,8 @@ import { sendEvent } from "./Track";
 
 // pending: реплика ещё не точно сохранена на сервере, отменять её пока нельзя.
 // step: «следующий шаг», который собеседник предложил в этой реплике (кнопка под ответом).
-type Message = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; step?: string | null };
+type Message = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; error?: string; step?: string | null };
+type ReplyListener = (text: string, complete: boolean) => void;
 
 // Оценку разговора спрашиваем, когда собеседник ответил хотя бы столько раз.
 const RATE_AFTER = 3;
@@ -52,17 +53,25 @@ export function Chat({
   const [voice, setVoice] = useState(initialVoice);
   const [talking, setTalking] = useState(false);
   const voiceRef = useRef(voice);
-  voiceRef.current = voice;
-  useEffect(() => () => speech.stop(), []);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      speech.stop();
+    };
+  }, []);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [breathing, setBreathing] = useState(false);
   const [showCrisis, setShowCrisis] = useState(() => initialMessages.some((m) => m.role === "user" && looksLikeCrisis(m.content)));
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const followReply = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const autoStarted = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const undoInFlight = useRef(false);
   const [undoing, setUndoing] = useState(false);
   // Упражнение при тревоге: какое открыто сейчас и для какой реплики карточку уже закрыли.
   const [calmTool, setCalmTool] = useState<CalmTool | null>(null);
@@ -73,14 +82,19 @@ export function Chat({
   const [justRated, setJustRated] = useState(false);
   const [rateHidden, setRateHidden] = useState(false);
 
-  const scrollDown = useCallback((smooth = true) => {
-    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
-  }, []);
-
   const send = useCallback(
-    async (text?: string, viaVoice = false): Promise<string | null> => {
+    async (text?: string, onVoiceReply?: ReplyListener): Promise<string | null> => {
+      if (abortRef.current || undoInFlight.current) return null;
+      const controller = new AbortController();
+      abortRef.current = controller;
       const content = text?.trim();
-      let reply: string | null = null;
+      const mayAutoPlay = !onVoiceReply && voiceRef.current.auto;
+      if (content && !onVoiceReply) {
+        speech.stop();
+        if (mayAutoPlay) speech.unlock();
+        inputRef.current?.focus({ preventScroll: true });
+      }
+      followReply.current = true;
       setBusy(true);
       const replyId = `a-${Date.now()}`;
       const userId = `u-${Date.now()}`;
@@ -91,57 +105,93 @@ export function Chat({
         { id: replyId, role: "assistant" as const, content: "" },
       ]);
       if (content && looksLikeCrisis(content)) setShowCrisis(true);
-      const controller = new AbortController();
-      abortRef.current = controller;
+      let playReply: ReturnType<typeof speech.stream> | undefined;
+      const showError = (message: string, unsent = false) => {
+        setMessages((prev) => prev.flatMap((m) => {
+          if (unsent && m.id === userId) return [];
+          return [m.id === replyId ? { ...m, error: message } : m];
+        }));
+        if (unsent && content && !onVoiceReply) setInput((draft) => draft || content);
+      };
 
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversationId, message: content, voice: viaVoice }),
+          body: JSON.stringify({ conversationId, message: content, voice: Boolean(onVoiceReply) }),
           signal: controller.signal,
         });
-        // Сервер отвечает только после того, как сохранил реплику: теперь её можно отменить.
-        if (res.ok) setMessages((prev) => prev.map((m) => (m.id === userId ? { ...m, pending: false } : m)));
+        const saved = res.headers.has("X-Opora-Message-Id");
+        if (saved) {
+          setMessages((prev) => prev.map((m) => (m.id === userId ? { ...m, pending: false } : m)));
+        }
+        if (!res.ok) {
+          const current = textRef.current.t;
+          if (res.headers.get("Content-Type")?.startsWith("text/plain")) {
+            const errorText = (await res.text()).trim() || current.connectionLost;
+            showError(errorText);
+          } else {
+            await res.body?.cancel();
+            if (!saved && [400, 401, 403, 404, 429, 500].includes(res.status)) {
+              showError(res.status === 429 ? current.sendBusy : current.sendFailed, true);
+            } else {
+              showError(current.connectionLost);
+            }
+          }
+          return null;
+        }
         if (!res.body) throw new Error("no body");
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let acc = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          acc += decoder.decode(value, { stream: true });
-          // Метку «следующий шаг» человек не видит: показываем текст без неё.
-          const shown = visibleText(acc);
-          setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: shown } : m)));
+        const updateVoice = (shown: string, complete: boolean) => {
+          if (!shown || !mounted.current || controller.signal.aborted) return;
+          if (onVoiceReply) {
+            onVoiceReply(shown, complete);
+          } else if (mayAutoPlay && voiceRef.current.auto) {
+            playReply ??= speech.stream(replyId, voiceRef.current, textRef.current.locale);
+            playReply(shown, complete);
+          }
+        };
+        let previous = "";
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            acc += decoder.decode(value, { stream: true });
+            // Метку «следующий шаг» человек не видит и не слышит.
+            const shown = visibleText(acc);
+            if (shown === previous) continue;
+            previous = shown;
+            setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: shown } : m)));
+            updateVoice(shown, false);
+          }
+          acc += decoder.decode();
+        } finally {
+          reader.releaseLock();
         }
         const { text: clean, step } = splitStep(acc);
         if (!clean) throw new Error("empty");
         setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: clean, step } : m)));
-        reply = clean;
-        if (voiceRef.current.auto && !viaVoice) speech.speak(replyId, clean, voiceRef.current, textRef.current.locale);
+        updateVoice(clean, true);
+        return clean;
       } catch {
+        if (speech.get().id === replyId) speech.stop();
         if (controller.signal.aborted) return null;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === replyId
-              ? { ...m, content: textRef.current.t.connectionLost }
-              : m,
-          ),
-        );
+        showError(textRef.current.t.connectionLost);
+        return null;
       } finally {
         if (abortRef.current === controller) abortRef.current = null;
         setBusy(false);
-        if (!viaVoice) inputRef.current?.focus({ preventScroll: true });
       }
-      return reply;
     },
     [conversationId],
   );
 
   // Отмена последней реплики: останавливаем ответ, удаляем реплику и ответ, текст возвращаем в поле ввода.
   const undo = async (id: string) => {
-    if (undoing) return;
+    if (undoInFlight.current) return;
+    undoInFlight.current = true;
     setUndoing(true);
     speech.stop();
     if (abortRef.current) {
@@ -149,7 +199,8 @@ export function Chat({
       // Даём серверу заметить обрыв, чтобы недописанный ответ не сохранился после удаления.
       await new Promise((r) => setTimeout(r, 600));
     }
-    const r = await undoLastMessage(conversationId);
+    const r = await undoLastMessage(conversationId).catch(() => ({ error: t.undoFailed }));
+    undoInFlight.current = false;
     setUndoing(false);
     if ("error" in r) {
       alert(r.error);
@@ -163,21 +214,20 @@ export function Chat({
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  const askVoice = useCallback((t: string) => send(t, true), [send]);
   const closeVoice = useCallback(() => setTalking(false), []);
 
   // Если последним было сообщение человека (например, из дневника), собеседник отвечает сам.
   useEffect(() => {
-    scrollDown(false);
     if (autoStarted.current) return;
     autoStarted.current = true;
     const last = initialMessages[initialMessages.length - 1];
     if (last?.role === "user") send();
-  }, [initialMessages, send, scrollDown]);
+  }, [initialMessages, send]);
 
-  useEffect(() => {
-    scrollDown();
-  }, [messages.length, scrollDown]);
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    if (scroller && followReply.current) scroller.scrollTop = scroller.scrollHeight;
+  }, [messages, busy, showCrisis]);
 
   useEffect(() => {
     const el = inputRef.current;
@@ -188,11 +238,9 @@ export function Chat({
 
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || busy) return;
+    if (!input.trim() || abortRef.current || undoInFlight.current) return;
     const text = input;
     setInput("");
-    speech.stop();
-    if (voiceRef.current.auto) speech.unlock();
     send(text);
   };
 
@@ -216,7 +264,7 @@ export function Chat({
       ? "topic"
       : null;
   const showCalm = !busy && !!calmKey && calmKey !== calmDismissed;
-  const replies = messages.filter((m) => m.role === "assistant" && m.content).length;
+  const replies = messages.filter((m) => m.role === "assistant" && m.content && !m.error).length;
   const showRate = !busy && !showCalm && !rateHidden && replies >= RATE_AFTER && (rating === null || justRated);
   const stepLabel = (step: StepCode) =>
     (PLACE_STEPS as readonly string[]).includes(step)
@@ -242,6 +290,7 @@ export function Chat({
           <button
             onClick={() => {
               const next = { ...voice, auto: !voice.auto };
+              voiceRef.current = next;
               setVoice(next);
               if (next.auto) speech.unlock();
               else speech.stop();
@@ -280,7 +329,14 @@ export function Chat({
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        onScroll={(e) => {
+          const { scrollHeight, scrollTop, clientHeight } = e.currentTarget;
+          followReply.current = scrollHeight - scrollTop - clientHeight < 80;
+        }}
+        className="flex-1 overflow-y-auto"
+      >
         <div className="mx-auto max-w-2xl px-5 pb-8 pt-8 sm:px-8">
           {empty && (
             <div className="flex animate-fade flex-col items-center pt-[8vh] text-center">
@@ -327,10 +383,13 @@ export function Chat({
               ) : (
                 <div key={m.id} className="flex animate-rise gap-3.5">
                   <Orb size={34} still face className="-mt-1 hidden sm:block" />
-                  {m.content ? (
+                  {m.content || m.error ? (
                     <div className="min-w-0 max-w-[92%]">
-                      <p className="whitespace-pre-wrap rounded-[24px] rounded-bl-[8px] bg-paper px-5 py-3.5 text-[16px] leading-[1.6] text-ink shadow-soft">{m.content}</p>
-                      {!(busy && m.id === messages[messages.length - 1]?.id) && (
+                      <p className="whitespace-pre-wrap rounded-[24px] rounded-bl-[8px] bg-paper px-5 py-3.5 text-[16px] leading-[1.6] text-ink shadow-soft">
+                        {m.content || m.error}
+                      </p>
+                      {m.content && m.error && <p className="mt-1.5 px-2 text-sm text-ink-soft" role="status">{m.error}</p>}
+                      {!m.error && !(busy && m.id === messages[messages.length - 1]?.id) && (
                         <SpeakButton id={m.id} text={m.content} voice={voice} className="-ml-3 mt-1.5" />
                       )}
                       {isStep(m.step) && !(busy && m.id === messages[messages.length - 1]?.id) && (
@@ -437,7 +496,6 @@ export function Chat({
               </button>
             </aside>
           )}
-          <div ref={bottomRef} className="h-1" />
         </div>
       </div>
 
@@ -458,7 +516,7 @@ export function Chat({
           {input.trim() ? (
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || undoing}
               aria-label={t.send}
               className="flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-[18px] bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-lilac-deep active:scale-90 disabled:bg-sand-deep disabled:text-paper"
             >
@@ -467,7 +525,7 @@ export function Chat({
           ) : (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || undoing}
               onClick={() => {
                 speech.unlock();
                 setTalking(true);
@@ -506,7 +564,7 @@ export function Chat({
           }}
         />
       )}
-      {talking && <VoiceMode voice={voice} ask={askVoice} onClose={closeVoice} />}
+      {talking && <VoiceMode voice={voice} ask={send} onClose={closeVoice} />}
     </div>
   );
 }

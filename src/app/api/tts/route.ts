@@ -3,7 +3,7 @@ import { synthesize, ttsConfigured } from "@/lib/ai";
 import { getVoice } from "@/lib/voices";
 import { HOUR, tooMany } from "@/lib/rate-limit";
 
-export const maxDuration = 60;
+export const maxDuration = 20;
 
 export async function POST(req: Request) {
   const { user } = await requireUser();
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   if (!clean) return new Response("empty", { status: 400 });
 
   try {
-    const audio = await synthesize(clean, getVoice(String(voice)).id);
+    const audio = await synthesize(clean, getVoice(String(voice)).id, req.signal);
     return new Response(audio as BodyInit, {
       headers: { "Content-Type": "audio/wav", "Cache-Control": "private, max-age=86400" },
     });

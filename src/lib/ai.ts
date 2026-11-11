@@ -28,6 +28,9 @@ const GEMINI_MODELS = (process.env.GEMINI_MODEL || "gemini-flash-latest,gemini-f
 const CHAT_MODELS = process.env.GEMINI_MODEL ? GEMINI_MODELS : [...GEMINI_MODELS].reverse();
 const FIRST_WORDS_TIMEOUT = 4_000;
 const CHAT_START_TIMEOUT = 10_000;
+const CHAT_RESPONSE_TIMEOUT = 30_000;
+const MODEL_RETRY_DELAY = 60_000;
+const modelRetryAt = new Map<string, number>();
 
 // Разговоры о здоровье, отношениях и трудных чувствах не должны блокироваться фильтрами.
 const SAFETY = [
@@ -74,7 +77,10 @@ async function streamGemini({ system, messages, signal }: StreamOptions) {
       generationConfig: { temperature: 0.8, maxOutputTokens: 4096, ...(thinking ? { thinkingConfig: thinking } : {}) },
     });
 
-  const queue = [...CHAT_MODELS, ...CHAT_MODELS];
+  // Если модель только что подвела, начинаем со здоровой, но позже проверяем исходный порядок снова.
+  const ready = CHAT_MODELS.filter((model) => (modelRetryAt.get(model) ?? 0) <= started);
+  const cooling = CHAT_MODELS.filter((model) => (modelRetryAt.get(model) ?? 0) > started);
+  const queue = [...ready, ...cooling, ...ready, ...cooling];
   let last: AIError | null = null;
   for (const [i, model] of queue.entries()) {
     if (i === CHAT_MODELS.length) await new Promise((resolve) => setTimeout(resolve, 400));
@@ -82,7 +88,7 @@ async function streamGemini({ system, messages, signal }: StreamOptions) {
     const remaining = CHAT_START_TIMEOUT - (Date.now() - started);
     if (remaining <= 0) break;
     const controller = new AbortController();
-    const attemptSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
+    const attemptSignal = replySignal(controller, signal);
     // Дедлайн включает получение первого видимого фрагмента. После него поток может идти дальше.
     const timer = setTimeout(() => controller.abort(), Math.min(FIRST_WORDS_TIMEOUT, remaining));
     try {
@@ -97,11 +103,14 @@ async function streamGemini({ system, messages, signal }: StreamOptions) {
           },
         );
         if (res.ok && res.body) {
-          if (process.env.AI_FAST_THINKING !== "off") thinkingChoice.set(model, thinking);
-          return await startTextStream(sseToText(res.body, (data) => {
+          const stream = await startTextStream(sseToText(res.body, (data) => {
             const parts = JSON.parse(data)?.candidates?.[0]?.content?.parts ?? [];
             return parts.map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? "")).join("");
-          }), () => console.log(`[ai] ${model} first words in ${Date.now() - started} ms (thinking: ${JSON.stringify(thinking)})`));
+          }));
+          if (process.env.AI_FAST_THINKING !== "off") thinkingChoice.set(model, thinking);
+          modelRetryAt.delete(model);
+          console.log(`[ai] ${model} response started in ${Date.now() - started} ms`);
+          return stream;
         }
         const text = await res.text();
         last = new AIError(res.status, `Gemini ${model} ${res.status}: ${text.slice(0, 300)}`);
@@ -118,25 +127,49 @@ async function streamGemini({ system, messages, signal }: StreamOptions) {
     } finally {
       clearTimeout(timer);
     }
+    modelRetryAt.set(model, Date.now() + MODEL_RETRY_DELAY);
   }
   throw last ?? new AIError(500, "Gemini: no models configured");
 }
 
-async function startTextStream(stream: ReadableStream<string>, onFirstChunk: () => void) {
+function replySignal(firstWords: AbortController, request?: AbortSignal) {
+  const signals = [firstWords.signal, AbortSignal.timeout(CHAT_RESPONSE_TIMEOUT)];
+  if (request) signals.push(request);
+  return AbortSignal.any(signals);
+}
+
+async function startTextStream(stream: ReadableStream<string>) {
   const reader = stream.getReader();
-  const first = await reader.read();
-  if (!first.done) onFirstChunk();
+  const read = async () => {
+    try {
+      const result = await reader.read();
+      if (result.done) reader.releaseLock();
+      return result;
+    } catch (e) {
+      reader.releaseLock();
+      throw e;
+    }
+  };
+  let first = await read();
+  while (!first.done && !first.value.trim()) first = await read();
+  if (first.done) throw new AIError(502, "AI returned no visible answer");
+  const firstText = first.value;
   return new ReadableStream<string>({
     start(controller) {
-      if (first.done) controller.close();
-      else controller.enqueue(first.value);
+      controller.enqueue(firstText);
     },
     async pull(controller) {
-      const { done, value } = await reader.read();
+      const { done, value } = await read();
       if (done) controller.close();
       else controller.enqueue(value);
     },
-    cancel: (reason) => reader.cancel(reason),
+    async cancel(reason) {
+      try {
+        await reader.cancel(reason);
+      } finally {
+        reader.releaseLock();
+      }
+    },
   });
 }
 
@@ -217,26 +250,31 @@ async function completeOpenAI({ system, messages, temperature = 0.9 }: Options) 
 async function streamOpenAI({ system, messages, signal }: StreamOptions) {
   const base = process.env.OPENAI_BASE_URL || "https://openrouter.ai/api/v1";
   const model = process.env.OPENAI_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
-  const res = await fetch(`${base}/chat/completions`, {
-    method: "POST",
-    signal,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      stream: true,
-      temperature: 0.8,
-      messages: [{ role: "system", content: system }, ...messages],
-    }),
-  });
-  if (!res.ok || !res.body) throw new AIError(res.status, `AI ${res.status}: ${await res.text()}`);
-
-  return sseToText(res.body, (data) => {
-    if (data === "[DONE]") return "";
-    return JSON.parse(data)?.choices?.[0]?.delta?.content ?? "";
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CHAT_START_TIMEOUT);
+  try {
+    const res = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      signal: replySignal(controller, signal),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        stream: true,
+        temperature: 0.8,
+        messages: [{ role: "system", content: system }, ...messages],
+      }),
+    });
+    if (!res.ok || !res.body) throw new AIError(res.status, `AI ${res.status}: ${await res.text()}`);
+    return await startTextStream(sseToText(res.body, (data) => {
+      if (data === "[DONE]") return "";
+      return JSON.parse(data)?.choices?.[0]?.delta?.content ?? "";
+    }));
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function sseToText(body: ReadableStream<Uint8Array>, extract: (data: string) => string) {
@@ -266,7 +304,7 @@ function sseToText(body: ReadableStream<Uint8Array>, extract: (data: string) => 
 
 /* ---------- Озвучка ---------- */
 
-const TTS_MODELS = (process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts,gemini-3.8-flash-lite-tts")
+const TTS_MODELS = (process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-lite-tts,gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts")
   .split(",")
   .map((m) => m.trim())
   .filter(Boolean);
@@ -277,7 +315,7 @@ export function ttsConfigured() {
 
 // Возвращает WAV. Некоторые модели отдают «сырой» PCM 16 бит — тогда добавляем заголовок сами.
 // Отправляем только сам текст: любые указания вроде «прочитай спокойно» модель может произнести вслух.
-export async function synthesize(text: string, voice: string): Promise<Uint8Array> {
+export async function synthesize(text: string, voice: string, signal: AbortSignal): Promise<Uint8Array> {
   const body = JSON.stringify({
     contents: [{ parts: [{ text }] }],
     generationConfig: {
@@ -285,38 +323,46 @@ export async function synthesize(text: string, voice: string): Promise<Uint8Arra
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
     },
   });
+  // На весь отрывок один бюджет ожидания, включая запасные модели.
+  const short = text.length <= 180;
+  const deadline = AbortSignal.any([signal, AbortSignal.timeout(short ? 8_000 : 14_000)]);
   let last: AIError | null = null;
-  for (const [i, model] of TTS_MODELS.entries()) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), i === 0 ? 15_000 : 20_000);
+  for (const model of TTS_MODELS) {
+    if (deadline.aborted) break;
+    const attempt = AbortSignal.any([deadline, AbortSignal.timeout(short ? 5_000 : 9_000)]);
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
         body,
-        signal: controller.signal,
+        signal: attempt,
       });
       if (!res.ok) {
-        last = new AIError(res.status, `TTS ${model} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+        last = new AIError(res.status, `TTS ${model}: HTTP ${res.status}`);
         console.error(last.message);
+        await res.body?.cancel();
+        if (res.status === 401) break;
         continue;
       }
       const json = await res.json();
-      const part = (json?.candidates?.[0]?.content?.parts ?? []).find((p: { inlineData?: unknown }) => p.inlineData);
+      const part = (json?.candidates?.[0]?.content?.parts ?? []).find((p: { inlineData?: { data?: unknown } }) => p.inlineData?.data);
       if (!part) {
         last = new AIError(502, `TTS ${model}: no audio`);
         continue;
       }
-      const bytes = Uint8Array.from(Buffer.from(part.inlineData.data as string, "base64"));
+      const bytes = Buffer.from(part.inlineData.data as string, "base64");
       const mime = String(part.inlineData.mimeType || "");
+      if (!bytes.length) {
+        last = new AIError(502, `TTS ${model}: empty audio`);
+        continue;
+      }
       if (/wav/i.test(mime)) return bytes;
       const rate = Number(/rate=(\d+)/.exec(mime)?.[1] || 24000);
       return wav(bytes, rate);
     } catch (e) {
+      if (signal.aborted) throw signal.reason;
       last = new AIError(504, `TTS ${model}: ${(e as Error).message}`);
       console.error(last.message);
-    } finally {
-      clearTimeout(timer);
     }
   }
   throw last ?? new AIError(500, "TTS: no models");
