@@ -29,7 +29,6 @@ export const legalMessages = defineMessages<{
     decline: string;
     failed: string;
   };
-  demoNote: Linked;
   links: { privacy: string; terms: string };
 }>({
   ru: {
@@ -81,7 +80,7 @@ export const legalMessages = defineMessages<{
         p: [
           "Пока существует ваш аккаунт. Отдельный разговор или запись можно удалить в любой момент.",
           "В «Профиле» можно удалить всю историю или весь аккаунт. Данные удаляются из рабочей базы сразу; в резервных копиях хостинга они могут оставаться ограниченное время, после чего удаляются автоматически.",
-          "Пробный разговор без регистрации хранится только в вашем браузере и отправляется на сервер лишь для получения ответа ИИ.",
+          "Пробный доступ без регистрации: на 20 минут создаётся временный гостевой аккаунт. Разговоры и записи гостя хранятся на сервере так же, как у зарегистрированных пользователей. Если гость не создаёт аккаунт, его данные автоматически удаляются в течение суток после окончания пробного времени, а кнопка «Выйти без сохранения» удаляет их сразу.",
         ],
       },
       {
@@ -185,11 +184,6 @@ export const legalMessages = defineMessages<{
       decline: "Не согласен(на), выйти",
       failed: "Не получилось сохранить. Попробуйте ещё раз.",
     },
-    demoNote: [
-      "Это ИИ, а не специалист. Отправляя сообщение, вы принимаете ",
-      "условия и политику конфиденциальности",
-      ". Не пишите имя, адрес и другие данные, по которым вас можно узнать.",
-    ],
     links: { privacy: "Конфиденциальность", terms: "Условия" },
   },
   kk: {
@@ -241,7 +235,7 @@ export const legalMessages = defineMessages<{
         p: [
           "Аккаунтыңыз бар болғанша. Жеке әңгімені немесе жазбаны кез келген уақытта жоюға болады.",
           "«Профиль» бөлімінде бүкіл тарихты немесе бүкіл аккаунтты жоюға болады. Деректер жұмыс дерекқорынан бірден жойылады; хостингтің резервтік көшірмелерінде олар шектеулі уақыт қалуы мүмкін, содан кейін автоматты түрде жойылады.",
-          "Тіркелусіз сынақ әңгіме тек браузеріңізде сақталады және серверге тек ЖИ жауабын алу үшін жіберіледі.",
+          "Тіркелусіз сынақ кіру: 20 минутқа уақытша қонақ аккаунты жасалады. Қонақтың әңгімелері мен жазбалары тіркелген пайдаланушылардікі сияқты серверде сақталады. Қонақ аккаунт ашпаса, оның деректері сынақ уақыты аяқталғаннан кейін бір тәулік ішінде автоматты түрде жойылады, ал «Сақтамай шығу» түймесі оларды бірден жояды.",
         ],
       },
       {
@@ -343,11 +337,6 @@ export const legalMessages = defineMessages<{
       decline: "Келіспеймін, шығу",
       failed: "Сақтау мүмкін болмады. Қайта көріңіз.",
     },
-    demoNote: [
-      "Бұл маман емес, ЖИ. Хабарлама жіберу арқылы сіз ",
-      "шарттар мен құпиялылық саясатын",
-      " қабылдайсыз. Есіміңізді, мекенжайыңызды және сізді танып-білуге болатын басқа деректерді жазбаңыз.",
-    ],
     links: { privacy: "Құпиялылық", terms: "Шарттар" },
   },
   en: {
@@ -399,7 +388,7 @@ export const legalMessages = defineMessages<{
         p: [
           "For as long as your account exists. You can delete any conversation or entry at any time.",
           "In Profile you can delete all your history or your whole account. Data is removed from the live database immediately; it may remain in hosting backups for a limited time and is then deleted automatically.",
-          "A trial conversation without an account is stored only in your browser and is sent to the server only to get the AI's reply.",
+          "Trial access without signing up: a temporary guest account is created for 20 minutes. A guest's conversations and entries are stored on the server the same way as for registered users. If the guest doesn't create an account, their data is deleted automatically within a day after the trial ends, and the “Leave without saving” button deletes it at once.",
         ],
       },
       {
@@ -499,11 +488,6 @@ export const legalMessages = defineMessages<{
       decline: "I don't agree, sign out",
       failed: "Couldn't save. Please try again.",
     },
-    demoNote: [
-      "This is an AI, not a professional. By sending a message you accept the ",
-      "terms and privacy policy",
-      ". Please don't include your name, address or other details that could identify you.",
-    ],
     links: { privacy: "Privacy", terms: "Terms" },
   },
 });

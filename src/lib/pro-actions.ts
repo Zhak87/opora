@@ -1,5 +1,6 @@
 "use server";
 
+import { isGuest } from "@/lib/trial";
 import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -52,6 +53,7 @@ function parseEducation(raw: string): Education[] {
 
 export async function createPsychologist() {
   const { supabase, user } = await authed();
+  if (isGuest((await supabase.auth.getClaims()).data?.claims)) redirect("/trial?state=need");
   if (await myPsychologist(supabase, user.id)) redirect("/pro");
   const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).maybeSingle();
   const base = slugify(profile?.name ?? "") || "psy";
@@ -185,6 +187,7 @@ type AcceptState = { error?: string } | undefined;
 export async function acceptInvite(_: AcceptState, formData: FormData): Promise<AcceptState> {
   const { supabase, user } = await authed();
   const m = careMessages[await getLocale()].invite;
+  if (isGuest((await supabase.auth.getClaims()).data?.claims)) redirect("/trial?state=need");
   if (formData.get("understand") !== "on") return { error: m.understand };
   // Без общего согласия на обработку данных подключаться к специалисту нельзя.
   const { data: auth } = await supabase.auth.getClaims();

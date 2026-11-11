@@ -13,7 +13,6 @@ import { currentCourse } from "@/lib/course-data";
 import { courseState } from "@/lib/course";
 import { courseMessages } from "@/i18n/course";
 import { TipCheck } from "@/components/plan/TipCheck";
-import { DemoImport } from "@/components/DemoImport";
 import { TalkIcon, CompassIcon, PenIcon, ArrowIcon, HeartHandIcon, ShieldIcon } from "@/components/icons";
 import { adminPending, hasCare } from "@/lib/pro";
 import { scheduleMessages } from "@/i18n/schedule";
@@ -59,7 +58,6 @@ export default async function HomePage() {
 
   return (
     <div className="stagger">
-      <DemoImport />
       {/* Видно только администраторам: вход в проверку анкет психологов */}
       {pending !== null && (
         <Link

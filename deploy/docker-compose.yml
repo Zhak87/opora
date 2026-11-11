@@ -48,6 +48,7 @@ services:
       - |
         H="Authorization: Bearer $$CRON_SECRET"
         echo "0 3 * * * wget -qO- --header '$$H' http://app:3000/api/cron/daily-email; wget -qO- --header '$$H' http://app:3000/api/cron/session-reminders" > /etc/crontabs/root
+        echo "17 * * * * wget -qO- --header '$$H' http://app:3000/api/cron/trial-cleanup" >> /etc/crontabs/root
         exec crond -f -l 8
 
   # Голос в «Комнатах»: медиасервер LiveKit. Спикеры отправляют звук один раз, сервер раздаёт его слушателям,
@@ -170,7 +171,10 @@ services:
       GOTRUE_JWT_SECRET: ${SB_JWT_SECRET}
       GOTRUE_JWT_ISSUER: ${NEXT_PUBLIC_SITE_URL}/auth/v1
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
-      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      # Пробный доступ без регистрации: гость получает анонимный аккаунт на 20 минут (src/lib/trial.ts).
+      # Запросы идут с сервера сайта, с одного адреса, поэтому общий лимит большой; на человека считает сам сайт.
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "true"
+      GOTRUE_RATE_LIMIT_ANONYMOUS_USERS: 600
       GOTRUE_MAILER_AUTOCONFIRM: ${SB_MAILER_AUTOCONFIRM:-false}
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_PASSWORD_MIN_LENGTH: 8

@@ -6,9 +6,13 @@ import { unreadCount } from "@/lib/notifications";
 import { getLocale } from "@/i18n/server";
 import { adminPending, hasCare } from "@/lib/pro";
 import { unreadTotal } from "@/lib/care-chat";
+import { TrialBadge } from "@/components/trial/TrialBadge";
+import { isGuest, trialUntil } from "@/lib/trial";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user } = await requireUser();
+  const { data: session } = await supabase.auth.getClaims();
+  const guest = isGuest(session?.claims);
   const [unread, care, pro, careUnread, admin] = user
     ? await Promise.all([
         unreadCount(supabase, await getLocale()).catch(() => 0),
@@ -24,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : [0, false, false, 0, null];
   return (
     <div className="min-h-dvh md:pl-[100px] lg:pl-[244px]">
+      {guest && <TrialBadge until={trialUntil(session?.claims)} />}
       <Nav unread={unread} care={care} pro={pro} careUnread={careUnread} adminPending={admin} />
       <div className="fixed right-4 top-4 z-30 flex items-center gap-2 pt-[env(safe-area-inset-top)] md:hidden">
         <Bell unread={unread} />

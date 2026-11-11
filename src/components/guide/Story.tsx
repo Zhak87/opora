@@ -9,6 +9,8 @@ import { useMsg } from "@/i18n/client";
 import { guideMessages } from "@/i18n/guide";
 import { chime } from "@/lib/chime";
 import { finishGuide } from "@/lib/guide-actions";
+import { startTrial } from "@/lib/trial-actions";
+import { trialMessages } from "@/i18n/trial";
 
 // Знакомство с «Опорой»: рассказ из семи сцен. Листается сам, как истории, или по нажатию;
 // удержание ставит на паузу. Каждая сцена появляется с анимацией и тихим звуком.
@@ -33,6 +35,7 @@ const delay = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
 export function Story({ authed }: { authed: boolean }) {
   const m = useMsg(guideMessages);
+  const t = useMsg(trialMessages);
   const total = DURATIONS.length;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -192,7 +195,15 @@ export function Story({ authed }: { authed: boolean }) {
               ) : (
                 <div className="flex flex-col gap-2.5">
                   <Link href="/signup" className={`${buttonStyles.primary} h-14`}>{m.finish.signup}</Link>
-                  <Link href="/demo" className={`${buttonStyles.soft} h-14`}>{m.finish.demo}</Link>
+                  <form action={startTrial} className="contents">
+                    <input type="hidden" name="guide" value="seen" />
+                    <button type="submit" className={`${buttonStyles.soft} h-14`}>{m.finish.demo}</button>
+                  </form>
+                  <p className="text-center text-xs leading-relaxed text-ink-faint">
+                    {t.startNote[0]}
+                    <Link href="/terms" className="underline underline-offset-2 hover:text-ink-soft">{t.startNote[1]}</Link>
+                    {t.startNote[2]}
+                  </p>
                 </div>
               )}
             </div>

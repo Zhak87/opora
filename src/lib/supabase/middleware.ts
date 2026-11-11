@@ -2,12 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasConsent } from "@/lib/consent";
 import { safeNext } from "@/lib/safe-next";
+import { closedForGuest, isGuest, trialOver } from "@/lib/trial";
 
 const PUBLIC_PATHS = [
-  "/welcome", "/demo", "/guide", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email",
+  "/welcome", "/guide", "/trial", "/login", "/signup", "/forgot", "/auth", "/privacy", "/terms", "/email",
   // Открытые страницы специалистов: профиль, приглашение по ссылке, страница «Для психологов».
   "/p", "/invite", "/pro/join", "/specialists",
 ];
+
+// Что остаётся открытым гостю после окончания пробного времени.
+const GUEST_ALWAYS = ["/trial", "/login", "/auth", "/privacy", "/terms"];
 
 export async function updateSession(request: NextRequest) {
   const { searchParams, pathname } = request.nextUrl;
@@ -60,14 +64,30 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && ["/welcome", "/demo", "/login", "/signup"].includes(path)) {
-    return NextResponse.redirect(new URL(safeNext(searchParams.get("next")), request.url));
+  // Гость (пробный доступ): комнаты закрыты, а когда 20 минут вышли, открыт только экран «Создать аккаунт».
+  const guest = isGuest(user);
+  if (guest) {
+    const over = trialOver(user);
+    const closed = closedForGuest(path);
+    if (path.startsWith("/api")) {
+      if (over || closed) return withCookies(NextResponse.json({ error: over ? "trial over" : "account required" }, { status: 403 }), response);
+    } else if ((over && !GUEST_ALWAYS.some((p) => path === p || path.startsWith(p + "/"))) || closed || path === "/signup") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/trial";
+      url.search = closed && !over ? "?from=rooms" : "";
+      return withCookies(NextResponse.redirect(url), response);
+    }
+  }
+
+  // Гостю вход оставляем открытым: у него уже может быть свой аккаунт.
+  if (user && ["/welcome", "/login", "/signup"].includes(path) && !(guest && path === "/login")) {
+    return withCookies(NextResponse.redirect(new URL(safeNext(searchParams.get("next")), request.url)), response);
   }
 
   // Кто зарегистрировался до появления согласия (или до новой версии политики), подтверждает его один раз.
   if (user && !isPublic && !hasConsent(user)) {
     if (path.startsWith("/api")) {
-      if (path !== "/api/demo") return withCookies(NextResponse.json({ error: "consent required" }, { status: 403 }), response);
+      return withCookies(NextResponse.json({ error: "consent required" }, { status: 403 }), response);
     } else if (path !== "/consent" && path !== "/reset") {
       const url = request.nextUrl.clone();
       url.pathname = "/consent";

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { hasConsent } from "@/lib/consent";
+import { isGuest } from "@/lib/trial";
 import { getLocale } from "@/i18n/server";
 import { scheduleMessages, TIMEZONES } from "@/i18n/schedule";
 import { careMessages } from "@/i18n/care";
@@ -34,6 +35,8 @@ function dbError(message: string | undefined, m: Awaited<ReturnType<typeof msg>>
 
 export async function bookSession(_: State, formData: FormData): Promise<State> {
   const { supabase } = await authed();
+  // Запись к живому специалисту только с настоящим аккаунтом: гость исчезнет через 20 минут.
+  if (isGuest((await supabase.auth.getClaims()).data?.claims)) redirect("/trial?state=need");
   const m = await msg();
   const psychologist = String(formData.get("psychologist") ?? "");
   const startsAt = String(formData.get("slot") ?? "");

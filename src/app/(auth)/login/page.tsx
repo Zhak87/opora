@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { resendConfirmation, signIn } from "@/lib/auth-actions";
 import { Field, Notice } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
-import { DemoNote } from "@/components/DemoNote";
 import { useMsg } from "@/i18n/client";
 import { authMessages } from "@/i18n/auth";
 
@@ -41,7 +40,6 @@ function LoginForm() {
     <>
       <h1 className="mb-1 font-serif text-[26px] text-ink">{m.login.title}</h1>
       <p className="mb-7 text-[15px] text-ink-soft">{m.login.subtitle}</p>
-      <DemoNote />
       <div className="space-y-4">
         {expired && (
           <>
