@@ -91,24 +91,24 @@ export function PushOptIn({ publicKey, locale, prompt = false, email }: {
 
   if (status === "loading" || (prompt && ["enabled", "blocked", "unsupported", "failed"].includes(status))) return null;
   const canEnablePhone = status === "ready" || status === "install";
-  const canEnableEmail = email?.available && !emailEnabled;
-  const actionLabel = canEnablePhone && canEnableEmail ? m.enableBoth : canEnablePhone ? m.enable : m.enableEmail;
 
-  function enable() {
+  function enablePhone() {
     if (status === "ready") void toggle();
-    if (status === "install") setShowInstall(true);
-    if (canEnableEmail) void toggleEmail(true);
+    if (status === "install") setShowInstall(!showInstall);
   }
 
   return (
     <section className="mb-4 rounded-2xl border border-line bg-paper p-4 text-sm text-ink-soft" aria-live="polite">
-      {(canEnableEmail || (canEnablePhone && (status !== "install" || !showInstall))) && (
-        <div>
-          <button type="button" className={`${buttonStyles.primary} w-full sm:w-auto`} disabled={busy || emailBusy} onClick={enable}>
-            {actionLabel}
-          </button>
-          {canEnableEmail && canEnablePhone && <p className="mt-2">{m.bothHint}</p>}
-        </div>
+      {canEnablePhone && (
+        <button
+          type="button"
+          className={`${buttonStyles.primary} w-full sm:w-auto`}
+          disabled={busy}
+          aria-expanded={status === "install" ? showInstall : undefined}
+          onClick={enablePhone}
+        >
+          {m.enable}
+        </button>
       )}
       {status === "install" && showInstall && <p className="mt-2">{m.install}</p>}
       {(status === "blocked" || status === "failed" || (status === "unsupported" && publicKey)) && <p className="mt-2">{m[status]}</p>}
@@ -123,6 +123,11 @@ export function PushOptIn({ publicKey, locale, prompt = false, email }: {
           <p>{m.emailEnabled}</p>
           <button type="button" className="underline underline-offset-4" disabled={emailBusy} onClick={() => void toggleEmail(false)}>{m.disableEmail}</button>
         </div>
+      )}
+      {email?.available && !emailEnabled && (
+        <button type="button" className="mt-3 underline underline-offset-4" disabled={emailBusy} onClick={() => void toggleEmail(true)}>
+          {m.enableEmail}
+        </button>
       )}
       {failed && <p className="mt-2">{m.failed}</p>}
       {emailFailed && !failed && <p className="mt-2">{m.failed}</p>}

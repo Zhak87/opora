@@ -1,4 +1,7 @@
 import { cookies } from "next/headers";
+import { after } from "next/server";
+import { sendNotification } from "web-push";
+import { pushMessages } from "@/i18n/push";
 import { getLocale } from "@/i18n/server";
 import { pushConfig } from "@/lib/push-config";
 import { PUSH_DEVICE_COOKIE, removePushDevice, validPushEndpoint } from "@/lib/push-device";
@@ -25,7 +28,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!pushConfig()) return new Response(null, { status: 503 });
+  const config = pushConfig();
+  if (!config) return new Response(null, { status: 503 });
   if (!request.headers.get("content-type")?.startsWith("application/json")) return new Response(null, { status: 415 });
   const userId = await registeredUserId();
   if (!userId) return new Response(null, { status: 401 });
@@ -40,12 +44,14 @@ export async function POST(request: Request) {
   const jar = await cookies();
   const previousId = jar.get(PUSH_DEVICE_COOKIE)?.value;
   const admin = createAdminClient();
+  const locale = await getLocale();
+  const endpoint = body.endpoint;
   const { data, error } = await admin.from("push_subscriptions").upsert({
-    endpoint: body.endpoint,
+    endpoint,
     user_id: userId,
     p256dh,
     auth_key: authKey,
-    locale: await getLocale(),
+    locale,
   }, { onConflict: "endpoint" }).select("id").single();
   if (error) return new Response(null, { status: 503 });
   if (previousId && UUID_RE.test(previousId) && previousId !== data.id) {
@@ -54,6 +60,18 @@ export async function POST(request: Request) {
   jar.set(PUSH_DEVICE_COOKIE, data.id, {
     httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365,
   });
+  if (previousId !== data.id) {
+    const m = pushMessages[locale];
+    after(async () => {
+      try {
+        await sendNotification({ endpoint, keys: { p256dh, auth: authKey } },
+          JSON.stringify({ title: m.title, body: m.test, href: "/notifications", tag: "opora-push-enabled" }),
+          { vapidDetails: config, TTL: 60, timeout: 5000, urgency: "high" });
+      } catch (error) {
+        console.warn("Push confirmation could not be delivered", (error as { statusCode?: number }).statusCode);
+      }
+    });
+  }
   return new Response(null, { status: 204 });
 }
 
