@@ -9,6 +9,7 @@ import { BalancePanel, GoalList, TrendPanel } from "@/components/wellbeing/Panel
 import { scheduleMessages } from "@/i18n/schedule";
 import { SessionList } from "@/components/schedule/SessionList";
 import { NewSessionForm } from "@/components/schedule/ProForms";
+import { acceptRequest, declineRequest } from "@/lib/session-actions";
 import { endLink } from "@/lib/pro-actions";
 import { relativeDate } from "@/lib/format";
 import { getLocale } from "@/i18n/server";
@@ -36,8 +37,37 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
   const locale = await getLocale();
   const m = proMessages[locale].clients;
   const care = careMessages[locale];
-  const client = (await myClients(supabase, user!.id)).find((c) => c.link.client_id === id && c.link.status === "active");
-  if (!client) notFound();
+  const links = await myClients(supabase, user!.id);
+  const client = links.find((c) => c.link.client_id === id && c.link.status === "active");
+  if (!client) {
+    // Новая заявка из каталога: человек уже есть в списке, но доступ к карточке появится после «Принять».
+    const request = links.find((c) => c.link.client_id === id && c.link.status === "pending");
+    if (!request) notFound();
+    const sm = scheduleMessages[locale].pro;
+    return (
+      <>
+        <Link href="/pro/clients" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
+          <BackIcon className="h-4 w-4" /> {common[locale].back}
+        </Link>
+        <Card className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-7" data-request-card>
+          <Avatar name={request.name ?? "?"} size={64} />
+          <div className="min-w-0 flex-1">
+            <h1 className="font-serif text-[28px] leading-tight text-ink">{request.name ?? m.noName}</h1>
+            <p className="mt-1 text-sm text-ink-soft">{sm.requestFrom}</p>
+          </div>
+          <div className="flex gap-2">
+            <form action={acceptRequest}>
+              <input type="hidden" name="link" value={request.link.id} />
+              <button className={`${buttonStyles.primary} h-11 px-5 text-sm`} data-accept>{sm.accept}</button>
+            </form>
+            <ConfirmForm action={declineRequest} question={sm.declineConfirm} hidden={{ link: request.link.id, back: "clients" }}>
+              <button className={`${buttonStyles.ghost} h-11 px-4 text-sm`}>{sm.decline}</button>
+            </ConfirmForm>
+          </div>
+        </Card>
+      </>
+    );
+  }
   // Сам факт просмотра попадает в журнал, который видит клиент.
   await supabase.rpc("log_client_view", { p_client: id, p_what: "card" });
   const [log, me, sessions, notes, [report]] = await Promise.all([
