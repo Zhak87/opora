@@ -11,6 +11,10 @@ export function emailSendingEnabled() {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.DAILY_EMAILS === "on");
 }
 
+export function notificationEmailConfigured() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.CRON_SECRET);
+}
+
 export function siteUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 }
@@ -148,10 +152,18 @@ export function renderDailyEmail(opts: {
   return { subject, html, text, unsubscribe: unsubscribeUrl(opts.userId, true) };
 }
 
-export async function sendEmail(msg: { to: string; subject: string; html: string; text: string; unsubscribe?: string; replyTo?: string }) {
+export async function sendEmail(msg: {
+  to: string; subject: string; html: string; text: string; unsubscribe?: string; replyTo?: string;
+  idempotencyKey?: string; signal?: AbortSignal;
+}) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      ...(msg.idempotencyKey ? { "Idempotency-Key": msg.idempotencyKey } : {}),
+    },
+    signal: msg.signal,
     body: JSON.stringify({
       from: process.env.EMAIL_FROM,
       to: [msg.to],

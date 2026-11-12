@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { courseState, todayIn, type Course, type CourseDay } from "@/lib/course";
-import { emailSendingEnabled, renderDailyEmail, sendEmail } from "@/lib/email";
+import { emailSendingEnabled, notificationEmailConfigured, renderDailyEmail, sendEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -18,6 +18,10 @@ export async function GET(req: Request) {
   // Бесплатный Resend: 100 писем в день и не больше 2 в секунду.
   const limit = Math.max(1, Number(process.env.DAILY_EMAILS_LIMIT) || 90);
   const admin = createAdminClient();
+  if (notificationEmailConfigured() && new URL(req.url).searchParams.get("dry") !== "1") {
+    const { error } = await admin.rpc("queue_daily_notification_emails");
+    if (error) console.error("Could not queue daily notification emails", error.code);
+  }
 
   const { data: courses, error } = await admin
     .from("courses")
