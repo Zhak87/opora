@@ -5,12 +5,13 @@ import { defineMessages } from "./config";
 type Entry = { title: string; hint: string; why: string; how: string[] };
 export type GameSlug =
   | "empty-bowl" | "thought-jar" | "breath" | "grounding" | "bubbles" | "light" | "garden"
-  | "emotion" | "what-if" | "letter"
-  | "strengths" | "jar"
+  | "emotion" | "mirror" | "what-if" | "letter"
+  | "boundaries" | "unsaid"
+  | "strengths" | "wins" | "jar"
   | "wheel" | "values" | "one-step"
   | "talk-out";
 type Catalog = Record<GameSlug, Entry>;
-export type Category = "calm" | "self" | "confidence" | "path" | "heard";
+export type Category = "calm" | "self" | "relations" | "confidence" | "path" | "heard";
 export type Feeling = "anxious" | "sad" | "lonely" | "calm" | "lost" | "grow";
 
 const catalogRu: Catalog = {
@@ -62,6 +63,30 @@ const catalogRu: Catalog = {
     why: "Когда чувство названо точно, оно становится понятнее и чуть тише. А зная, чего не хватает, проще выбрать, что сделать.",
     how: ["Выберите чувство из палитры", "Отметьте, насколько оно сильное", "Подумайте, что было перед этим и что вам нужно"],
   },
+  mirror: {
+    title: "Зеркало личности",
+    hint: "Десять вопросов себе и отражение того, что повторяется",
+    why: "Мы редко спрашиваем себя о простом: что радует, чего избегаю, когда я настоящий. В ответах видны желания, привычки и внутренние противоречия.",
+    how: ["Зеркало задаст до десяти вопросов", "Отвечайте коротко, любой вопрос можно пропустить", "В конце увидите темы, которые повторяются"],
+  },
+  boundaries: {
+    title: "Мои границы",
+    hint: "Потренироваться говорить «нет» на жизненной ситуации",
+    why: "Отказывать и просить трудно, пока нет своих слов. Здесь можно безопасно примерить разные ответы и найти фразу, которая звучит по-вашему.",
+    how: ["Выберите ситуацию или опишите свою", "Посмотрите, к чему ведут разные ответы", "Соберите свою фразу, которой обозначите границу"],
+  },
+  unsaid: {
+    title: "Несказанные слова",
+    hint: "Письмо человеку, которое никуда не отправится",
+    why: "Невысказанное остаётся внутри и занимает много места. Его можно сформулировать, не вступая в контакт с человеком.",
+    how: ["Выберите, кому и о чём хотите сказать", "Ответьте на три вопроса, из них сложится письмо", "Перечитайте, сохраните или отпустите его"],
+  },
+  wins: {
+    title: "Мои маленькие победы",
+    hint: "Зажечь три фонарика за то, что сегодня получилось",
+    why: "Усилия легко не заметить, особенно свои. Три маленькие победы в день помогают смотреть на себя честнее и теплее.",
+    how: ["Вспомните три вещи, которые сегодня получились", "Подойдут самые простые: встал вовремя, позвонил близкому", "Победы останутся в вашем календаре"],
+  },
   "what-if": {
     title: "Если бы не было страха",
     hint: "Карточки-вопросы, чтобы услышать свои желания",
@@ -96,7 +121,7 @@ const catalogRu: Catalog = {
     title: "Мой компас",
     hint: "Найти то, что для вас по-настоящему важно",
     why: "Когда ясно, что важно, проще принимать решения и замечать, где жизнь от этого уходит.",
-    how: ["Отберите важные ценности из карточек", "Оставьте самые главные", "Посмотрите, насколько жизнь им сейчас соответствует"],
+    how: ["Из 20 ценностей зажгите 10 важных", "Оставьте пять, а потом одну главную", "Посмотрите, насколько жизнь сейчас идёт по этому компасу"],
   },
   "one-step": {
     title: "Один шаг",
@@ -121,11 +146,11 @@ const feelingsRu = {
   sad: { label: "Грустно", items: [
     ["emotion", "Назвать грусть точнее и понять, чего ей не хватает."],
     ["talk-out", "Иногда достаточно, чтобы вас просто выслушали."],
-    ["jar", "Найти пару тёплых мелочей, не отменяя грусть."],
+    ["wins", "Заметить три вещи, которые сегодня всё-таки получились."],
   ] },
   lonely: { label: "Одиноко", items: [
     ["talk-out", "Рассказать о том, что происходит, тому, кто слушает."],
-    ["letter", "Написать письмо себе, как близкому другу."],
+    ["unsaid", "Сказать человеку то, что осталось несказанным, не отправляя письмо."],
     ["emotion", "Понять, какой близости сейчас не хватает."],
   ] },
   calm: { label: "Спокойно", items: [
@@ -141,7 +166,7 @@ const feelingsRu = {
   grow: { label: "Хочу развиваться", items: [
     ["one-step", "Превратить желание в одно дело на сегодня."],
     ["wheel", "Найти сферу, куда стоит направить силы."],
-    ["strengths", "Опереться на то, что у вас уже получается."],
+    ["mirror", "Задать себе десять вопросов и увидеть, что повторяется."],
   ] },
 } satisfies Record<Feeling, { label: string; items: [GameSlug, string][] }>;
 
@@ -173,6 +198,7 @@ export const gamesMessages = defineMessages({
       groups: {
         calm: { title: "Успокоиться", hint: "Переключить внимание, заметить своё состояние и немного замедлиться." },
         self: { title: "Понять себя", hint: "Распознать эмоции и услышать свои желания." },
+        relations: { title: "Отношения", hint: "Границы, близость и то, что осталось несказанным." },
         confidence: { title: "Уверенность в себе", hint: "Заметить свои силы, усилия и маленькие победы." },
         path: { title: "Найти своё направление", hint: "Понять, что важно, и перейти к небольшим делам." },
         heard: { title: "Быть услышанным", hint: "Выговориться и почувствовать, что вас слышат." },
@@ -277,6 +303,30 @@ export const gamesMessages = defineMessages({
         why: "Сезім дәл аталғанда, ол түсініктірек әрі сәл тынышырақ болады. Неге жетіспейтінін білсеңіз, не істеу керегін таңдау оңай.",
         how: ["Палитрадан сезімді таңдаңыз", "Оның қаншалықты күшті екенін белгілеңіз", "Оның алдында не болғанын және сізге не керегін ойлаңыз"],
       },
+      mirror: {
+        title: "Тұлға айнасы",
+        hint: "Өзіңізге он сұрақ және қайталанатын нәрсенің бейнесі",
+        why: "Біз өзімізден қарапайым нәрсені сирек сұраймыз: не қуантады, неден қашамын, қашан өзіммін. Жауаптардан қалаулар, әдеттер және ішкі қайшылықтар көрінеді.",
+        how: ["Айна онға дейін сұрақ қояды", "Қысқа жауап беріңіз, кез келген сұрақты өткізуге болады", "Соңында қайталанатын тақырыптарды көресіз"],
+      },
+      boundaries: {
+        title: "Менің шекараларым",
+        hint: "Өмірлік жағдайда «жоқ» деп айтуды жаттығу",
+        why: "Өз сөзіңіз болмайынша, бас тарту да, сұрау да қиын. Мұнда әртүрлі жауапты қауіпсіз байқап, өзіңізше естілетін сөйлемді табуға болады.",
+        how: ["Жағдайды таңдаңыз немесе өзіңіздікін жазыңыз", "Әртүрлі жауап неге әкелетінін қараңыз", "Шекараңызды білдіретін өз сөйлеміңізді құраңыз"],
+      },
+      unsaid: {
+        title: "Айтылмаған сөздер",
+        hint: "Ешқайда жіберілмейтін адамға арналған хат",
+        why: "Айтылмаған нәрсе іште қалып, көп орын алады. Оны адаммен байланысқа шықпай-ақ сөзге айналдыруға болады.",
+        how: ["Кімге және не туралы айтқыңыз келетінін таңдаңыз", "Үш сұраққа жауап беріңіз, олардан хат құралады", "Қайта оқып, сақтаңыз немесе жіберіп қойыңыз"],
+      },
+      wins: {
+        title: "Менің кішкентай жеңістерім",
+        hint: "Бүгін шыққан нәрсе үшін үш шам жағу",
+        why: "Талпынысты байқамай қалу оңай, әсіресе өзіңіздікін. Күніне үш кішкентай жеңіс өзіңізге әділ әрі жылы қарауға көмектеседі.",
+        how: ["Бүгін шыққан үш нәрсені еске алыңыз", "Ең қарапайымы да жарайды: уақытында тұрдым, жақыныма қоңырау шалдым", "Жеңістер күнтізбеңізде қалады"],
+      },
       "what-if": {
         title: "Егер қорқыныш болмаса",
         hint: "Өз қалауыңызды есту үшін сұрақ карточкалары",
@@ -311,7 +361,7 @@ export const gamesMessages = defineMessages({
         title: "Менің компасым",
         hint: "Сіз үшін шынымен маңыздыны табу",
         why: "Не маңызды екені анық болғанда, шешім қабылдау және өмірдің одан қай жерде алыстап жатқанын байқау оңайырақ.",
-        how: ["Карточкалардан маңызды құндылықтарды іріктеңіз", "Ең бастыларын қалдырыңыз", "Өміріңіз оларға қазір қаншалықты сай екенін қараңыз"],
+        how: ["20 құндылықтың ішінен 10 маңыздысын жағыңыз", "Бесеуін, сосын ең басты біреуін қалдырыңыз", "Өміріңіз қазір осы компаспен қаншалықты жүріп жатқанын қараңыз"],
       },
       "one-step": {
         title: "Бір қадам",
@@ -335,11 +385,11 @@ export const gamesMessages = defineMessages({
       sad: { label: "Мұңды", items: [
         ["emotion", "Мұңды дәлірек атап, оған неге жетіспейтінін түсіну."],
         ["talk-out", "Кейде жай тыңдалу жеткілікті."],
-        ["jar", "Мұңды жоққа шығармай, бірнеше жылы ұсақ-түйек табу."],
+        ["wins", "Бүгін бәрібір шыққан үш нәрсені байқау."],
       ] },
       lonely: { label: "Жалғыз", items: [
         ["talk-out", "Не болып жатқанын тыңдайтын біреуге айту."],
-        ["letter", "Өзіңізге жақын досқа жазғандай хат жазу."],
+        ["unsaid", "Айтылмай қалғанды хатты жібермей-ақ адамға айту."],
         ["emotion", "Қазір қандай жақындық жетіспейтінін түсіну."],
       ] },
       calm: { label: "Тыныш", items: [
@@ -355,7 +405,7 @@ export const gamesMessages = defineMessages({
       grow: { label: "Дамығым келеді", items: [
         ["one-step", "Қалауды бүгінгі бір іске айналдыру."],
         ["wheel", "Күшті қай салаға бағыттау керегін табу."],
-        ["strengths", "Қазірдің өзінде шығып жатқан нәрсеге сүйену."],
+        ["mirror", "Өзіңізге он сұрақ қойып, не қайталанатынын көру."],
       ] },
     },
     page: {
@@ -382,6 +432,7 @@ export const gamesMessages = defineMessages({
       groups: {
         calm: { title: "Тынышталу", hint: "Назарды ауыстырып, күйіңізді байқап, сәл баяулау." },
         self: { title: "Өзіңді түсіну", hint: "Эмоцияларды тану және өз қалауыңызды есту." },
+        relations: { title: "Қарым-қатынас", hint: "Шекаралар, жақындық және айтылмай қалған нәрсе." },
         confidence: { title: "Өзіңе сенім", hint: "Күшіңізді, талпынысыңызды және кішкентай жеңістеріңізді байқау." },
         path: { title: "Өз бағытыңды табу", hint: "Не маңызды екенін түсініп, шағын істерге көшу." },
         heard: { title: "Тыңдалу", hint: "Сөйлеп алып, сізді естіп тұрғанын сезіну." },
@@ -486,6 +537,30 @@ export const gamesMessages = defineMessages({
         why: "When a feeling is named precisely, it becomes clearer and a little quieter. Knowing what you lack makes it easier to choose what to do.",
         how: ["Pick a feeling from the palette", "Mark how strong it is", "Think about what came before and what you need"],
       },
+      mirror: {
+        title: "Mirror of self",
+        hint: "Ten questions to yourself and a reflection of what repeats",
+        why: "We rarely ask ourselves simple things: what delights me, what I avoid, when I feel like myself. The answers show wishes, habits and inner contradictions.",
+        how: ["The mirror asks up to ten questions", "Answer briefly, any question can be skipped", "At the end you'll see the themes that repeat"],
+      },
+      boundaries: {
+        title: "My boundaries",
+        hint: "Practise saying no in a real-life situation",
+        why: "Refusing and asking are hard until you have your own words. Here you can safely try different answers and find a phrase that sounds like you.",
+        how: ["Pick a situation or describe your own", "See where different answers lead", "Build your own phrase to mark the boundary"],
+      },
+      unsaid: {
+        title: "Unsaid words",
+        hint: "A letter to someone that will never be sent",
+        why: "What stays unsaid lives inside and takes up a lot of room. You can put it into words without contacting the person.",
+        how: ["Choose who it's for and what it's about", "Answer three questions and they become a letter", "Reread it, keep it or let it go"],
+      },
+      wins: {
+        title: "My small wins",
+        hint: "Light three lanterns for what worked out today",
+        why: "Effort is easy to miss, especially your own. Three small wins a day help you see yourself more fairly and more warmly.",
+        how: ["Recall three things that worked out today", "The simplest ones count: got up on time, called someone close", "Your wins stay in your calendar"],
+      },
       "what-if": {
         title: "If there were no fear",
         hint: "Question cards to hear your own wishes",
@@ -520,7 +595,7 @@ export const gamesMessages = defineMessages({
         title: "My compass",
         hint: "Find what truly matters to you",
         why: "When it's clear what matters, it's easier to make decisions and notice where life drifts away from it.",
-        how: ["Sort the important values from the cards", "Keep the most important ones", "See how well your life matches them now"],
+        how: ["Light up 10 of the 20 values that matter", "Keep five, then the one that matters most", "See how closely your life follows this compass now"],
       },
       "one-step": {
         title: "One step",
@@ -544,11 +619,11 @@ export const gamesMessages = defineMessages({
       sad: { label: "Sad", items: [
         ["emotion", "Name the sadness more precisely and see what it needs."],
         ["talk-out", "Sometimes it's enough just to be listened to."],
-        ["jar", "Find a couple of warm little things without cancelling the sadness."],
+        ["wins", "Notice three things that still worked out today."],
       ] },
       lonely: { label: "Lonely", items: [
         ["talk-out", "Tell what's going on to someone who listens."],
-        ["letter", "Write a letter to yourself as to a close friend."],
+        ["unsaid", "Say what was left unsaid to someone, without sending the letter."],
         ["emotion", "Understand what kind of closeness you're missing."],
       ] },
       calm: { label: "Calm", items: [
@@ -564,7 +639,7 @@ export const gamesMessages = defineMessages({
       grow: { label: "Want to grow", items: [
         ["one-step", "Turn the wish into one thing for today."],
         ["wheel", "Find the area where your energy should go."],
-        ["strengths", "Lean on what you already do well."],
+        ["mirror", "Ask yourself ten questions and see what repeats."],
       ] },
     },
     page: {
@@ -591,6 +666,7 @@ export const gamesMessages = defineMessages({
       groups: {
         calm: { title: "Calm down", hint: "Shift your attention, notice how you are and slow down a little." },
         self: { title: "Understand yourself", hint: "Recognise emotions and hear your own wishes." },
+        relations: { title: "Relationships", hint: "Boundaries, closeness and what was left unsaid." },
         confidence: { title: "Self-confidence", hint: "Notice your strengths, efforts and small wins." },
         path: { title: "Find your direction", hint: "Understand what matters and move to small actions." },
         heard: { title: "Be heard", hint: "Talk it out and feel that you're heard." },

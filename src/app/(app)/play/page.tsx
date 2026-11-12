@@ -103,7 +103,11 @@ const COVERS: Record<GameSlug, string> = {
   strengths: "linear-gradient(150deg,#d6f2e6,#bfe3f0)",
   jar: "linear-gradient(150deg,#fff0d6,#ffcfa6)",
   wheel: "linear-gradient(150deg,#e9f7f0,#cfe3ff)",
-  values: "linear-gradient(150deg,#f3ecdc,#ffe4d8)",
+  values: "radial-gradient(120% 100% at 50% 110%,#4f5aa6,#2a2762 50%,#12133a)",
+  mirror: "radial-gradient(120% 100% at 50% 110%,#56508f,#2a2762 50%,#12133a)",
+  boundaries: "radial-gradient(120% 100% at 50% 110%,#3f7f7a,#2a2762 50%,#12133a)",
+  unsaid: "radial-gradient(120% 100% at 50% 110%,#8a4f7a,#2a2762 50%,#12133a)",
+  wins: "radial-gradient(120% 100% at 50% 110%,#8a5a86,#2a2762 50%,#12133a)",
   "one-step": "linear-gradient(170deg,#dcebfb,#9fc0ef)",
   "talk-out": "linear-gradient(150deg,#e6e4ff,#c9c4ff)",
 };
@@ -205,6 +209,7 @@ function ForYou({ stored, locale }: { stored: Awaited<ReturnType<typeof latestPl
 // Маленькие анимированные знаки для каждой игры.
 function GameGlyph({ slug }: { slug: string }) {
   const base = "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-paper/70";
+  const dark = "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-paper/10";
   if (slug === "bubbles")
     return (
       <span className={base} aria-hidden>
@@ -229,9 +234,51 @@ function GameGlyph({ slug }: { slug: string }) {
     );
   if (slug === "values")
     return (
-      <span className={base} aria-hidden>
-        <span className="absolute h-7 w-5 -rotate-12 rounded-md bg-sand-deep" />
-        <span className="absolute h-7 w-5 rotate-6 rounded-md border border-line bg-paper" />
+      <span className={dark} aria-hidden>
+        <svg viewBox="0 0 24 24" className="h-8 w-8">
+          <circle cx="12" cy="12" r="9.5" fill="none" stroke="#cfc9ff" strokeOpacity="0.7" />
+          <g className="compass-seek">
+            <path d="M12 4 L14 12 L10 12 Z" fill="#fff" />
+            <path d="M12 20 L14 12 L10 12 Z" fill="#8f8ad6" />
+          </g>
+        </svg>
+      </span>
+    );
+  if (slug === "mirror")
+    return (
+      <span className={dark} aria-hidden>
+        <span className="relative h-9 w-7 overflow-hidden rounded-[50%] border-2 border-[#e6d3a8] bg-gradient-to-b from-[#6f6bb8] to-[#2c2a66]">
+          <span className="mirror-sheen absolute -top-1/4 left-0 h-[150%] w-1/2 bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+        </span>
+      </span>
+    );
+  if (slug === "boundaries")
+    return (
+      <span className={dark} aria-hidden>
+        <span className="absolute left-2 h-7 w-7 rounded-full border-2 border-[#9fe6c8] shadow-[0_0_8px_1px_#9fe6c8]" />
+        <span className="absolute left-[18px] h-2.5 w-2.5 rounded-full bg-[#cfc9ff]" />
+        <span className="press absolute right-1.5 h-2.5 w-2.5 rounded-full bg-[#ffb79c] shadow-[0_0_6px_2px_#ffb79c]" />
+      </span>
+    );
+  if (slug === "unsaid")
+    return (
+      <span className={dark} aria-hidden>
+        <span className="relative h-8 w-6 -rotate-6 rounded-[3px] bg-[#fbf5e8]">
+          {[8, 13, 18].map((y) => (
+            <span key={y} className="absolute left-1 right-1 h-px bg-[#c9bfa8]" style={{ top: y }} />
+          ))}
+          <span className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-breathe rounded-full bg-[#f2a7cb] shadow-[0_0_8px_3px_#f2a7cb]" />
+        </span>
+      </span>
+    );
+  if (slug === "wins")
+    return (
+      <span className={dark} aria-hidden>
+        <span className="flex items-end gap-1">
+          {["#ffd59c", "#ffb79c", "#f2a7cb"].map((c, i) => (
+            <span key={c} className="jar-bob h-5 w-3 rounded-b-md rounded-t-sm" style={{ background: c, boxShadow: `0 0 8px 2px ${c}`, marginBottom: i === 1 ? 6 : 0, animationDelay: `${-i * 1.5}s` }} />
+          ))}
+        </span>
       </span>
     );
   if (slug === "grounding")

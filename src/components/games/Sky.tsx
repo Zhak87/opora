@@ -3,9 +3,9 @@ import { gamesMessages, type Category } from "@/i18n/games";
 import { CATEGORIES, getGames } from "@/lib/games";
 import type { PracticeRun } from "@/lib/practice-memory";
 
-const HUE: Record<Category, string> = { calm: "#a9b4ff", self: "#f2a7cb", confidence: "#9fe6c8", path: "#ffd59c", heard: "#ffb79c" };
+const HUE: Record<Category, string> = { calm: "#a9b4ff", self: "#f2a7cb", relations: "#8fd3f4", confidence: "#9fe6c8", path: "#ffd59c", heard: "#ffb79c" };
 // Где на небе живёт созвездие каждой категории (центр в процентах).
-const HOME: Record<Category, [number, number]> = { calm: [20, 42], self: [43, 26], confidence: [62, 58], path: [82, 30], heard: [38, 72] };
+const HOME: Record<Category, [number, number]> = { calm: [20, 42], self: [43, 26], relations: [62, 78], confidence: [60, 50], path: [82, 30], heard: [38, 72] };
 
 // Детерминированный «случайный» сдвиг, чтобы звёзды не прыгали между заходами.
 const rnd = (n: number) => {
