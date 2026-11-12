@@ -2,6 +2,9 @@
 // AI_PROVIDER=gemini (по умолчанию) — Google Gemini, бесплатный ключ на aistudio.google.com
 // AI_PROVIDER=openai — любой OpenAI-совместимый API (OpenRouter, Groq и т.п.)
 
+// Адрес API Gemini. Меняется только для проверок с подставным сервером или через свой прокси.
+const geminiBase = () => (process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com").replace(/\/$/, "");
+
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 type Options = { system: string; messages: ChatMessage[]; maxTokens?: number; temperature?: number };
@@ -94,7 +97,7 @@ async function streamGemini({ system, messages, signal }: StreamOptions) {
     try {
       for (const thinking of thinkingOptions(model)) {
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
+          `${geminiBase()}/v1beta/models/${model}:streamGenerateContent?alt=sse`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
@@ -200,7 +203,7 @@ async function completeGemini({ system, messages, maxTokens = 8192, temperature 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), Math.min(left - 1_000, i === 0 ? 28_000 : 22_000));
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      const res = await fetch(`${geminiBase()}/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
         body,
@@ -331,7 +334,7 @@ export async function synthesize(text: string, voice: string, signal: AbortSigna
     if (deadline.aborted) break;
     const attempt = AbortSignal.any([deadline, AbortSignal.timeout(short ? 5_000 : 9_000)]);
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      const res = await fetch(`${geminiBase()}/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
         body,
@@ -396,7 +399,7 @@ const STT_MODELS = (process.env.GEMINI_STT_MODEL || "gemini-flash-lite-latest,ge
   .map((m) => m.trim())
   .filter(Boolean);
 
-export async function transcribe(audio: Uint8Array, mime: string): Promise<string> {
+export async function transcribe(audio: Uint8Array, mime: string, signal?: AbortSignal): Promise<string> {
   const body = JSON.stringify({
     contents: [
       {
@@ -413,10 +416,13 @@ export async function transcribe(audio: Uint8Array, mime: string): Promise<strin
   });
   let last: AIError | null = null;
   for (const model of [...STT_MODELS, ...STT_MODELS]) {
+    if (signal?.aborted) throw new AIError(499, "STT: cancelled");
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15_000);
+    const onAbort = () => controller.abort();
+    signal?.addEventListener("abort", onAbort, { once: true });
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      const res = await fetch(`${geminiBase()}/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
         body,
@@ -435,10 +441,12 @@ export async function transcribe(audio: Uint8Array, mime: string): Promise<strin
         .trim()
         .replace(/^["«]|["»]$/g, "");
     } catch (e) {
+      if (signal?.aborted) throw new AIError(499, "STT: cancelled");
       last = new AIError(504, `STT ${model}: ${(e as Error).message}`);
       console.error(last.message);
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
     }
   }
   throw last ?? new AIError(500, "STT: no models");

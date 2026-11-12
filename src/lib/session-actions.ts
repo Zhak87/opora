@@ -12,6 +12,8 @@ import { careMessages } from "@/i18n/care";
 import { CARE_CONSENT_VERSION, isScope } from "@/lib/pro";
 import { UUID_RE } from "@/lib/sessions";
 import { timeToMinutes, zonedToUtc } from "@/lib/time";
+import { getTimeZone } from "@/lib/tz";
+import { closeConsultRooms } from "@/lib/consult/server";
 
 type State = { ok?: string; error?: string } | undefined;
 
@@ -30,6 +32,15 @@ function dbError(message: string | undefined, m: Awaited<ReturnType<typeof msg>>
   if (/slot taken|sessions_no_overlap|conflicting key/.test(message)) return m.pro.errors.overlap;
   if (/in past/.test(message)) return m.pro.errors.past;
   return m.pro.errors.generic;
+}
+
+const backOf = (formData: FormData) => String(formData.get("back") ?? "");
+
+// Часовой пояс клиента нужен для писем-напоминаний: берём тот, что сообщил его браузер.
+async function rememberTimeZone(supabase: Awaited<ReturnType<typeof authed>>["supabase"]) {
+  const { data } = await supabase.auth.getClaims();
+  const me = data?.claims?.sub;
+  if (me) await supabase.from("profiles").update({ timezone: await getTimeZone() }).eq("id", me);
 }
 
 /* ---------- Клиент ---------- */
@@ -56,6 +67,7 @@ export async function bookSession(_: State, formData: FormData): Promise<State> 
     p_version: CARE_CONSENT_VERSION,
   });
   if (error) return { error: /slot taken/.test(error.message) ? m.book.taken : m.book.failed };
+  await rememberTimeZone(supabase);
   await track("contact_request");
   revalidatePath("/", "layout");
   redirect("/care?booked=1");
@@ -73,6 +85,9 @@ export async function rescheduleSession(_: State, formData: FormData): Promise<S
   if (!UUID_RE.test(id) || !startsAt || Number.isNaN(startsAt.getTime())) return { error: m.pro.errors.generic };
   const { error } = await supabase.rpc("reschedule_session", { p_session: id, p_starts_at: startsAt.toISOString() });
   if (error) return { error: /slot taken/.test(error.message) ? m.book.taken : dbError(error.message, m) };
+  // Старые пропуски в видеокомнату больше не действуют: открытые подключения закрываем сразу.
+  await closeConsultRooms(id);
+  if (backOf(formData) !== "pro") await rememberTimeZone(supabase);
   revalidatePath("/", "layout");
   const back = String(formData.get("back") ?? "");
   redirect(back === "pro" ? `/pro/sessions/${id}?moved=1` : "/care?rescheduled=1");
@@ -82,7 +97,8 @@ export async function cancelSession(formData: FormData) {
   const { supabase } = await authed();
   const id = String(formData.get("session") ?? "");
   if (!UUID_RE.test(id)) return;
-  await supabase.rpc("cancel_session", { p_session: id, p_reason: String(formData.get("reason") ?? "").slice(0, 500) || null });
+  const { error } = await supabase.rpc("cancel_session", { p_session: id, p_reason: String(formData.get("reason") ?? "").slice(0, 500) || null });
+  if (!error) await closeConsultRooms(id);
   revalidatePath("/", "layout");
   if (formData.get("back") === "pro") redirect(`/pro/sessions/${id}`);
   redirect("/care?cancelled=1");
@@ -119,7 +135,11 @@ export async function completeSession(_: State, formData: FormData): Promise<Sta
     p_tasks: String(formData.get("tasks") ?? ""),
   });
   if (error) return { error: m.pro.errors.generic };
+  // Встреча завершена: видеокомната закрывается, черновик (если был) отмечается опубликованным.
+  await closeConsultRooms(id);
+  await supabase.from("consult_drafts").update({ published_at: new Date().toISOString() }).eq("session_id", id);
   revalidatePath("/pro", "layout");
+  revalidatePath("/care", "layout");
   return { ok: m.pro.saved };
 }
 

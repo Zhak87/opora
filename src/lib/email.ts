@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { courseMessages } from "@/i18n/course";
 import { careChatMessages } from "@/i18n/care-chat";
+import { consultMessages } from "@/i18n/consult";
 import { isLocale, type Locale } from "@/i18n/config";
 import { weekOf, type Course, type CourseState } from "./course";
 
@@ -9,6 +10,12 @@ import { weekOf, type Course, type CourseState } from "./course";
 
 export function emailSendingEnabled() {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.DAILY_EMAILS === "on");
+}
+
+// Служебные письма о встречах (подтверждения, напоминания) не зависят от рассылки писем дня:
+// уходят, когда настроен Resend. Выключить отдельно: SESSION_EMAILS=off.
+export function sessionEmailsEnabled() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.SESSION_EMAILS !== "off");
 }
 
 export function siteUrl() {
@@ -149,7 +156,7 @@ export function renderDailyEmail(opts: {
 }
 
 export async function sendEmail(msg: { to: string; subject: string; html: string; text: string; unsubscribe?: string; replyTo?: string }) {
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch(`${(process.env.RESEND_API_URL || "https://api.resend.com").replace(/\/$/, "")}/emails`, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -166,8 +173,18 @@ export async function sendEmail(msg: { to: string; subject: string; html: string
 }
 
 // Напоминание о встрече с психологом: служебное письмо, без подробностей о работе — только время и ссылка.
-export function renderSessionReminder(opts: { locale: Locale; name?: string | null; peer: string; when: string; link: string }) {
-  const m = careChatMessages[opts.locale].email;
+export type SessionNoticeKind = "booked" | "rescheduled" | "cancelled" | "remind24" | "remind1";
+
+export function renderSessionReminder(opts: { locale: Locale; name?: string | null; peer: string; when: string; link: string; kind?: SessionNoticeKind; join?: boolean }) {
+  const base = careChatMessages[opts.locale].email;
+  const cm = consultMessages[opts.locale].email;
+  const kind = opts.kind;
+  const m = {
+    ...base,
+    subject: kind ? cm.subject[kind] : base.subject,
+    text: kind ? cm.text[kind] : base.text,
+    open: opts.join ? cm.join : base.open,
+  };
   const subject = m.subject(opts.when);
   const html = `<!DOCTYPE html>
 <html lang="${opts.locale}">

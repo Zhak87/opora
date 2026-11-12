@@ -107,14 +107,14 @@ export default async function CarePage({
                 )}
               </div>
               <SessionList
-                sessions={sessions.filter((x) => x.psychologist_id === link.psychologist_id && x.status === "scheduled" && Date.parse(x.ends_at) > now)}
+                sessions={sessions.filter((x) => x.psychologist_id === link.psychologist_id && x.status === "scheduled" && Date.parse(x.ends_at) + 30 * 60_000 > now)}
                 tz={tz}
                 locale={locale}
                 empty={sm.care.noUpcoming}
                 manage
               />
               <PastSessions
-                sessions={sessions.filter((x) => x.psychologist_id === link.psychologist_id && (x.status !== "scheduled" || Date.parse(x.ends_at) <= now)).reverse()}
+                sessions={sessions.filter((x) => x.psychologist_id === link.psychologist_id && (x.status !== "scheduled" || Date.parse(x.ends_at) + 30 * 60_000 <= now)).reverse()}
                 title={sm.care.past}
                 tz={tz}
                 locale={locale}

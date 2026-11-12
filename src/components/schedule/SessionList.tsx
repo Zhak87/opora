@@ -6,6 +6,7 @@ import { INTL, type Locale } from "@/i18n/config";
 import { scheduleMessages } from "@/i18n/schedule";
 import { proLabels } from "@/i18n/pro";
 import { ConfirmForm } from "../ConfirmForm";
+import { JoinCard } from "../consult/JoinCard";
 
 const STATUS_TONE = { scheduled: "bg-mist text-sky-deep", completed: "bg-sage-soft text-sage-deep", cancelled: "bg-sand text-ink-faint" };
 
@@ -62,7 +63,8 @@ export function SessionList({
               </p>
             </div>
             {manage && s.status === "scheduled" && (
-              <div className="flex w-full gap-1 sm:w-auto">
+              <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto">
+                <JoinCard session={s} href={`/care/sessions/${s.id}/call`} tz={tz} locale={locale} compact />
                 <Link href={`/care/sessions/${s.id}`} className="flex h-9 items-center rounded-full px-3 text-sm text-ink-soft transition hover:bg-sand/60 hover:text-ink">
                   {m.care.reschedule}
                 </Link>

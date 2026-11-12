@@ -99,7 +99,7 @@ export class MicRecorder {
   }
 }
 
-function downsample(chunks: Float32Array[], from: number, to: number) {
+export function downsample(chunks: Float32Array[], from: number, to: number) {
   const total = chunks.reduce((n, c) => n + c.length, 0);
   const input = new Float32Array(total);
   let o = 0;
@@ -121,7 +121,7 @@ function downsample(chunks: Float32Array[], from: number, to: number) {
   return out;
 }
 
-function encodeWav(samples: Float32Array, rate: number) {
+export function encodeWav(samples: Float32Array, rate: number) {
   const buf = new ArrayBuffer(44 + samples.length * 2);
   const v = new DataView(buf);
   const str = (off: number, s: string) => [...s].forEach((c, i) => v.setUint8(off + i, c.charCodeAt(0)));

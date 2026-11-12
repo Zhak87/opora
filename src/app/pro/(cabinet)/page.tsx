@@ -15,6 +15,8 @@ import { scheduleMessages } from "@/i18n/schedule";
 import { careNotices, lastMessages, markNotificationsRead, unreadByPeer } from "@/lib/care-chat";
 import { careChatMessages } from "@/i18n/care-chat";
 import { dashboardMessages } from "@/i18n/dashboard";
+import { consultMessages } from "@/i18n/consult";
+import { joinState } from "@/lib/consult/config";
 
 export default async function ProOverview() {
   const { supabase, user } = await requireUser();
@@ -38,6 +40,18 @@ export default async function ProOverview() {
     listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: new Date(now).toISOString(), to: new Date(now + 7 * 86_400_000).toISOString() }, 200),
   ]);
   const needSummary = overdue.filter((s) => Date.parse(s.ends_at) < now);
+  const qm = consultMessages[locale].quick;
+  // Быстрые действия: ближайшая онлайн-встреча, итоги прошедшей, следующая встреча после последней.
+  const nextOnline = upcoming.find((s) => s.format === "online" && ["open", "early"].includes(joinState(s)));
+  const { data: lastDone } = await supabase
+    .from("sessions")
+    .select("id, client_id")
+    .eq("psychologist_id", me.user_id)
+    .in("status", ["completed", "scheduled"])
+    .lt("ends_at", new Date(now).toISOString())
+    .order("starts_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   // Уведомления показаны — отмечаем прочитанными; подсветка новых остаётся до следующего захода.
   if (notices.some((n) => n.fresh)) await markNotificationsRead(supabase, notices.filter((n) => n.fresh).map((n) => n.id));
   const names = Object.fromEntries(clients.map((c) => [c.link.client_id, c.name ?? m.clients.noName]));
@@ -80,6 +94,31 @@ export default async function ProOverview() {
         <Stat value={views} label={m.overview.invitesViews(views)} tone="bg-gradient-to-br from-paper to-mist/70" />
         <Stat value={fromInvites} label={m.overview.fromInvites(fromInvites)} tone="bg-gradient-to-br from-paper to-sand/80" />
       </section>
+
+      {(nextOnline || needSummary.length > 0 || lastDone) && (
+        <section className="mb-6 flex flex-wrap gap-2" aria-label={qm.title} data-quick-actions>
+          {nextOnline && (
+            <Link
+              href={`/pro/sessions/${nextOnline.id}/call`}
+              className={`${joinState(nextOnline) === "open" ? buttonStyles.primary : buttonStyles.soft} h-11`}
+              title={qm.nextAt(`${dayLabel(nextOnline.starts_at, me.timezone, locale)}, ${timeOf(nextOnline.starts_at, me.timezone, INTL[locale])}`)}
+              data-quick="join"
+            >
+              {qm.join} · {timeOf(nextOnline.starts_at, me.timezone, INTL[locale])}
+            </Link>
+          )}
+          {needSummary[0] && (
+            <Link href={`/pro/sessions/${needSummary[0].id}#draft`} className={`${buttonStyles.soft} h-11`} data-quick="summary">
+              {qm.summarize}
+            </Link>
+          )}
+          {lastDone && (
+            <Link href={`/pro/sessions/${lastDone.id}#next`} className={`${buttonStyles.ghost} h-11`} data-quick="next">
+              {qm.scheduleNext}
+            </Link>
+          )}
+        </section>
+      )}
 
       {requests.length > 0 && (
         <Link
