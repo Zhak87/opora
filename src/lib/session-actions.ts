@@ -185,6 +185,8 @@ export async function declineRequest(formData: FormData) {
   const { supabase } = await authed();
   await supabase.rpc("end_link", { p_link: String(formData.get("link") ?? "") });
   revalidatePath("/pro", "layout");
+  // Из карточки клиента после отказа карточки больше нет: возвращаемся к списку.
+  if (formData.get("back") === "clients") redirect("/pro/clients");
 }
 
 // Рабочие часы: форма присылает пары start/end для каждого дня недели. Заменяем целиком.
