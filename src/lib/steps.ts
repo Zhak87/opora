@@ -3,7 +3,7 @@
 // которая ведёт к практике, в комнаты, к психологам или в дневник.
 export const PRACTICE_STEPS = [
   "breath", "bubbles", "grounding", "light", "jar", "garden", "values", "what-if", "strengths", "letter", "wheel",
-  "empty-bowl", "thought-jar", "emotion", "one-step",
+  "empty-bowl", "thought-jar", "emotion", "one-step", "boundaries", "mirror", "wins", "unsaid",
 ] as const;
 export const PLACE_STEPS = ["rooms", "specialists", "journal"] as const;
 export type StepCode = (typeof PRACTICE_STEPS)[number] | (typeof PLACE_STEPS)[number];

@@ -16,26 +16,30 @@ export type Game = {
   isNew?: boolean;
 };
 
-export const CATEGORIES: Category[] = ["calm", "self", "confidence", "path", "heard"];
+export const CATEGORIES: Category[] = ["calm", "self", "relations", "confidence", "path", "heard"];
 
 // Порядок внутри категории = порядок на странице. Названия и тексты — в src/i18n/games.ts.
 const BASE: Omit<Game, "title" | "hint" | "why" | "how">[] = [
-  { slug: "empty-bowl", group: "calm", tone: "lavender", minutes: "3–7", flagship: true, isNew: true },
-  { slug: "thought-jar", group: "calm", tone: "beige", minutes: "3–5", isNew: true },
+  { slug: "empty-bowl", group: "calm", tone: "lavender", minutes: "3–7", flagship: true },
+  { slug: "thought-jar", group: "calm", tone: "beige", minutes: "3–5" },
   { slug: "breath", group: "calm", tone: "blue", minutes: "2–4" },
   { slug: "grounding", group: "calm", tone: "green", minutes: "3–5" },
   { slug: "bubbles", group: "calm", tone: "blue", minutes: "2–3" },
   { slug: "light", group: "calm", tone: "lavender", minutes: "2–5" },
   { slug: "garden", group: "calm", tone: "green", minutes: "3–5" },
-  { slug: "emotion", group: "self", tone: "lavender", minutes: "3–5", isNew: true },
+  { slug: "emotion", group: "self", tone: "lavender", minutes: "3–5" },
+  { slug: "mirror", group: "self", tone: "lavender", minutes: "5–7", isNew: true },
   { slug: "what-if", group: "self", tone: "beige", minutes: "5–7" },
   { slug: "letter", group: "self", tone: "blue", minutes: "5–10" },
+  { slug: "boundaries", group: "relations", tone: "blue", minutes: "5–7", isNew: true },
+  { slug: "unsaid", group: "relations", tone: "beige", minutes: "5–10", isNew: true },
+  { slug: "wins", group: "confidence", tone: "beige", minutes: "2–3", isNew: true },
   { slug: "strengths", group: "confidence", tone: "green", minutes: "5–7" },
   { slug: "jar", group: "confidence", tone: "beige", minutes: "2–3" },
   { slug: "wheel", group: "path", tone: "green", minutes: "5–7" },
-  { slug: "values", group: "path", tone: "beige", minutes: "5–7" },
-  { slug: "one-step", group: "path", tone: "blue", minutes: "3–5", isNew: true },
-  { slug: "talk-out", group: "heard", tone: "lavender", minutes: "5–15", isNew: true },
+  { slug: "values", group: "path", tone: "lavender", minutes: "5–7", isNew: true },
+  { slug: "one-step", group: "path", tone: "blue", minutes: "3–5" },
+  { slug: "talk-out", group: "heard", tone: "lavender", minutes: "5–15" },
 ];
 
 export const GAME_SLUGS = BASE.map((g) => g.slug);
@@ -57,12 +61,16 @@ const AFTER: Partial<Record<GameSlug, GameSlug[]>> = {
   grounding: ["breath", "emotion"],
   emotion: ["thought-jar", "talk-out"],
   wheel: ["one-step", "values"],
-  values: ["one-step", "wheel"],
+  values: ["one-step", "mirror"],
   "one-step": ["strengths", "wheel"],
   "talk-out": ["emotion", "empty-bowl"],
   bubbles: ["empty-bowl", "thought-jar"],
-  jar: ["strengths", "empty-bowl"],
-  strengths: ["one-step", "jar"],
+  jar: ["wins", "empty-bowl"],
+  strengths: ["wins", "one-step"],
+  wins: ["strengths", "jar"],
+  mirror: ["values", "emotion"],
+  boundaries: ["unsaid", "talk-out"],
+  unsaid: ["talk-out", "empty-bowl"],
 };
 
 export function nextGames(slug: string, locale: Locale): Game[] {

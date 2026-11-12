@@ -6,7 +6,11 @@ import { BackIcon } from "@/components/icons";
 import { Bubbles } from "@/components/games/Bubbles";
 import { BreathWave } from "@/components/games/BreathWave";
 import { LightDraw } from "@/components/games/LightDraw";
-import { Values } from "@/components/games/Values";
+import { Compass } from "@/components/games/Compass";
+import { Boundaries } from "@/components/games/Boundaries";
+import { Mirror } from "@/components/games/Mirror";
+import { Wins } from "@/components/games/Wins";
+import { Unsaid } from "@/components/games/Unsaid";
 import { WhatIf } from "@/components/games/WhatIf";
 import { Wheel } from "@/components/games/Wheel";
 import { Grounding } from "@/components/games/Grounding";
@@ -33,7 +37,11 @@ const COMPONENTS: Record<string, React.ComponentType> = {
   bubbles: Bubbles,
   breath: BreathWave,
   light: LightDraw,
-  values: Values,
+  values: Compass,
+  boundaries: Boundaries,
+  mirror: Mirror,
+  wins: Wins,
+  unsaid: Unsaid,
   "what-if": WhatIf,
   wheel: Wheel,
   grounding: Grounding,
