@@ -2,6 +2,7 @@
 #   setup   — первая настройка чистого сервера (входит как root по тому же ключу, потом root закрывается)
 #   status  — что запущено, память, диск, срок SSL
 #   logs    — последние строки журналов сайта и Caddy
+#   mail    — почему не приходят письма входа: ошибки службы входа, домен в Resend, DNS (ничего не меняет)
 #   voice   — проверка голоса «Комнат»: медиасервер LiveKit, его журнал и порты (ничего не меняет)
 #   reload-caddy — перечитать Caddyfile без остановки сайта (если новые адреса не заработали после выкладки)
 #   restart — перезапустить сайт
@@ -15,7 +16,7 @@ on:
       action:
         description: Что сделать
         type: choice
-        options: [status, logs, voice, reload-caddy, restart, setup, migrate-db, anon-key]
+        options: [status, logs, mail, voice, reload-caddy, restart, setup, migrate-db, anon-key]
         default: status
 
 concurrency:
@@ -83,6 +84,50 @@ jobs:
       - name: logs
         if: inputs.action == 'logs'
         run: ssh prod 'cd /opt/opora && ./dc.sh logs --tail 150 app caddy cron auth rest storage backup'
+
+      - name: mail
+        if: inputs.action == 'mail'
+        env:
+          RESEND: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          D=${NEXT_PUBLIC_SITE_URL#https://}
+          echo "== Настройки почты в службе входа (без пароля)"
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T auth sh -c "env | grep -E \"^GOTRUE_(SMTP_(HOST|PORT|USER|ADMIN_EMAIL|SENDER_NAME)|MAILER_AUTOCONFIRM|RATE_LIMIT_EMAIL_SENT|SITE_URL)=\"; printenv GOTRUE_SMTP_PASS | wc -c"' || true
+          echo; echo "== Ошибки и письма в журнале входа за 3 дня"
+          ssh prod 'cd /opt/opora && ./dc.sh logs --since 72h auth 2>&1 | grep -v GOTRUE_MAILER_EXTERNAL_HOSTS | grep -iE "mail|smtp|error|rate.?limit|signup|recover|over_" | sed -E "s/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/***@***/g" | tail -60' || true
+          echo; echo "== Все запросы, после которых уходит письмо (регистрация, повтор, новый пароль, смена почты), за 3 дня"
+          ssh prod 'cd /opt/opora && ./dc.sh logs --no-log-prefix --since 72h auth 2>&1' | jq -R -r 'fromjson? | select(.msg=="request completed" and ((.path // "")|test("^/(signup|recover|resend|otp|magiclink|user)$")) and (.method=="POST" or .method=="PUT")) | [.time, .method, .path, .status, ((.duration/1000000|floor|tostring)+"ms"), (.auth_event.action // ""), (.error // ""), (.referer // "")] | @tsv' || true
+          echo; echo "== Ошибки отправки писем за 7 дней"
+          ssh prod 'cd /opt/opora && ./dc.sh logs --since 168h auth 2>&1 | grep -iE "smtp|sending|mailer|email_send|over_email|535|554|550" | grep -v GOTRUE_MAILER_EXTERNAL_HOSTS | sed -E "s/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/***@***/g" | tail -30' || true
+          echo; echo "== Аккаунты за 4 дня (почтовый домен, когда отправлены письма)"
+          cat > /tmp/q.sql <<'SQL'
+          select to_char(created_at,'MM-DD HH24:MI') created, is_anonymous anon, split_part(email,'@',2) dom,
+            to_char(confirmation_sent_at,'MM-DD HH24:MI') conf_sent, to_char(email_confirmed_at,'MM-DD HH24:MI') confirmed,
+            split_part(email_change,'@',2) change_to, to_char(email_change_sent_at,'MM-DD HH24:MI') change_sent,
+            to_char(recovery_sent_at,'MM-DD HH24:MI') recovery_sent, to_char(last_sign_in_at,'MM-DD HH24:MI') last_in
+          from auth.users
+          where created_at > now() - interval '4 days' or recovery_sent_at > now() - interval '4 days'
+             or email_change_sent_at > now() - interval '4 days' or confirmation_sent_at > now() - interval '4 days'
+          order by created_at;
+          SQL
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres' < /tmp/q.sql || true
+          echo; echo "== Ошибки сайта за 2 дня"
+          ssh prod 'cd /opt/opora && ./dc.sh logs --since 48h app 2>&1 | grep -iE "error|fail|auth" | sed -E "s/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/***@***/g" | tail -40' || true
+          echo; echo "== Регистрации за 4 дня по дням"
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres -c "select date(created_at) d, count(*) all_users, count(*) filter (where is_anonymous) guests, count(email_confirmed_at) confirmed, count(confirmation_sent_at) conf_sent, count(recovery_sent_at) recovery_sent from auth.users where created_at > now() - interval '"'"'4 days'"'"' group by 1 order by 1"' || true
+          echo; echo "== Домен в Resend"
+          if [ -n "$RESEND" ]; then
+            curl -s -m 15 -H "Authorization: Bearer $RESEND" https://api.resend.com/domains > /tmp/domains.json || true
+            head -c 1500 /tmp/domains.json; echo
+            ID=$(python3 -c 'import sys,json; d=json.load(open("/tmp/domains.json")).get("data",[]); print(next((x["id"] for x in d if x.get("name")==sys.argv[1]),""))' "$D" || true)
+            if [ -n "$ID" ]; then
+              curl -s -m 15 -H "Authorization: Bearer $RESEND" "https://api.resend.com/domains/$ID" | python3 -c 'import sys,json; d=json.load(sys.stdin); print("status:", d.get("status")); [print(r.get("record"), r.get("type"), r.get("name"), r.get("status"), str(r.get("value"))[:90]) for r in d.get("records",[])]' || true
+            fi
+          else echo "Нет секрета RESEND_API_KEY"; fi
+          echo; echo "== DNS"
+          for q in "TXT $D" "MX $D" "TXT send.$D" "MX send.$D" "TXT resend._domainkey.$D" "TXT _dmarc.$D"; do echo "-- $q:"; dig +short $q; done
+          echo; echo "== Сервер достаёт до smtp.resend.com:465"
+          ssh prod 'timeout 10 bash -c "exec 3<>/dev/tcp/smtp.resend.com/465" && echo открыт || echo ЗАКРЫТ'
 
       - name: voice
         if: inputs.action == 'voice'
