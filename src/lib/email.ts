@@ -156,7 +156,7 @@ export async function sendEmail(msg: {
   to: string; subject: string; html: string; text: string; unsubscribe?: string; replyTo?: string;
   idempotencyKey?: string; signal?: AbortSignal;
 }) {
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch(`${(process.env.RESEND_API_URL || "https://api.resend.com").replace(/\/$/, "")}/emails`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,

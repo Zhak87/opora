@@ -10,6 +10,7 @@ import { common } from "@/i18n/common";
 import { Card, PageHeader } from "@/components/ui";
 import { RescheduleForm } from "@/components/schedule/SlotPicker";
 import { BackIcon } from "@/components/icons";
+import { JoinCard } from "@/components/consult/JoinCard";
 
 // Перенос встречи клиентом: только на свободные окна психолога.
 export default async function ClientSession({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +31,11 @@ export default async function ClientSession({ params }: { params: Promise<{ id: 
       <PageHeader title={m.care.rescheduleTitle}>
         {m.care.current}: {whenLabel(s.starts_at, tz, locale)}
       </PageHeader>
+      {s.status === "scheduled" && s.format === "online" && (
+        <div className="mb-5">
+          <JoinCard session={s} href={`/care/sessions/${s.id}/call`} tz={tz} locale={locale} />
+        </div>
+      )}
       <Card className="p-6 sm:p-8">
         {s.video_url && s.status === "scheduled" && (
           <a href={s.video_url} target="_blank" rel="noopener noreferrer" className="mb-5 inline-block font-medium text-sky-deep underline">

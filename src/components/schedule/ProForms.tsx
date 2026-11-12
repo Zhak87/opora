@@ -118,7 +118,7 @@ export function TimeOffForm({ tz }: { tz: string }) {
   );
 }
 
-export function NewSessionForm({ clients, tz, minutes, formats }: { clients: { id: string; name: string }[]; tz: string; minutes: number; formats: string[] }) {
+export function NewSessionForm({ clients, tz, minutes, formats, defaultLocal }: { clients: { id: string; name: string }[]; tz: string; minutes: number; formats: string[]; defaultLocal?: string }) {
   const [state, action] = useActionState(createSessionForClient, undefined);
   const m = useMsg(scheduleMessages).pro;
   const labels = useMsg(proLabels);
@@ -141,7 +141,7 @@ export function NewSessionForm({ clients, tz, minutes, formats }: { clients: { i
       )}
       <label>
         <span className="mb-2 block text-sm text-ink-soft">{m.start}</span>
-        <input type="datetime-local" name="local" required step={60} className={`${input} w-full`} />
+        <input type="datetime-local" name="local" required step={60} defaultValue={defaultLocal} className={`${input} w-full`} />
       </label>
       <Field label={m.duration} name="minutes" type="number" min={15} max={180} step={5} defaultValue={minutes} />
       {formats.length > 1 && (

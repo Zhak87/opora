@@ -19,6 +19,8 @@ export type Session = {
   summary: string | null;
   tasks: string | null;
   video_url: string | null;
+  video_epoch: number;
+  speech_ver: number;
   payment_status: "none" | "pending" | "paid" | "refunded";
   cancel_reason: string | null;
   cancelled_by: string | null;
