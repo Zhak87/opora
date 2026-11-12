@@ -59,6 +59,8 @@ export type ConsultState = {
   epoch: number;
   peerInRoom: boolean | null;
   speech: SpeechInfo;
+  startsAt: string | null;
+  endsAt: string | null;
 };
 
 const noSpeech = (): SpeechInfo => ({ available: false, me: false, peer: false, active: false, ver: null, keepDays: keepDays() });
@@ -67,12 +69,12 @@ const noSpeech = (): SpeechInfo => ({ available: false, me: false, peer: false, 
 // есть ли собеседник в комнате и включена ли обработка речи.
 export async function consultState(id: string): Promise<ConsultState> {
   const who = await participant(id);
-  if (!who) return { ok: false, state: "forbidden", epoch: -1, peerInRoom: null, speech: noSpeech() };
+  if (!who) return { ok: false, state: "forbidden", epoch: -1, peerInRoom: null, speech: noSpeech(), startsAt: null, endsAt: null };
   const s = who.session;
   const state = joinState(s);
   const peerId = who.role === "psychologist" ? s.client_id : s.psychologist_id;
   const [ids, speech] = await Promise.all([state === "open" ? roomIdentities(s.id, s.video_epoch) : Promise.resolve(null), speechInfo(s, who.user, peerId)]);
-  return { ok: true, state, epoch: s.video_epoch, peerInRoom: ids ? ids.includes(peerId) : null, speech };
+  return { ok: true, state, epoch: s.video_epoch, peerInRoom: ids ? ids.includes(peerId) : null, speech, startsAt: s.starts_at, endsAt: s.ends_at };
 }
 
 async function speechInfo(s: Session, me: string, peer: string): Promise<SpeechInfo> {
@@ -109,4 +111,24 @@ export async function sweepConsultRooms(id: string) {
   const who = await participant(id);
   if (!who) return;
   await closeConsultRooms(id, joinState(who.session) === "open" ? who.session.video_epoch : undefined);
+}
+
+// «Начать сейчас»: психолог переносит запланированную онлайн-встречу на текущий момент.
+// Это обычный перенос (та же проверка в базе, та же очередь уведомлений): клиент получает
+// уведомление со ссылкой, а его открытое лобби само видит, что вход открыт.
+export type StartNowResult = { ok: true; state: ConsultState } | { ok: false; error: "forbidden" | "overlap" | "failed" };
+
+export async function startConsultNow(id: string): Promise<StartNowResult> {
+  const who = await participant(id);
+  if (!who || who.role !== "psychologist") return { ok: false, error: "forbidden" };
+  const s = who.session;
+  if (s.format !== "online" || s.status !== "scheduled") return { ok: false, error: "forbidden" };
+  // Уже идёт или вот-вот начнётся: переносить незачем.
+  if (Date.parse(s.starts_at) <= Date.now() + 60_000) return { ok: true, state: await consultState(id) };
+  const { supabase } = await requireUser();
+  // Небольшой запас: часы сервера сайта и базы могут чуть расходиться, а база не примет время в прошлом.
+  const { error } = await supabase.rpc("reschedule_session", { p_session: id, p_starts_at: new Date(Date.now() + 5_000).toISOString() });
+  if (error) return { ok: false, error: /sessions_no_overlap|conflicting key|slot taken/.test(error.message) ? "overlap" : "failed" };
+  await closeConsultRooms(id);
+  return { ok: true, state: await consultState(id) };
 }

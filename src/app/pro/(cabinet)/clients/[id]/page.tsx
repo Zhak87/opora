@@ -24,6 +24,7 @@ import { BackIcon, CheckIcon, SparkIcon } from "@/components/icons";
 import { listNotes, listReports } from "@/lib/analytics";
 import { analyticsMessages } from "@/i18n/analytics";
 import { NotesPanel } from "@/components/analytics/Notes";
+import { CallNowButton } from "@/components/consult/CallNowButton";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -78,7 +79,8 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
           <h1 className="font-serif text-[30px] leading-tight text-ink sm:text-[36px]">{client.name ?? m.noName}</h1>
           <p className="text-sm text-ink-faint">{m.since(relativeDate(client.link.activated_at ?? client.link.created_at, locale))}</p>
         </div>
-        <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+        <div className="flex w-full flex-wrap items-start gap-2 sm:ml-auto sm:w-auto">
+          {me?.formats?.includes("online") && <CallNowButton client={id} />}
           <Link href={`/pro/clients/${id}/insights`} className={`${buttonStyles.soft} h-11 flex-1 shrink-0 px-5 text-sm sm:flex-none`}>
             <SparkIcon className="h-4 w-4 text-lilac-deep" /> {am.open}
           </Link>

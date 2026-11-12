@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Room } from "livekit-client";
-import { consultState, setSpeechConsent, type ConsultState, type JoinResult } from "@/lib/consult/actions";
+import { consultState, setSpeechConsent, startConsultNow, type ConsultState, type JoinResult } from "@/lib/consult/actions";
 import { OPEN_BEFORE_MIN, type ConsultRole } from "@/lib/consult/config";
 import { useMsg } from "@/i18n/client";
 import { consultMessages } from "@/i18n/consult";
@@ -26,8 +26,8 @@ export function ConsultCall({
   session,
   role,
   peerName,
-  startsAt,
-  endsAt,
+  startsAt: startsAtProp,
+  endsAt: endsAtProp,
   tz,
   locale,
   initial,
@@ -80,7 +80,21 @@ export function ConsultCall({
   const uploads = useRef(new Set<AbortController>());
   const micBeforePrivate = useRef<boolean | null>(null);
 
+  // Время берём из последнего состояния: психолог мог перенести встречу на «сейчас».
+  const startsAt = state.startsAt ?? startsAtProp;
+  const endsAt = state.endsAt ?? endsAtProp;
   const opensAt = Date.parse(startsAt) - OPEN_BEFORE_MIN * 60_000;
+  const [startingNow, setStartingNow] = useState(false);
+  const startNow = async () => {
+    setStartingNow(true);
+    setError(null);
+    const res = await startConsultNow(session).catch(() => null);
+    setStartingNow(false);
+    if (res?.ok) {
+      setState(res.state);
+      setNow(Date.now());
+    } else setError(res?.error === "overlap" ? m.now.overlap : m.now.failed);
+  };
   const early = state.state === "early" && now < opensAt;
 
   /* ---------- Предпросмотр перед входом ---------- */
@@ -496,6 +510,19 @@ export function ConsultCall({
             >
               {phase === "joining" ? m.lobby.entering : early ? m.join.opensAt(time(opensAt)) : m.lobby.enter}
             </button>
+            {early && role === "psychologist" && (
+              <div className="space-y-1 text-center">
+                <button
+                  onClick={startNow}
+                  disabled={startingNow}
+                  className="h-11 w-full rounded-full bg-lilac-soft px-6 text-[15px] text-ink transition hover:bg-lilac-soft/70 disabled:opacity-50"
+                  data-start-now
+                >
+                  {startingNow ? m.now.starting : m.now.start}
+                </button>
+                <p className="text-xs text-ink-faint">{m.now.startHint}</p>
+              </div>
+            )}
             <p className="text-center text-xs text-ink-faint">{m.call.until(time(endsAt))}</p>
           </div>
         </div>

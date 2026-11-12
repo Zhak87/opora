@@ -7,7 +7,7 @@ import { buttonStyles } from "@/components/ui";
 import { setNotificationEmail } from "@/lib/notification-email-actions";
 
 const subscriptionUrl = "/api/push/subscription";
-type Status = "loading" | "ready" | "enabled" | "install" | "blocked" | "unsupported" | "failed";
+type Status = "loading" | "ready" | "enabled" | "install" | "blocked" | "unsupported" | "failed" | "desktop";
 
 export function PushOptIn({ publicKey, locale, prompt = false, email }: {
   publicKey?: string; locale: Locale; prompt?: boolean; email?: { available: boolean; enabled: boolean };
@@ -28,6 +28,8 @@ export function PushOptIn({ publicKey, locale, prompt = false, email }: {
       if (!publicKey) return "unsupported";
       const appleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      // Кнопка про push на телефоне на компьютере не нужна.
+      if (!appleMobile && !/Android|Mobile/i.test(navigator.userAgent)) return "desktop";
       if (appleMobile && !matchMedia("(display-mode: standalone)").matches &&
           !(navigator as Navigator & { standalone?: boolean }).standalone) {
         return "install";
@@ -89,7 +91,8 @@ export function PushOptIn({ publicKey, locale, prompt = false, email }: {
     }
   }
 
-  if (status === "loading" || (prompt && ["enabled", "blocked", "unsupported", "failed"].includes(status))) return null;
+  if (status === "loading" || (prompt && ["enabled", "blocked", "unsupported", "failed", "desktop"].includes(status))) return null;
+  if (status === "desktop" && !email?.available && !emailEnabled) return null;
   const canEnablePhone = status === "ready" || status === "install";
 
   function enablePhone() {
