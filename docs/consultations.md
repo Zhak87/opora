@@ -6,7 +6,7 @@
 
 | Часть | Где в коде |
 | --- | --- |
-| Миграция: номер комнаты, согласия, расшифровка, приватный диалог, черновики, журнал писем | `supabase/migrations/0017_consultations.sql` |
+| Миграция: номер комнаты, согласия, расшифровка, приватный диалог, черновики, журнал писем | `supabase/migrations/0019_consultations.sql` |
 | Выдача пропуска в видеокомнату, состояние встречи, согласие | `src/lib/consult/actions.ts`, `src/app/api/consult/[id]/join` |
 | Видеокомнаты LiveKit, настройки | `src/lib/consult/server.ts`, `src/lib/consult/config.ts` |
 | Экран звонка (лобби, звонок, обрыв) | `src/components/consult/ConsultCall.tsx` |
