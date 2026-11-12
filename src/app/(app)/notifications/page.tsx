@@ -6,6 +6,9 @@ import { notificationMessages } from "@/i18n/notifications";
 import { PageHeader } from "@/components/ui";
 import { ArrowIcon } from "@/components/icons";
 import { MarkSeen } from "@/components/MarkSeen";
+import { PushOptIn } from "@/components/PushOptIn";
+import { pushConfig } from "@/lib/push-config";
+import { isGuest } from "@/lib/trial";
 
 const TONE: Record<Notice["kind"], { dot: string; bg: string }> = {
   course: { dot: "bg-lilac-deep", bg: "from-lilac-soft/80" },
@@ -16,8 +19,10 @@ const TONE: Record<Notice["kind"], { dot: string; bg: string }> = {
 };
 
 export default async function NotificationsPage() {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const locale = await getLocale();
+  const { data: session } = await supabase.auth.getClaims();
+  const push = user && !isGuest(session?.claims) ? pushConfig() : null;
   const m = notificationMessages[locale];
   const [list, seen] = await Promise.all([buildNotifications(supabase, locale), seenIds()]);
   const unseen = list.filter((n) => !seen.has(n.id)).map((n) => n.id);
@@ -26,6 +31,7 @@ export default async function NotificationsPage() {
     <>
       <PageHeader title={m.title}>{m.lead}</PageHeader>
       <MarkSeen ids={unseen} />
+      {push && <PushOptIn publicKey={push.publicKey} locale={locale} />}
       {list.length === 0 ? (
         <p className="rounded-[24px] bg-paper shadow-soft p-6 text-center text-[15px] text-ink-soft">{m.empty}</p>
       ) : (

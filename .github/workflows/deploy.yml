@@ -88,6 +88,12 @@ jobs:
           ssh prod 'set -e; cd /opt/opora; chmod +x dc.sh migrate.sh supabase/gen-keys.sh
             test -f server.env || (umask 077 && echo "CRON_SECRET=$(openssl rand -hex 32)" > server.env)
             bash supabase/gen-keys.sh server.env'
+          # Постоянная пара VAPID хранится только на сервере, чтобы подписки переживали выкладки.
+          ssh prod 'set -e; cd /opt/opora
+            if ! grep -q "^WEB_PUSH_PUBLIC_KEY=" server.env && ! grep -q "^WEB_PUSH_PRIVATE_KEY=" server.env; then
+              keys=$(docker run --rm --entrypoint node opora:${{ github.sha }} -e "const ecdh = require(\"node:crypto\").createECDH(\"prime256v1\"); ecdh.generateKeys(); const privateKey = Buffer.from(ecdh.getPrivateKey().toString(\"hex\").padStart(64, \"0\"), \"hex\"); console.log(\"WEB_PUSH_PUBLIC_KEY=\" + ecdh.getPublicKey().toString(\"base64url\")); console.log(\"WEB_PUSH_PRIVATE_KEY=\" + privateKey.toString(\"base64url\"));")
+              printf "\n%s\n" "$keys" >> server.env
+            fi'
 
       - name: Перезапустить сайт
         if: steps.cfg.outputs.ready == 'yes'

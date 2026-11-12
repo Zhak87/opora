@@ -72,6 +72,11 @@ export default async function ProSession({ params, searchParams }: { params: Pro
         )}
         {s.status === "scheduled" && (
           <Card className="space-y-5 p-6 sm:p-7">
+            {s.video_url && (
+              <a href={s.video_url} target="_blank" rel="noopener noreferrer" className="inline-block font-medium text-sky-deep underline">
+                {m.care.video}
+              </a>
+            )}
             <MoveSessionForm session={s.id} tz={tz} value={toLocalInput(s.starts_at, tz)} />
             <ConfirmForm action={cancelSession} question={m.pro.cancelConfirm} hidden={{ session: s.id, back: "pro" }} className="flex flex-col gap-3 border-t border-line/60 pt-5 sm:flex-row sm:items-end">
               <label className="flex-1">
