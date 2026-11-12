@@ -65,15 +65,18 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     return cleanup;
   }, [start]);
 
-  // Если браузер не дал включить звук сам, один раз за визит показываем спокойный экран входа:
+  // Если браузер не дал включить звук сам, при самом первом заходе показываем спокойный экран входа:
   // нажатие на него и есть то действие, после которого браузер разрешает музыку.
+  // Только один раз на этом устройстве: если показывать его при каждом визите, он выглядит как экран
+  // входа в аккаунт, и человеку кажется, что сайт его «разлогинил». Дальше музыка просто начнётся
+  // с первого касания страницы (см. unlock выше).
   const [gate, setGate] = useState(false);
   useEffect(() => {
     let off = false;
     let seen = false;
     try {
       off = localStorage.getItem(KEY) === "off";
-      seen = sessionStorage.getItem(KEY + "-gate") === "1";
+      seen = localStorage.getItem(KEY + "-gate") === "1" || sessionStorage.getItem(KEY + "-gate") === "1";
     } catch {}
     if (off || seen) return;
     const t = setTimeout(() => {
@@ -85,7 +88,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const enter = () => {
     if (engine.current?.running) engine.current.resume();
     else start();
-    try { sessionStorage.setItem(KEY + "-gate", "1"); } catch {}
+    try { localStorage.setItem(KEY + "-gate", "1"); } catch {}
     setGate(false);
   };
 
