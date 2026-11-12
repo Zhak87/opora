@@ -25,6 +25,9 @@ import { IntakeCard } from "@/components/IntakeCard";
 import { GUIDE_COOKIE, guideSeen } from "@/lib/guide";
 import { Needs } from "@/components/Needs";
 import { needForMood } from "@/lib/needs";
+import { PushOptIn } from "@/components/PushOptIn";
+import { pushConfig } from "@/lib/push-config";
+import { isGuest } from "@/lib/trial";
 
 // Плитки настроения 1–5 на главной: ведут к отметке дня.
 const MOOD_TILES = [
@@ -58,6 +61,7 @@ export default async function HomePage() {
   const question = pickForDay(dailyQuestions(locale));
   const name = profile?.name;
   const showIntake = profile && !intakeSeen(profile.intake);
+  const push = user && !isGuest(session?.claims) ? pushConfig() : null;
 
   return (
     <div className="stagger">
@@ -123,6 +127,8 @@ export default async function HomePage() {
           <span className="text-sm text-ink-soft transition group-hover:text-ink">{checkin ? wb.homeDone : wb.homeTitle}</span>
         </Link>
       </section>
+
+      {push && <PushOptIn publicKey={push.publicKey} locale={locale} prompt />}
 
       {/* Три главных действия: «Поговорить» — большая тёмная плитка, остальные рядом */}
       <section className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-[1.25fr_1fr_1fr] sm:gap-4">

@@ -3,7 +3,7 @@
 import { track } from "@/lib/track";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient, requireUser } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/server";
 import { getTopic } from "@/lib/topics";
 import { talkOutMessages } from "@/i18n/game-talk-out";
 import { JOURNAL_KINDS, journalKinds, type JournalKind } from "@/lib/content";
@@ -12,6 +12,7 @@ import { INTL } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { profileMessages } from "@/i18n/profile";
+import { removePushDevice } from "@/lib/push-device";
 
 async function authed() {
   const { supabase, user } = await requireUser();
@@ -209,7 +210,8 @@ export async function saveVoice(settings: unknown) {
 }
 
 export async function signOut() {
-  const supabase = await createClient();
+  const { supabase, user } = await requireUser();
+  if (user) await removePushDevice(user.id).catch(() => console.error("Push subscription cleanup failed on sign-out"));
   await supabase.auth.signOut();
   redirect("/welcome");
 }

@@ -9,8 +9,8 @@
 -- 3. Расшифровка, подсказки, вопросы психолога и черновик итогов — только для психолога этой встречи.
 --    Клиент видит лишь то, что психолог сам опубликовал в sessions.summary и sessions.tasks.
 --    У всех этих записей есть срок хранения (expires_at); purge_consult_data удаляет просроченное.
--- 4. Напоминания и подтверждения: журнал отправленного (session_notifications) не даёт отправить
---    одно и то же письмо дважды, даже если задача запустилась повторно.
+-- Подтверждения и напоминания о встречах идут через общую очередь уведомлений push_jobs (0017_web_push):
+-- она уже пересоздаёт напоминания при переносе и блокирует задание на время отправки.
 
 /* ---------- Встреча ---------- */
 
@@ -209,23 +209,9 @@ begin
 end;
 $f$;
 
-/* ---------- Отправленные напоминания и подтверждения ---------- */
-
--- Один ключ — одно письмо. slot — время встречи (для напоминаний) или время события (для подтверждений):
--- после переноса у напоминаний новый ключ, а старые просто не наступят.
-create table public.session_notifications (
-  session_id uuid not null references public.sessions (id) on delete cascade,
-  kind text not null check (kind in ('booked', 'rescheduled', 'cancelled', 'remind24', 'remind1')),
-  recipient uuid not null references auth.users (id) on delete cascade,
-  slot timestamptz not null,
-  created_at timestamptz not null default now(),
-  primary key (session_id, kind, recipient, slot)
-);
-alter table public.session_notifications enable row level security;
-revoke all on public.session_notifications from anon, authenticated;
-
 revoke execute on function public.sessions_video_epoch() from public, anon, authenticated;
 revoke execute on function public.set_speech_consent(uuid, boolean) from public, anon;
 revoke execute on function public.speech_ticket(uuid) from public, anon;
 revoke execute on function public.add_transcript(uuid, int, text, timestamptz, int) from public, anon;
 revoke execute on function public.purge_consult_data() from public, anon, authenticated;
+grant execute on function public.purge_consult_data() to service_role;

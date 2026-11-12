@@ -47,9 +47,10 @@ services:
       - -c
       - |
         H="Authorization: Bearer $$CRON_SECRET"
-        echo "0 3 * * * wget -qO- --header '$$H' http://app:3000/api/cron/daily-email" > /etc/crontabs/root
-        echo "*/10 * * * * wget -qO- --header '$$H' http://app:3000/api/cron/session-reminders" >> /etc/crontabs/root
+        echo "0 3 * * * wget -qO- --header '$$H' http://app:3000/api/cron/daily-email; wget -qO- --header '$$H' http://app:3000/api/cron/session-reminders" > /etc/crontabs/root
+        echo "41 * * * * wget -qO- --header '$$H' http://app:3000/api/cron/consult-cleanup" >> /etc/crontabs/root
         echo "17 * * * * wget -qO- --header '$$H' http://app:3000/api/cron/trial-cleanup" >> /etc/crontabs/root
+        echo "* * * * * wget -qO- --header '$$H' http://app:3000/api/cron/web-push" >> /etc/crontabs/root
         exec crond -f -l 8
 
   # Голос в «Комнатах»: медиасервер LiveKit. Спикеры отправляют звук один раз, сервер раздаёт его слушателям,

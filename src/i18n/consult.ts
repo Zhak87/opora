@@ -152,23 +152,6 @@ export const consultMessages = defineMessages({
       scheduleNext: "Назначить следующую встречу",
       nextTitle: "Следующая встреча",
     },
-    email: {
-      subject: {
-        booked: (when: string) => `Встреча назначена: ${when}`,
-        rescheduled: (when: string) => `Встреча перенесена: ${when}`,
-        cancelled: (when: string) => `Встреча отменена: ${when}`,
-        remind24: (when: string) => `Завтра встреча: ${when}`,
-        remind1: (when: string) => `Скоро встреча: ${when}`,
-      },
-      text: {
-        booked: (peer: string, when: string) => `Встреча назначена на ${when}. ${peer}.`,
-        rescheduled: (peer: string, when: string) => `Встреча перенесена. Новое время: ${when}. ${peer}.`,
-        cancelled: (peer: string, when: string) => `Встреча ${when} отменена. ${peer}.`,
-        remind24: (peer: string, when: string) => `Напоминаем о встрече: ${when}. ${peer}.`,
-        remind1: (peer: string, when: string) => `Встреча начнётся в ${when}. ${peer}. Вход в консультацию откроется за 15 минут.`,
-      },
-      join: "Войти в консультацию",
-    },
   },
   kk: {
     join: {
@@ -318,23 +301,6 @@ export const consultMessages = defineMessages({
       scheduleNext: "Келесі кездесуді белгілеу",
       nextTitle: "Келесі кездесу",
     },
-    email: {
-      subject: {
-        booked: (when: string) => `Кездесу белгіленді: ${when}`,
-        rescheduled: (when: string) => `Кездесу ауыстырылды: ${when}`,
-        cancelled: (when: string) => `Кездесу тоқтатылды: ${when}`,
-        remind24: (when: string) => `Ертең кездесу: ${when}`,
-        remind1: (when: string) => `Жақында кездесу: ${when}`,
-      },
-      text: {
-        booked: (peer: string, when: string) => `Кездесу ${when} уақытына белгіленді. ${peer}.`,
-        rescheduled: (peer: string, when: string) => `Кездесу ауыстырылды. Жаңа уақыты: ${when}. ${peer}.`,
-        cancelled: (peer: string, when: string) => `${when} кездесуі тоқтатылды. ${peer}.`,
-        remind24: (peer: string, when: string) => `Кездесуді еске саламыз: ${when}. ${peer}.`,
-        remind1: (peer: string, when: string) => `Кездесу ${when} басталады. ${peer}. Консультацияға кіру 15 минут бұрын ашылады.`,
-      },
-      join: "Консультацияға кіру",
-    },
   },
   en: {
     join: {
@@ -483,23 +449,6 @@ export const consultMessages = defineMessages({
       summarize: "Write the summary",
       scheduleNext: "Schedule the next session",
       nextTitle: "Next session",
-    },
-    email: {
-      subject: {
-        booked: (when: string) => `Session booked: ${when}`,
-        rescheduled: (when: string) => `Session moved: ${when}`,
-        cancelled: (when: string) => `Session cancelled: ${when}`,
-        remind24: (when: string) => `Session tomorrow: ${when}`,
-        remind1: (when: string) => `Session soon: ${when}`,
-      },
-      text: {
-        booked: (peer: string, when: string) => `Your session is booked for ${when}. ${peer}.`,
-        rescheduled: (peer: string, when: string) => `Your session was moved. New time: ${when}. ${peer}.`,
-        cancelled: (peer: string, when: string) => `The session on ${when} was cancelled. ${peer}.`,
-        remind24: (peer: string, when: string) => `A reminder about your session: ${when}. ${peer}.`,
-        remind1: (peer: string, when: string) => `Your session starts at ${when}. ${peer}. The room opens 15 minutes before.`,
-      },
-      join: "Join the session",
     },
   },
 });

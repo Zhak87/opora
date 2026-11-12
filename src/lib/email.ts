@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { courseMessages } from "@/i18n/course";
 import { careChatMessages } from "@/i18n/care-chat";
-import { consultMessages } from "@/i18n/consult";
 import { isLocale, type Locale } from "@/i18n/config";
 import { weekOf, type Course, type CourseState } from "./course";
 
@@ -12,10 +11,8 @@ export function emailSendingEnabled() {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.DAILY_EMAILS === "on");
 }
 
-// Служебные письма о встречах (подтверждения, напоминания) не зависят от рассылки писем дня:
-// уходят, когда настроен Resend. Выключить отдельно: SESSION_EMAILS=off.
-export function sessionEmailsEnabled() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.SESSION_EMAILS !== "off");
+export function notificationEmailConfigured() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM && process.env.CRON_SECRET);
 }
 
 export function siteUrl() {
@@ -155,10 +152,18 @@ export function renderDailyEmail(opts: {
   return { subject, html, text, unsubscribe: unsubscribeUrl(opts.userId, true) };
 }
 
-export async function sendEmail(msg: { to: string; subject: string; html: string; text: string; unsubscribe?: string; replyTo?: string }) {
+export async function sendEmail(msg: {
+  to: string; subject: string; html: string; text: string; unsubscribe?: string; replyTo?: string;
+  idempotencyKey?: string; signal?: AbortSignal;
+}) {
   const res = await fetch(`${(process.env.RESEND_API_URL || "https://api.resend.com").replace(/\/$/, "")}/emails`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      ...(msg.idempotencyKey ? { "Idempotency-Key": msg.idempotencyKey } : {}),
+    },
+    signal: msg.signal,
     body: JSON.stringify({
       from: process.env.EMAIL_FROM,
       to: [msg.to],
@@ -173,18 +178,8 @@ export async function sendEmail(msg: { to: string; subject: string; html: string
 }
 
 // Напоминание о встрече с психологом: служебное письмо, без подробностей о работе — только время и ссылка.
-export type SessionNoticeKind = "booked" | "rescheduled" | "cancelled" | "remind24" | "remind1";
-
-export function renderSessionReminder(opts: { locale: Locale; name?: string | null; peer: string; when: string; link: string; kind?: SessionNoticeKind; join?: boolean }) {
-  const base = careChatMessages[opts.locale].email;
-  const cm = consultMessages[opts.locale].email;
-  const kind = opts.kind;
-  const m = {
-    ...base,
-    subject: kind ? cm.subject[kind] : base.subject,
-    text: kind ? cm.text[kind] : base.text,
-    open: opts.join ? cm.join : base.open,
-  };
+export function renderSessionReminder(opts: { locale: Locale; name?: string | null; peer: string; when: string; link: string }) {
+  const m = careChatMessages[opts.locale].email;
   const subject = m.subject(opts.when);
   const html = `<!DOCTYPE html>
 <html lang="${opts.locale}">

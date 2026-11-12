@@ -6,6 +6,11 @@ import { notificationMessages } from "@/i18n/notifications";
 import { PageHeader } from "@/components/ui";
 import { ArrowIcon } from "@/components/icons";
 import { MarkSeen } from "@/components/MarkSeen";
+import { PushOptIn } from "@/components/PushOptIn";
+import { pushConfig } from "@/lib/push-config";
+import { isGuest } from "@/lib/trial";
+import { notificationEmailConfigured } from "@/lib/email";
+import { adminConfigured } from "@/lib/supabase/admin";
 
 const TONE: Record<Notice["kind"], { dot: string; bg: string }> = {
   course: { dot: "bg-lilac-deep", bg: "from-lilac-soft/80" },
@@ -16,16 +21,30 @@ const TONE: Record<Notice["kind"], { dot: string; bg: string }> = {
 };
 
 export default async function NotificationsPage() {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const locale = await getLocale();
+  const { data: session } = await supabase.auth.getClaims();
+  const registered = Boolean(user && !isGuest(session?.claims));
+  const push = registered ? pushConfig() : null;
+  const emailAvailable = Boolean(registered && user?.email && adminConfigured() && notificationEmailConfigured());
   const m = notificationMessages[locale];
-  const [list, seen] = await Promise.all([buildNotifications(supabase, locale), seenIds()]);
+  const [list, seen, emailPreference] = await Promise.all([
+    buildNotifications(supabase, locale),
+    seenIds(),
+    registered && user
+      ? supabase.from("notification_email_preferences").select("user_id").eq("user_id", user.id).maybeSingle()
+      : null,
+  ]);
+  const emailEnabled = Boolean(emailPreference?.data);
   const unseen = list.filter((n) => !seen.has(n.id)).map((n) => n.id);
 
   return (
     <>
       <PageHeader title={m.title}>{m.lead}</PageHeader>
       <MarkSeen ids={unseen} />
+      {(push || emailAvailable || emailEnabled) && (
+        <PushOptIn publicKey={push?.publicKey} locale={locale} email={{ available: emailAvailable, enabled: emailEnabled }} />
+      )}
       {list.length === 0 ? (
         <p className="rounded-[24px] bg-paper shadow-soft p-6 text-center text-[15px] text-ink-soft">{m.empty}</p>
       ) : (
@@ -57,13 +76,6 @@ export default async function NotificationsPage() {
           </ul>
         </>
       )}
-      <p className="mt-10 flex items-center justify-center gap-2 text-center text-sm text-ink-faint">
-        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
-          <path d="m4.5 7 7.5 6 7.5-6" />
-        </svg>
-        {m.emailSoon}
-      </p>
     </>
   );
 }

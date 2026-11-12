@@ -37,6 +37,11 @@ export default async function ClientSession({ params }: { params: Promise<{ id: 
         </div>
       )}
       <Card className="p-6 sm:p-8">
+        {s.video_url && s.status === "scheduled" && (
+          <a href={s.video_url} target="_blank" rel="noopener noreferrer" className="mb-5 inline-block font-medium text-sky-deep underline">
+            {m.care.video}
+          </a>
+        )}
         {s.status === "scheduled" ? <RescheduleForm session={s.id} slots={slots} /> : <p className="text-ink-soft">{m.status[s.status]}</p>}
       </Card>
     </>
