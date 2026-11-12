@@ -95,6 +95,24 @@ jobs:
           ssh prod 'cd /opt/opora && ./dc.sh exec -T auth sh -c "env | grep -E \"^GOTRUE_(SMTP_(HOST|PORT|USER|ADMIN_EMAIL|SENDER_NAME)|MAILER_AUTOCONFIRM|RATE_LIMIT_EMAIL_SENT|SITE_URL)=\"; printenv GOTRUE_SMTP_PASS | wc -c"' || true
           echo; echo "== Ошибки и письма в журнале входа за 3 дня"
           ssh prod 'cd /opt/opora && ./dc.sh logs --since 72h auth 2>&1 | grep -v GOTRUE_MAILER_EXTERNAL_HOSTS | grep -iE "mail|smtp|error|rate.?limit|signup|recover|over_" | sed -E "s/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/***@***/g" | tail -60' || true
+          echo; echo "== Все запросы, после которых уходит письмо (регистрация, повтор, новый пароль, смена почты), за 3 дня"
+          ssh prod 'cd /opt/opora && ./dc.sh logs --no-log-prefix --since 72h auth 2>&1' | jq -R -r 'fromjson? | select(.msg=="request completed" and ((.path // "")|test("^/(signup|recover|resend|otp|magiclink|user)$")) and (.method=="POST" or .method=="PUT")) | [.time, .method, .path, .status, ((.duration/1000000|floor|tostring)+"ms"), (.auth_event.action // ""), (.error // ""), (.referer // "")] | @tsv' || true
+          echo; echo "== Ошибки отправки писем за 7 дней"
+          ssh prod 'cd /opt/opora && ./dc.sh logs --since 168h auth 2>&1 | grep -iE "smtp|sending|mailer|email_send|over_email|535|554|550" | grep -v GOTRUE_MAILER_EXTERNAL_HOSTS | sed -E "s/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/***@***/g" | tail -30' || true
+          echo; echo "== Аккаунты за 4 дня (почтовый домен, когда отправлены письма)"
+          cat > /tmp/q.sql <<'SQL'
+          select to_char(created_at,'MM-DD HH24:MI') created, is_anonymous anon, split_part(email,'@',2) dom,
+            to_char(confirmation_sent_at,'MM-DD HH24:MI') conf_sent, to_char(email_confirmed_at,'MM-DD HH24:MI') confirmed,
+            split_part(email_change,'@',2) change_to, to_char(email_change_sent_at,'MM-DD HH24:MI') change_sent,
+            to_char(recovery_sent_at,'MM-DD HH24:MI') recovery_sent, to_char(last_sign_in_at,'MM-DD HH24:MI') last_in
+          from auth.users
+          where created_at > now() - interval '4 days' or recovery_sent_at > now() - interval '4 days'
+             or email_change_sent_at > now() - interval '4 days' or confirmation_sent_at > now() - interval '4 days'
+          order by created_at;
+          SQL
+          ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres' < /tmp/q.sql || true
+          echo; echo "== Ошибки сайта за 2 дня"
+          ssh prod 'cd /opt/opora && ./dc.sh logs --since 48h app 2>&1 | grep -iE "error|fail|auth" | sed -E "s/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/***@***/g" | tail -40' || true
           echo; echo "== Регистрации за 4 дня по дням"
           ssh prod 'cd /opt/opora && ./dc.sh exec -T db psql -U postgres -c "select date(created_at) d, count(*) all_users, count(*) filter (where is_anonymous) guests, count(email_confirmed_at) confirmed, count(confirmation_sent_at) conf_sent, count(recovery_sent_at) recovery_sent from auth.users where created_at > now() - interval '"'"'4 days'"'"' group by 1 order by 1"' || true
           echo; echo "== Домен в Resend"
