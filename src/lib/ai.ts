@@ -29,9 +29,11 @@ const GEMINI_MODELS = (process.env.GEMINI_MODEL || "gemini-flash-latest,gemini-f
   .filter(Boolean);
 // Flash-Lite рассчитана на низкую задержку. Для остальных задач и явной настройки сохраняем порядок моделей.
 const CHAT_MODELS = process.env.GEMINI_MODEL ? GEMINI_MODELS : [...GEMINI_MODELS].reverse();
+// Через столько ждём первых слов, прежде чем параллельно спросить запасную модель.
 const FIRST_WORDS_TIMEOUT = 4_000;
-const CHAT_START_TIMEOUT = 10_000;
-const CHAT_RESPONSE_TIMEOUT = 30_000;
+// Сколько всего ждём начала ответа, прежде чем показать «не удалось ответить».
+const CHAT_START_TIMEOUT = 25_000;
+const CHAT_RESPONSE_TIMEOUT = 50_000;
 const MODEL_RETRY_DELAY = 60_000;
 const modelRetryAt = new Map<string, number>();
 
@@ -83,56 +85,108 @@ async function streamGemini({ system, messages, signal }: StreamOptions) {
   // Если модель только что подвела, начинаем со здоровой, но позже проверяем исходный порядок снова.
   const ready = CHAT_MODELS.filter((model) => (modelRetryAt.get(model) ?? 0) <= started);
   const cooling = CHAT_MODELS.filter((model) => (modelRetryAt.get(model) ?? 0) > started);
-  const queue = [...ready, ...cooling, ...ready, ...cooling];
-  let last: AIError | null = null;
-  for (const [i, model] of queue.entries()) {
-    if (i === CHAT_MODELS.length) await new Promise((resolve) => setTimeout(resolve, 400));
-    signal?.throwIfAborted();
-    const remaining = CHAT_START_TIMEOUT - (Date.now() - started);
-    if (remaining <= 0) break;
+  const order = [...ready, ...cooling];
+  // Три круга по всем моделям: при перегрузке (503) Gemini часто отвечает со второй-третьей попытки.
+  const maxAttempts = order.length * 3;
+
+  // Медленный запрос не обрываем: когда Gemini перегружен, первые слова могут прийти через 5–9 секунд,
+  // и новый запрос с нуля только отодвигает ответ. Вместо этого через FIRST_WORDS_TIMEOUT параллельно
+  // спрашиваем запасную модель и берём того, кто ответит первым. Остальные запросы отменяем.
+  type Outcome = { run: Run; stream?: ReadableStream<string>; error?: unknown };
+  type Run = { model: string; controller: AbortController; done: Promise<Outcome> };
+  const running = new Set<Run>();
+  let launched = 0;
+  const launch = () => {
+    const model = order[launched % order.length];
+    launched++;
     const controller = new AbortController();
-    const attemptSignal = replySignal(controller, signal);
-    // Дедлайн включает получение первого видимого фрагмента. После него поток может идти дальше.
-    const timer = setTimeout(() => controller.abort(), Math.min(FIRST_WORDS_TIMEOUT, remaining));
-    try {
-      for (const thinking of thinkingOptions(model)) {
-        const res = await fetch(
-          `${geminiBase()}/v1beta/models/${model}:streamGenerateContent?alt=sse`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-            body: makeBody(thinking),
-            signal: attemptSignal,
-          },
-        );
-        if (res.ok && res.body) {
-          const stream = await startTextStream(sseToText(res.body, (data) => {
-            const parts = JSON.parse(data)?.candidates?.[0]?.content?.parts ?? [];
-            return parts.map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? "")).join("");
-          }));
-          if (process.env.AI_FAST_THINKING !== "off") thinkingChoice.set(model, thinking);
-          modelRetryAt.delete(model);
-          console.log(`[ai] ${model} response started in ${Date.now() - started} ms`);
-          return stream;
-        }
-        const text = await res.text();
-        last = new AIError(res.status, `Gemini ${model} ${res.status}: ${text.slice(0, 300)}`);
-        console.error(last.message);
-        if (res.status === 401 || res.status === 403 || (res.status === 400 && /API_KEY|API key/i.test(text))) {
-          throw new AIError(401, last.message);
-        }
-        if (!(res.status === 400 && thinking && /think/i.test(text))) break;
-      }
-    } catch (e) {
-      if (signal?.aborted || e instanceof AIError) throw e;
-      last = new AIError(504, `Gemini ${model}: ${(e as Error).message}`);
-      console.error(last.message);
-    } finally {
+    const run = { model, controller } as Run;
+    run.done = attemptGemini(model, makeBody, replySignal(controller, signal)).then(
+      (stream) => ({ run, stream }),
+      (error) => ({ run, error }),
+    );
+    running.add(run);
+  };
+  const stopAll = () => {
+    for (const run of running) run.controller.abort();
+    running.clear();
+  };
+
+  let last: AIError | null = null;
+  try {
+    launch();
+    while (running.size > 0) {
+      signal?.throwIfAborted();
+      const remaining = CHAT_START_TIMEOUT - (Date.now() - started);
+      if (remaining <= 0) break;
+      const canHedge = running.size < 2 && launched < maxAttempts;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const tick = new Promise<"tick">((resolve) => {
+        timer = setTimeout(() => resolve("tick"), canHedge ? Math.min(FIRST_WORDS_TIMEOUT, remaining) : remaining);
+      });
+      const next = await Promise.race([...[...running].map((run) => run.done), tick]);
       clearTimeout(timer);
+      if (next === "tick") {
+        if (canHedge) launch();
+        continue;
+      }
+      running.delete(next.run);
+      if (next.stream) {
+        modelRetryAt.delete(next.run.model);
+        console.log(`[ai] ${next.run.model} response started in ${Date.now() - started} ms`);
+        return next.stream;
+      }
+      if (signal?.aborted) throw next.error;
+      const e = next.error;
+      last = e instanceof AIError ? e : new AIError(504, `Gemini ${next.run.model}: ${(e as Error)?.message}`);
+      if (!(e instanceof AIError)) console.error(last.message);
+      if (last.status === 401) throw last;
+      modelRetryAt.set(next.run.model, Date.now() + MODEL_RETRY_DELAY);
+      if (launched < maxAttempts && running.size === 0) {
+        // Все модели уже ответили ошибкой: пауза перед следующим кругом.
+        if (launched % order.length === 0) await new Promise((resolve) => setTimeout(resolve, 1_000));
+        launch();
+      }
     }
-    modelRetryAt.set(model, Date.now() + MODEL_RETRY_DELAY);
+  } finally {
+    stopAll();
   }
-  throw last ?? new AIError(500, "Gemini: no models configured");
+  throw last ?? new AIError(504, "Gemini: no answer in time");
+}
+
+// Одна попытка у одной модели: перебираем настройки размышлений, пока модель их принимает.
+async function attemptGemini(
+  model: string,
+  makeBody: (thinking: Record<string, unknown> | null) => string,
+  attemptSignal: AbortSignal,
+): Promise<ReadableStream<string>> {
+  let last: AIError | null = null;
+  for (const thinking of thinkingOptions(model)) {
+    const res = await fetch(`${geminiBase()}/v1beta/models/${model}:streamGenerateContent?alt=sse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+      body: makeBody(thinking),
+      signal: attemptSignal,
+    });
+    if (res.ok && res.body) {
+      const stream = await startTextStream(
+        sseToText(res.body, (data) => {
+          const parts = JSON.parse(data)?.candidates?.[0]?.content?.parts ?? [];
+          return parts.map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? "")).join("");
+        }),
+      );
+      if (process.env.AI_FAST_THINKING !== "off") thinkingChoice.set(model, thinking);
+      return stream;
+    }
+    const text = await res.text();
+    last = new AIError(res.status, `Gemini ${model} ${res.status}: ${text.slice(0, 300)}`);
+    console.error(last.message);
+    if (res.status === 401 || res.status === 403 || (res.status === 400 && /API_KEY|API key/i.test(text))) {
+      throw new AIError(401, last.message);
+    }
+    if (!(res.status === 400 && thinking && /think/i.test(text))) break;
+  }
+  throw last ?? new AIError(500, `Gemini ${model}: no thinking option accepted`);
 }
 
 function replySignal(firstWords: AbortController, request?: AbortSignal) {

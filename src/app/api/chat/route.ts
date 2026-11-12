@@ -168,7 +168,7 @@ export async function POST(req: Request) {
     if (req.signal.aborted) return new Response(null, { status: 499 });
     console.error(e);
     const status = e instanceof AIError ? e.status : 0;
-    const text = status === 429 ? BUSY : status === 401 ? KEY_PROBLEM : FAILED;
+    const text = status === 429 || status === 503 ? BUSY : status === 401 ? KEY_PROBLEM : FAILED;
     return textResponse(text, 502, persistedId);
   }
 
