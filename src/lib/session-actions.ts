@@ -124,6 +124,38 @@ export async function createSessionForClient(_: State, formData: FormData): Prom
   return { ok: m.pro.saved };
 }
 
+// «Созвониться сейчас»: онлайн-встреча с клиентом, которая начинается прямо сейчас.
+// Клиент получает обычное уведомление о записи со ссылкой, психолог сразу попадает в лобби.
+export async function callClientNow(_: State, formData: FormData): Promise<State> {
+  const { supabase } = await authed();
+  const m = await msg();
+  const client = String(formData.get("client") ?? "");
+  if (!UUID_RE.test(client)) return { error: m.pro.errors.generic };
+  // Если с этим клиентом уже идёт или вот-вот начнётся онлайн-встреча, открываем её, а не создаём вторую.
+  const soon = new Date(Date.now() + 15 * 60_000).toISOString();
+  const { data: current } = await supabase
+    .from("sessions")
+    .select("id")
+    .eq("client_id", client)
+    .eq("status", "scheduled")
+    .eq("format", "online")
+    .lte("starts_at", soon)
+    .gte("ends_at", new Date().toISOString())
+    .order("starts_at")
+    .limit(1)
+    .maybeSingle();
+  if (current) redirect(`/pro/sessions/${current.id}/call`);
+  const { data: sid, error } = await supabase.rpc("create_session", {
+    p_client: client,
+    p_starts_at: new Date(Date.now() + 5_000).toISOString(),
+    p_minutes: null,
+    p_format: "online",
+  });
+  if (error || typeof sid !== "string") return { error: dbError(error?.message, m) };
+  revalidatePath("/pro", "layout");
+  redirect(`/pro/sessions/${sid}/call`);
+}
+
 export async function completeSession(_: State, formData: FormData): Promise<State> {
   const { supabase } = await authed();
   const m = await msg();

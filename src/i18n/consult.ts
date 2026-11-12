@@ -5,6 +5,15 @@ type Role = "psychologist" | "client";
 
 export const consultMessages = defineMessages({
   ru: {
+    now: {
+      call: "Созвониться сейчас",
+      calling: "Создаём встречу…",
+      start: "Начать сейчас",
+      starting: "Переносим на сейчас…",
+      startHint: "Встреча перенесётся на текущее время, клиент получит уведомление со ссылкой.",
+      overlap: "В это время у вас уже есть другая встреча.",
+      failed: "Не получилось начать встречу сейчас. Попробуйте ещё раз.",
+    },
     join: {
       enter: "Войти в консультацию",
       opensAt: (t: string) => `Вход откроется в ${t}`,
@@ -154,6 +163,15 @@ export const consultMessages = defineMessages({
     },
   },
   kk: {
+    now: {
+      call: "Қазір қоңырау шалу",
+      calling: "Кездесу құрылуда…",
+      start: "Қазір бастау",
+      starting: "Қазірге ауыстырылуда…",
+      startHint: "Кездесу қазіргі уақытқа ауысады, клиент сілтемесі бар хабарлама алады.",
+      overlap: "Бұл уақытта сізде басқа кездесу бар.",
+      failed: "Кездесуді қазір бастау мүмкін болмады. Қайта көріңіз.",
+    },
     join: {
       enter: "Консультацияға кіру",
       opensAt: (t: string) => `Кіру ${t} уақытында ашылады`,
@@ -303,6 +321,15 @@ export const consultMessages = defineMessages({
     },
   },
   en: {
+    now: {
+      call: "Call now",
+      calling: "Creating the session…",
+      start: "Start now",
+      starting: "Moving to now…",
+      startHint: "The session moves to the current time and the client gets a notification with a link.",
+      overlap: "You already have another session at this time.",
+      failed: "Couldn't start the session now. Please try again.",
+    },
     join: {
       enter: "Join the session",
       opensAt: (t: string) => `Opens at ${t}`,
