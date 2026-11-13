@@ -8,6 +8,7 @@ import { proLabels } from "@/i18n/pro";
 import { ConfirmForm } from "../ConfirmForm";
 import { JoinCard } from "../consult/JoinCard";
 import { recordMessages } from "@/i18n/record";
+import { cabinetMessages } from "@/i18n/cabinet";
 
 const STATUS_TONE = { scheduled: "bg-mist text-sky-deep", completed: "bg-sage-soft text-sage-deep", cancelled: "bg-sand text-ink-faint" };
 
@@ -34,6 +35,7 @@ export function SessionList({
   const m = scheduleMessages[locale];
   const formats = proLabels[locale].formats;
   const rm = recordMessages[locale];
+  const cm = cabinetMessages[locale];
   if (!sessions.length) return empty ? <p className="text-sm text-ink-faint">{empty}</p> : null;
   return (
     <ul className="space-y-3">
@@ -60,7 +62,14 @@ export function SessionList({
               <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
                 <span className={`rounded-full px-2 py-0.5 ${STATUS_TONE[s.status]}`}>{m.status[s.status]}</span>
                 {formats[s.format]}
-                {noted && s.status !== "cancelled" && Date.parse(s.starts_at) < Date.now() && (
+                {s.no_show && <span className="rounded-full bg-sand px-2 py-0.5 text-ink-soft">{cm.attend.noShow}</span>}
+                {noted && s.late_cancel && <span className="text-[#b0702a]">{cm.attend.lateCancel}</span>}
+                {noted && (s.late_cancel || (s.status !== "cancelled" && Date.parse(s.ends_at) < Date.now())) && (
+                  <span className={s.payment_status === "paid" ? "text-sage-deep" : "text-ink-faint"} data-mark-paid>
+                    {s.payment_status === "paid" ? cm.pay.paid : cm.pay.unpaid}
+                  </span>
+                )}
+                {noted && s.status !== "cancelled" && !s.no_show && Date.parse(s.starts_at) < Date.now() && (
                   <>
                     <span className={noted.has(s.id) ? "text-ink-soft" : "text-[#b0702a]"} data-mark-note>
                       {noted.has(s.id) ? `🔒 ${rm.marks.note}` : rm.marks.noNote}
@@ -99,6 +108,11 @@ export function SessionList({
                     {s.summary_edited_at && <span className="ml-2 normal-case tracking-normal text-ink-faint" data-edited>· {rm.summary.edited}</span>}
                   </p>
                   <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink">{s.summary}</p>
+                  {!noted && !href && s.summary_shared_at && (
+                    <Link href={`/care/chat/${s.psychologist_id}`} className="mt-2 inline-block text-sm text-sky-deep hover:text-ink" data-ask-summary>
+                      {cm.summary.ask} →
+                    </Link>
+                  )}
                 </div>
               )}
               {s.tasks && (

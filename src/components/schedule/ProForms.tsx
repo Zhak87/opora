@@ -14,6 +14,7 @@ import { PlusIcon, TrashIcon } from "../icons";
 import { useMsg } from "@/i18n/client";
 import { scheduleMessages, TIMEZONES } from "@/i18n/schedule";
 import { proLabels } from "@/i18n/pro";
+import { cabinetMessages } from "@/i18n/cabinet";
 import { minutesToTime } from "@/lib/time";
 
 const input =
@@ -63,9 +64,10 @@ export function AvailabilityForm({ initial }: { initial: Record<number, Window[]
   );
 }
 
-export function BookingSettingsForm({ tz, buffer, notice, horizon }: { tz: string; buffer: number; notice: number; horizon: number }) {
+export function BookingSettingsForm({ tz, buffer, notice, horizon, cancel }: { tz: string; buffer: number; notice: number; horizon: number; cancel: number }) {
   const [state, action] = useActionState(saveBookingSettings, undefined);
   const m = useMsg(scheduleMessages).pro;
+  const rule = useMsg(cabinetMessages).cancelRule;
   return (
     <form action={action} className="space-y-4">
       <label className="block">
@@ -81,6 +83,7 @@ export function BookingSettingsForm({ tz, buffer, notice, horizon }: { tz: strin
         <Field label={m.notice} name="booking_notice_hours" type="number" min={0} max={168} defaultValue={notice} />
         <Field label={m.horizon} name="booking_horizon_days" type="number" min={1} max={90} defaultValue={horizon} />
       </div>
+      <Field label={rule.field} name="cancel_hours" type="number" min={0} max={168} defaultValue={cancel} />
       {state?.error && <Notice tone="error">{state.error}</Notice>}
       {state?.ok && <Notice>{state.ok}</Notice>}
       <SubmitButton variant="soft">{m.save}</SubmitButton>

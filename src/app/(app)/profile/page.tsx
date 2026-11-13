@@ -169,13 +169,6 @@ export default async function ProfilePage({
         <form action={signOut} className="pt-2 text-center">
           <button className={buttonStyles.ghost}>{m.signOut}</button>
         </form>
-        {!pro && (
-          <p className="text-center text-xs">
-            <Link href="/pro/join" className="text-ink-faint underline-offset-4 hover:text-ink-soft hover:underline">
-              {m.proLink}
-            </Link>
-          </p>
-        )}
       </div>
     </>
   );

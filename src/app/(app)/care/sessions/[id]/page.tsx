@@ -6,6 +6,7 @@ import { getTimeZone } from "@/lib/tz";
 import { whenLabel } from "@/lib/time";
 import { getLocale } from "@/i18n/server";
 import { scheduleMessages } from "@/i18n/schedule";
+import { cabinetMessages } from "@/i18n/cabinet";
 import { common } from "@/i18n/common";
 import { Card, PageHeader } from "@/components/ui";
 import { RescheduleForm } from "@/components/schedule/SlotPicker";
@@ -22,6 +23,7 @@ export default async function ClientSession({ params }: { params: Promise<{ id: 
   const locale = await getLocale();
   const m = scheduleMessages[locale];
   const tz = await getTimeZone();
+  const { data: psy } = await supabase.from("psychologists").select("cancel_hours").eq("user_id", s.psychologist_id).maybeSingle();
   const slots = s.status === "scheduled" ? await freeSlots(supabase, s.psychologist_id, 30) : [];
   return (
     <>
@@ -43,6 +45,11 @@ export default async function ClientSession({ params }: { params: Promise<{ id: 
           </a>
         )}
         {s.status === "scheduled" ? <RescheduleForm session={s.id} slots={slots} /> : <p className="text-ink-soft">{m.status[s.status]}</p>}
+        {s.status === "scheduled" && psy && (
+          <p className="mt-5 border-t border-line/60 pt-4 text-sm leading-relaxed text-ink-soft" data-cancel-rule>
+            {cabinetMessages[locale].cancelRule.client(psy.cancel_hours)}
+          </p>
+        )}
       </Card>
     </>
   );

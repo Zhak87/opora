@@ -23,6 +23,8 @@ import { SessionRecord } from "@/components/record/SessionRecord";
 import { TaskList } from "@/components/record/Tasks";
 import { clientSessionNotes, listTasks, noteHasText } from "@/lib/records";
 import { recordMessages } from "@/i18n/record";
+import { cabinetMessages } from "@/i18n/cabinet";
+import { NoShowToggle, PaidToggle } from "@/components/pro/Marks";
 import { consultMessages } from "@/i18n/consult";
 import { consultAiEnabled } from "@/lib/consult/server";
 import { normalizeDraft, transcriptOf } from "@/lib/consult/assistant";
@@ -92,6 +94,20 @@ export default async function ProSession({ params, searchParams }: { params: Pro
       <div className="stagger space-y-5">
         {sp.moved && <Notice>{m.care.rescheduled}</Notice>}
         {s.status === "cancelled" && s.cancel_reason && <Notice tone="error">{s.cancel_reason}</Notice>}
+        {s.late_cancel && (
+          <Notice>
+            <span data-late-cancel>
+              {cabinetMessages[locale].attend.lateCancel}. {cabinetMessages[locale].attend.lateCancelHint(me.cancel_hours)}
+            </span>
+          </Notice>
+        )}
+        {(past ? s.status !== "cancelled" : false) || s.late_cancel ? (
+          <div className="flex flex-wrap items-center gap-2" data-session-marks>
+            <PaidToggle session={s} locale={locale} />
+            {s.status !== "cancelled" && (!s.summary_shared_at || s.no_show) && <NoShowToggle session={s} locale={locale} />}
+            {s.no_show && <span className="rounded-full bg-sand px-3 py-1 text-sm text-ink-soft" data-no-show-mark>{cabinetMessages[locale].attend.noShow}</span>}
+          </div>
+        ) : null}
         {s.status === "scheduled" && s.format === "online" && <JoinCard session={s} href={`/pro/sessions/${s.id}/call`} tz={tz} locale={locale} />}
         {s.status === "scheduled" && (prevNote || openTasks.length > 0) && (
           <Card className="space-y-4 p-6 sm:p-7">
@@ -136,7 +152,7 @@ export default async function ProSession({ params, searchParams }: { params: Pro
             )}
           </Card>
         )}
-        {s.status !== "cancelled" && (past || s.status === "completed") && (
+        {s.status !== "cancelled" && !s.no_show && (past || s.status === "completed") && (
           <SessionRecord
             session={s.id}
             client={s.client_id}

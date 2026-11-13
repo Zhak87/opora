@@ -3,149 +3,176 @@ import { requireUser } from "@/lib/supabase/server";
 import { myClients, myPsychologist } from "@/lib/pro";
 import { relativeDate } from "@/lib/format";
 import { getLocale } from "@/i18n/server";
-import { proMessages } from "@/i18n/pro";
-import { careMessages } from "@/i18n/care";
-import { Avatar, Chip, Stat, StatusPill } from "@/components/pro/bits";
+import { proLabels, proMessages } from "@/i18n/pro";
+import { cabinetMessages } from "@/i18n/cabinet";
+import { scheduleMessages } from "@/i18n/schedule";
+import { careChatMessages } from "@/i18n/care-chat";
+import { INTL } from "@/i18n/config";
+import { Avatar, StatusPill } from "@/components/pro/bits";
+import { PaidToggle } from "@/components/pro/Marks";
 import { ArrowIcon } from "@/components/icons";
 import { buttonStyles } from "@/components/ui";
 import { listSessions } from "@/lib/sessions";
-import { timeOf, dayLabel } from "@/lib/time";
-import { INTL } from "@/i18n/config";
-import { scheduleMessages } from "@/i18n/schedule";
+import { addDays, dayKey, dayLabel, timeOf, whenLabel, zonedToUtc } from "@/lib/time";
 import { careNotices, lastMessages, markNotificationsRead, unreadByPeer } from "@/lib/care-chat";
-import { careChatMessages } from "@/i18n/care-chat";
-import { dashboardMessages } from "@/i18n/dashboard";
-import { consultMessages } from "@/i18n/consult";
 import { joinState } from "@/lib/consult/config";
+import { listTasks, noteHasText, type SessionNote } from "@/lib/records";
 
-export default async function ProOverview() {
+const DAY = 86_400_000;
+
+// «Сегодня»: всё, что нужно психологу в течение рабочего дня, без лишних переходов.
+// Встречи дня, записи, которые ещё не заполнены, новые сообщения и новости по заданиям.
+export default async function ProToday() {
   const { supabase, user } = await requireUser();
   const locale = await getLocale();
   const m = proMessages[locale];
-  const scopes = careMessages[locale].scopes;
-  const me = (await myPsychologist(supabase, user!.id))!;
+  const cm = cabinetMessages[locale];
   const sm = scheduleMessages[locale];
-  const cm = careChatMessages[locale];
-  const dm = dashboardMessages[locale];
+  const chat = careChatMessages[locale];
+  const formats = proLabels[locale].formats;
+  const me = (await myPsychologist(supabase, user!.id))!;
+  const tz = me.timezone;
   const now = Date.now();
-  const [clients, { data: invites }, upcoming, notices, unread, last, overdue, week] = await Promise.all([
+  const today = dayKey(new Date(), tz);
+  const dayStart = zonedToUtc(`${today}T00:00`, tz)!.toISOString();
+  const dayEnd = zonedToUtc(`${addDays(today, 1)}T00:00`, tz)!.toISOString();
+
+  const [clients, todayAll, upcoming, recent, notices, unread, last, tasks] = await Promise.all([
     myClients(supabase, me.user_id),
-    supabase.from("invites").select("id, views").eq("psychologist_id", me.user_id),
-    listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: new Date(Date.now() - 60 * 60 * 1000).toISOString() }, 5),
-    careNotices(supabase, { me: me.user_id, role: "pro", locale, tz: me.timezone, limit: 6 }),
+    listSessions(supabase, { psychologist: me.user_id, from: dayStart, to: dayEnd }),
+    listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: dayEnd }, 4),
+    listSessions(supabase, { psychologist: me.user_id, from: new Date(now - 14 * DAY).toISOString(), to: new Date(now).toISOString() }),
+    careNotices(supabase, { me: me.user_id, role: "pro", locale, tz, limit: 6 }),
     unreadByPeer(supabase),
     lastMessages(supabase, me.user_id),
-    // Прошедшие, но не завершённые встречи: клиент ждёт итогов.
-    listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], to: new Date(now - 60 * 60 * 1000).toISOString() }, 10),
-    listSessions(supabase, { psychologist: me.user_id, status: ["scheduled"], from: new Date(now).toISOString(), to: new Date(now + 7 * 86_400_000).toISOString() }, 200),
+    listTasks(supabase, { psychologist: me.user_id }, 200),
   ]);
-  const needSummary = overdue.filter((s) => Date.parse(s.ends_at) < now);
-  const qm = consultMessages[locale].quick;
-  // Быстрые действия: ближайшая онлайн-встреча, итоги прошедшей, следующая встреча после последней.
-  const nextOnline = upcoming.find((s) => s.format === "online" && ["open", "early"].includes(joinState(s)));
-  const { data: lastDone } = await supabase
-    .from("sessions")
-    .select("id, client_id")
-    .eq("psychologist_id", me.user_id)
-    .in("status", ["completed", "scheduled"])
-    .lt("ends_at", new Date(now).toISOString())
-    .order("starts_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
   // Уведомления показаны — отмечаем прочитанными; подсветка новых остаётся до следующего захода.
   if (notices.some((n) => n.fresh)) await markNotificationsRead(supabase, notices.filter((n) => n.fresh).map((n) => n.id));
+
   const names = Object.fromEntries(clients.map((c) => [c.link.client_id, c.name ?? m.clients.noName]));
+  const nameOf = (id: string) => names[id] ?? m.clients.noName;
+  const sessions = todayAll.filter((s) => s.status !== "cancelled");
   const requests = clients.filter((c) => c.link.status === "pending");
+
+  // Прошедшие встречи без записи: нет личной заметки и итогом не делились.
+  const ended = recent.filter((s) => s.status !== "cancelled" && !s.no_show && Date.parse(s.ends_at) < now && !s.summary_shared_at);
+  const { data: noteRows } = ended.length
+    ? await supabase.from("session_notes").select("session_id, topic, client_state, fields, hypotheses, next_questions").in("session_id", ended.map((s) => s.id))
+    : { data: [] };
+  const noted = new Set(((noteRows ?? []) as SessionNote[]).filter(noteHasText).map((n) => n.session_id));
+  const toRecord = ended.filter((s) => !noted.has(s.id)).reverse();
+
   const newMessages = [...unread.entries()].map(([peer, n]) => ({ peer, n, msg: last.get(peer) }));
-  const active = clients.filter((c) => c.link.status === "active");
-  const views = (invites ?? []).reduce((sum, i) => sum + (i.views ?? 0), 0);
-  const fromInvites = clients.filter((c) => c.link.source === "invite").length;
+  // Новости по заданиям за неделю: клиент отметил выполнение или ответил в ветке.
+  const weekAgo = now - 7 * DAY;
+  const taskNews = tasks
+    .map((t) => {
+      const reply = [...t.replies].reverse().find((r) => r.author_id === t.client_id);
+      const lastMine = [...t.replies].reverse().find((r) => r.author_id === me.user_id);
+      const replyAt = reply && (!lastMine || lastMine.created_at < reply.created_at) ? Date.parse(reply.created_at) : 0;
+      const doneAt = t.status === "done" && t.done_at ? Date.parse(t.done_at) : 0;
+      return { t, at: Math.max(replyAt, doneAt), kind: replyAt > doneAt ? ("reply" as const) : ("done" as const), text: reply?.body };
+    })
+    .filter((x) => x.at > weekAgo)
+    .sort((a, b) => b.at - a.at)
+    .slice(0, 5);
+
+  const dateTitle = new Intl.DateTimeFormat(INTL[locale], { timeZone: tz, weekday: "long", day: "numeric", month: "long" }).format(new Date());
 
   return (
     <div className="stagger">
-      <header className="mb-8 sm:mb-10">
-        <p className="mb-2 text-sm text-ink-soft">{m.cabinet}</p>
-        <h1 className="font-serif text-[32px] leading-tight text-ink sm:text-[40px]">{m.overview.hello(me.full_name.split(" ")[0] ?? "")}</h1>
+      <header className="mb-8">
+        <p className="mb-2 text-sm text-ink-soft first-letter:uppercase">{dateTitle}</p>
+        <h1 className="font-serif text-[30px] leading-tight text-ink sm:text-[38px]">{m.overview.hello(me.full_name.split(" ")[0] ?? "")}</h1>
       </header>
 
-      <section className="mb-6 flex flex-col gap-4 rounded-[28px] border border-line/70 bg-gradient-to-r from-paper via-paper to-lilac-soft/60 p-6 shadow-soft sm:flex-row sm:items-center sm:p-7">
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <p className="text-[15px] font-medium text-ink">{m.overview.profileStatus}</p>
-            <StatusPill status={me.status} label={m.status[me.status]} />
+      {me.status !== "approved" && (
+        <section className="mb-6 flex flex-col gap-4 rounded-[28px] border border-line/70 bg-paper p-6 shadow-soft sm:flex-row sm:items-center">
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <p className="text-[15px] font-medium text-ink">{m.overview.profileStatus}</p>
+              <StatusPill status={me.status} label={m.status[me.status]} />
+            </div>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">{m.statusHint[me.status]}</p>
           </div>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">{m.statusHint[me.status]}</p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          {me.status === "approved" && (
-            <Link href={`/p/${me.slug}`} className={`${buttonStyles.ghost} h-11`}>
-              {m.overview.publicLink}
-            </Link>
-          )}
-          <Link href="/pro/profile" className={`${buttonStyles.soft} h-11`}>
+          <Link href="/pro/profile" className={`${buttonStyles.soft} h-11 shrink-0`}>
             {m.overview.openProfile}
           </Link>
-        </div>
-      </section>
-
-      <section className="mb-10 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-        <Stat value={active.length} label={m.overview.activeClients(active.length)} tone="bg-gradient-to-br from-paper to-sage-soft/70" />
-        <Stat value={week.length} label={dm.week(week.length)} tone="bg-gradient-to-br from-paper to-lilac-soft/70" />
-        <Stat value={views} label={m.overview.invitesViews(views)} tone="bg-gradient-to-br from-paper to-mist/70" />
-        <Stat value={fromInvites} label={m.overview.fromInvites(fromInvites)} tone="bg-gradient-to-br from-paper to-sand/80" />
-      </section>
-
-      {(nextOnline || needSummary.length > 0 || lastDone) && (
-        <section className="mb-6 flex flex-wrap gap-2" aria-label={qm.title} data-quick-actions>
-          {nextOnline && (
-            <Link
-              href={`/pro/sessions/${nextOnline.id}/call`}
-              className={`${joinState(nextOnline) === "open" ? buttonStyles.primary : buttonStyles.soft} h-11`}
-              title={qm.nextAt(`${dayLabel(nextOnline.starts_at, me.timezone, locale)}, ${timeOf(nextOnline.starts_at, me.timezone, INTL[locale])}`)}
-              data-quick="join"
-            >
-              {qm.join} · {timeOf(nextOnline.starts_at, me.timezone, INTL[locale])}
-            </Link>
-          )}
-          {needSummary[0] && (
-            <Link href={`/pro/sessions/${needSummary[0].id}#draft`} className={`${buttonStyles.soft} h-11`} data-quick="summary">
-              {qm.summarize}
-            </Link>
-          )}
-          {lastDone && (
-            <Link href={`/pro/sessions/${lastDone.id}#next`} className={`${buttonStyles.ghost} h-11`} data-quick="next">
-              {qm.scheduleNext}
-            </Link>
-          )}
         </section>
       )}
 
       {requests.length > 0 && (
-        <Link
-          href="/pro/schedule"
-          className="group mb-6 flex items-center gap-4 rounded-[24px] border border-sky/40 bg-mist/60 px-5 py-4 transition hover:bg-mist"
-        >
+        <Link href="/pro/schedule" className="group mb-6 flex items-center gap-4 rounded-[24px] border border-sky/40 bg-mist/60 px-5 py-4 transition hover:bg-mist">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper font-serif text-lg text-sky-deep">{requests.length}</span>
           <span className="flex-1 text-[15px] text-ink">{sm.pro.requests}</span>
           <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
         </Link>
       )}
 
-      {needSummary.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-1 px-1 text-[15px] text-ink-soft">{dm.needSummary.title}</h2>
-          <p className="mb-3 px-1 text-xs leading-relaxed text-ink-faint">{dm.needSummary.hint}</p>
+      <section className="mb-8" data-today-sessions>
+        <h2 className="mb-3 px-1 text-[15px] text-ink-soft">{cm.today.sessions}</h2>
+        {sessions.length ? (
+          <ul className="space-y-2.5">
+            {sessions.map((s) => {
+              const started = Date.parse(s.starts_at) <= now;
+              const over = Date.parse(s.ends_at) < now;
+              const canJoin = s.status === "scheduled" && s.format === "online" && ["open", "early"].includes(joinState(s));
+              return (
+                <li key={s.id} className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[24px] bg-paper px-5 py-4 shadow-soft ${over ? "opacity-80" : ""}`} data-today-session={s.id}>
+                  <Link href={`/pro/sessions/${s.id}`} className="group flex min-w-[200px] flex-1 items-center gap-4">
+                    <span className="w-14 shrink-0 font-serif text-[20px] text-ink">{timeOf(s.starts_at, tz, INTL[locale])}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] text-ink group-hover:text-lilac-deep">{nameOf(s.client_id)}</span>
+                      <span className="block text-xs text-ink-faint">
+                        {formats[s.format as keyof typeof formats]}
+                        {s.no_show ? ` · ${cm.attend.noShow}` : started && !over ? ` · ${cm.today.now}` : over ? ` · ${cm.today.done}` : ""}
+                      </span>
+                    </span>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    {!s.no_show && <PaidToggle session={s} locale={locale} compact />}
+                    {canJoin ? (
+                      <Link href={`/pro/sessions/${s.id}/call`} className={`${joinState(s) === "open" ? buttonStyles.primary : buttonStyles.soft} h-9 px-4 text-sm`}>
+                        {cm.today.join}
+                      </Link>
+                    ) : (
+                      over &&
+                      !s.no_show &&
+                      !s.summary_shared_at && (
+                        <Link href={`/pro/sessions/${s.id}#draft`} className={`${buttonStyles.soft} h-9 px-4 text-sm`}>
+                          {cm.today.record}
+                        </Link>
+                      )
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-[24px] border border-dashed border-line px-6 py-7 text-center text-sm text-ink-soft">
+            {cm.today.noSessions}
+            {upcoming[0] && <span className="mt-1 block text-ink-faint">{cm.today.nextOne(whenLabel(upcoming[0].starts_at, tz, locale))}</span>}
+          </p>
+        )}
+      </section>
+
+      {toRecord.length > 0 && (
+        <section className="mb-8" data-to-record>
+          <h2 className="mb-1 px-1 text-[15px] text-ink-soft">{cm.today.toRecord}</h2>
+          <p className="mb-3 px-1 text-xs leading-relaxed text-ink-faint">{cm.today.toRecordHint}</p>
           <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] border border-[#e5dcc9] bg-[#fbf6ea]/70">
-            {needSummary.map((s) => (
+            {toRecord.map((s) => (
               <li key={s.id}>
-                <Link href={`/pro/sessions/${s.id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">
+                <Link href={`/pro/sessions/${s.id}#draft`} className="group flex items-center gap-4 px-5 py-3.5 transition hover:bg-sand/40">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] text-ink">{names[s.client_id] ?? m.clients.noName}</span>
+                    <span className="block truncate text-[15px] text-ink">{nameOf(s.client_id)}</span>
                     <span className="block text-xs text-ink-faint">
-                      {dayLabel(s.starts_at, me.timezone, locale)}, {timeOf(s.starts_at, me.timezone, INTL[locale])}
+                      {dayLabel(s.starts_at, tz, locale)}, {timeOf(s.starts_at, tz, INTL[locale])}
                     </span>
                   </span>
-                  <span className="shrink-0 text-sm text-sky-deep group-hover:text-ink">{dm.needSummary.action}</span>
+                  <span className="shrink-0 text-sm text-sky-deep group-hover:text-ink">{cm.today.record}</span>
                 </Link>
               </li>
             ))}
@@ -153,49 +180,22 @@ export default async function ProOverview() {
         </section>
       )}
 
-      <section className="mb-10">
-        <div className="mb-3 flex items-baseline justify-between px-1">
-          <h2 className="text-[15px] text-ink-soft">{sm.care.upcoming}</h2>
-          <Link href="/pro/schedule" className="text-sm text-ink-faint hover:text-ink">
-            {sm.pro.title}
-          </Link>
-        </div>
-        {upcoming.length ? (
-          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
-            {upcoming.map((s) => (
-              <li key={s.id}>
-                <Link href={`/pro/sessions/${s.id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">
-                  <span className="w-14 shrink-0 font-serif text-[20px] text-ink">{timeOf(s.starts_at, me.timezone, INTL[locale])}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] text-ink">{names[s.client_id] ?? m.clients.noName}</span>
-                    <span className="block text-xs text-ink-faint">{dayLabel(s.starts_at, me.timezone, locale)}</span>
-                  </span>
-                  <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm text-ink-soft">{sm.care.noUpcoming}</p>
-        )}
-      </section>
-
-      <div className="mb-10 grid gap-5 lg:grid-cols-2">
-        <section>
+      <div className="mb-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <section className="min-w-0">
           <div className="mb-3 flex items-baseline justify-between px-1">
-            <h2 className="text-[15px] text-ink-soft">{cm.messages}</h2>
+            <h2 className="text-[15px] text-ink-soft">{cm.today.messages}</h2>
             <Link href="/pro/messages" className="text-sm text-ink-faint hover:text-ink">
-              {cm.all}
+              {chat.all}
             </Link>
           </div>
           {newMessages.length ? (
             <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
               {newMessages.slice(0, 5).map(({ peer, n, msg }) => (
                 <li key={peer}>
-                  <Link href={`/pro/messages/${peer}`} className="group flex items-center gap-3 px-5 py-4 transition hover:bg-sand/40">
-                    <Avatar name={names[peer] ?? "?"} size={36} />
+                  <Link href={`/pro/messages/${peer}`} className="group flex items-center gap-3 px-5 py-3.5 transition hover:bg-sand/40">
+                    <Avatar name={nameOf(peer)} size={36} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-medium text-ink">{names[peer] ?? m.clients.noName}</span>
+                      <span className="block truncate text-[15px] font-medium text-ink">{nameOf(peer)}</span>
                       {msg && <span className="block truncate text-sm text-ink-soft">{msg.body}</span>}
                     </span>
                     <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-lilac-deep px-2 text-xs text-paper">{n}</span>
@@ -204,12 +204,65 @@ export default async function ProOverview() {
               ))}
             </ul>
           ) : (
-            <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm text-ink-soft">{cm.noNew}</p>
+            <p className="rounded-[24px] border border-dashed border-line px-6 py-7 text-center text-sm text-ink-soft">{chat.noNew}</p>
           )}
         </section>
-        <section>
-          <h2 className="mb-3 px-1 text-[15px] text-ink-soft">{cm.notificationsTitle}</h2>
-          {notices.length ? (
+        <section className="min-w-0" data-task-news>
+          <h2 className="mb-1 px-1 text-[15px] text-ink-soft">{cm.today.tasks}</h2>
+          <p className="mb-3 px-1 text-xs text-ink-faint">{cm.today.tasksHint}</p>
+          {taskNews.length ? (
+            <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
+              {taskNews.map(({ t, kind, text, at }) => (
+                <li key={t.id}>
+                  <Link href={`/pro/clients/${t.client_id}?tab=tasks`} className="block px-5 py-3.5 transition hover:bg-sand/40">
+                    <span className="flex items-baseline gap-2">
+                      <span className="min-w-0 flex-1 truncate text-[15px] text-ink">{t.title}</span>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${kind === "done" ? "bg-sage-soft text-sage-deep" : "bg-lilac-soft text-lilac-deep"}`}>
+                        {kind === "done" ? cm.today.taskDone : cm.today.taskReply}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-ink-faint">
+                      {nameOf(t.client_id)} · {relativeDate(new Date(at).toISOString(), locale)}
+                      {text ? ` · ${text}` : ""}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-[24px] border border-dashed border-line px-6 py-7 text-center text-sm text-ink-soft">{cm.today.noTasks}</p>
+          )}
+        </section>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {upcoming.length > 0 && (
+          <section className="min-w-0">
+            <div className="mb-3 flex items-baseline justify-between px-1">
+              <h2 className="text-[15px] text-ink-soft">{cm.today.upcoming}</h2>
+              <Link href="/pro/schedule" className="text-sm text-ink-faint hover:text-ink">
+                {cm.nav.calendar}
+              </Link>
+            </div>
+            <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
+              {upcoming.map((s) => (
+                <li key={s.id}>
+                  <Link href={`/pro/sessions/${s.id}`} className="group flex items-center gap-4 px-5 py-3.5 transition hover:bg-sand/40">
+                    <span className="w-14 shrink-0 font-serif text-[18px] text-ink">{timeOf(s.starts_at, tz, INTL[locale])}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] text-ink">{nameOf(s.client_id)}</span>
+                      <span className="block text-xs text-ink-faint">{dayLabel(s.starts_at, tz, locale)}</span>
+                    </span>
+                    <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {notices.length > 0 && (
+          <section className="min-w-0">
+            <h2 className="mb-3 px-1 text-[15px] text-ink-soft">{cm.today.events}</h2>
             <ul className="space-y-2">
               {notices.map((n) => (
                 <li key={n.id}>
@@ -224,57 +277,9 @@ export default async function ProOverview() {
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="rounded-[24px] border border-dashed border-line px-6 py-8 text-center text-sm text-ink-soft">{cm.noNotifications}</p>
-          )}
-        </section>
-      </div>
-
-      <section className="mb-10">
-        <div className="mb-3 flex items-baseline justify-between px-1">
-          <h2 className="text-[15px] text-ink-soft">{m.overview.recentClients}</h2>
-          {clients.length > 0 && (
-            <Link href="/pro/clients" className="text-sm text-ink-faint hover:text-ink">
-              {m.overview.allClients}
-            </Link>
-          )}
-        </div>
-        {clients.length ? (
-          <ul className="divide-y divide-line/70 overflow-hidden rounded-[24px] bg-paper shadow-soft">
-            {clients.slice(0, 5).map((c) => (
-              <li key={c.link.id}>
-                <Link href={`/pro/clients/${c.link.client_id}`} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-sand/40">
-                  <Avatar name={c.name ?? "?"} size={40} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] text-ink">{c.name ?? m.clients.noName}</span>
-                    <span className="mt-1 flex flex-wrap gap-1.5">
-                      {c.scopes.length ? (
-                        c.scopes.map((s) => (
-                          <Chip key={s} tone="bg-sage-soft/80 text-sage-deep">
-                            {scopes[s].title}
-                          </Chip>
-                        ))
-                      ) : (
-                        <span className="text-xs text-ink-faint">{m.clients.sharesNothing}</span>
-                      )}
-                    </span>
-                  </span>
-                  <span className="hidden text-xs text-ink-faint sm:block">{relativeDate(c.link.activated_at ?? c.link.created_at, locale)}</span>
-                  <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="rounded-[24px] border border-dashed border-line px-6 py-10 text-center text-[15px] leading-relaxed text-ink-soft">
-            {me.status === "approved" ? m.overview.noClientsApproved : m.overview.noClients}
-          </p>
+          </section>
         )}
-      </section>
-
-      <Link href="/pro/invites" className="block text-center text-sm text-ink-faint hover:text-ink md:hidden">
-        {m.nav.invites}
-      </Link>
+      </div>
     </div>
   );
 }

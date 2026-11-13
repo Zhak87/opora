@@ -8,7 +8,7 @@ import { common } from "@/i18n/common";
 import { welcomeMessages } from "@/i18n/welcome";
 import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
-import { profileMessages } from "@/i18n/profile";
+import { cabinetMessages } from "@/i18n/cabinet";
 import { guideMessages } from "@/i18n/guide";
 import { trialMessages } from "@/i18n/trial";
 import { startTrial } from "@/lib/trial-actions";
@@ -39,7 +39,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const c = await getMsg(common);
   const legal = await getMsg(legalMessages);
   const a = await getMsg(aboutMessages);
-  const pm = await getMsg(profileMessages);
+  const pro = (await getMsg(cabinetMessages)).landing;
   const g = await getMsg(guideMessages);
   const t = await getMsg(trialMessages);
   // Ссылка для аудитории (/welcome?for=step или share) меняет только слова на первом экране.
@@ -101,6 +101,17 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             </Link>
           </div>
         </div>
+
+        <section className="mt-16 w-full text-left" data-pro-landing>
+          <div className="flex flex-col gap-6 rounded-[32px] bg-gradient-to-br from-paper via-paper to-lilac-soft/70 p-7 shadow-soft sm:flex-row sm:items-center sm:p-10">
+            <div className="flex-1">
+              <p className="mb-2 text-xs uppercase tracking-[0.16em] text-lilac-deep">{pro.eyebrow}</p>
+              <h2 className="font-serif text-[26px] leading-tight text-ink sm:text-[32px]">{pro.title}</h2>
+              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-soft">{pro.text}</p>
+            </div>
+            <ButtonLink href="/pro/join" className="h-14 shrink-0 whitespace-nowrap px-8">{pro.cta}</ButtonLink>
+          </div>
+        </section>
       </main>
 
       <footer className="px-5 pb-8 text-center text-xs leading-relaxed text-ink-faint">
@@ -120,7 +131,6 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           <Link href="/privacy" className="hover:text-ink">{legal.links.privacy}</Link>
           <Link href="/terms" className="hover:text-ink">{legal.links.terms}</Link>
           <Link href="/mascot" className="hover:text-ink">{(await getMsg(mascotMessages)).footerLink}</Link>
-          <Link href="/pro/join" className="hover:text-ink">{pm.proTitle}</Link>
         </p>
       </footer>
     </div>

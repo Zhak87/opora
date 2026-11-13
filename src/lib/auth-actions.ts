@@ -1,5 +1,7 @@
 "use server";
 
+import { ensurePsychologist } from "@/lib/pro-create";
+import { cabinetMessages } from "@/i18n/cabinet";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +47,14 @@ export async function signIn(_: State, formData: FormData): Promise<State> {
     const unconfirmed = error.message.toLowerCase().includes("email not confirmed");
     return { error: await translate(error.message), unconfirmed: unconfirmed ? String(formData.get("email")).trim() : undefined };
   }
-  redirect(safeNext(formData.get("next") as string | null));
+  const next = safeNext(formData.get("next") as string | null);
+  // Психолог после входа сразу попадает в кабинет; личное пространство остаётся по кнопке «Моё пространство».
+  if (next === "/") {
+    const { data: user } = await supabase.auth.getUser();
+    const { count } = user.user ? await supabase.from("psychologists").select("user_id", { count: "exact", head: true }).eq("user_id", user.user.id) : { count: 0 };
+    if (count) redirect("/pro");
+  }
+  redirect(next);
 }
 
 export async function resendConfirmation(_: State, formData: FormData): Promise<State> {
@@ -84,6 +93,29 @@ export async function signUp(_: State, formData: FormData): Promise<State> {
   if (data.session) {
     await track("signup_complete", { via: "form" });
     redirect(next);
+  }
+  return { ok: (await getMsg(authMessages)).notices.confirmSent };
+}
+
+// Отдельная регистрация психолога: аккаунт, черновик анкеты и сразу сама анкета.
+export async function signUpPro(_: State, formData: FormData): Promise<State> {
+  const name = String(formData.get("name") || "").trim().slice(0, 60);
+  if (name.length < 2) return { error: cabinetMessages[await getLocale()].proJoin.nameRequired };
+  const password = String(formData.get("password"));
+  if (password.length < 8) return { error: (await getMsg(authMessages)).errors.passwordShort };
+  if (!consentGiven(formData)) return { error: (await getMsg(legalMessages)).consent.required };
+  const supabase = await createClient();
+  const back = safeNext(formData.get("next") as string | null);
+  const { data, error } = await supabase.auth.signUp({
+    email: String(formData.get("email")).trim(),
+    password,
+    options: { data: { name, consent: consentRecord(await getLocale()) }, emailRedirectTo: await callbackUrl(back.startsWith("/pro/join") ? back : "/pro/join") },
+  });
+  if (error) return { error: await translate(error.message) };
+  if (data.session && data.user) {
+    await track("signup_complete", { via: "pro" });
+    await ensurePsychologist(supabase, data.user.id, name);
+    redirect("/pro/profile");
   }
   return { ok: (await getMsg(authMessages)).notices.confirmSent };
 }

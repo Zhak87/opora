@@ -25,6 +25,11 @@ export type Session = {
   video_epoch: number;
   speech_ver: number;
   payment_status: "none" | "pending" | "paid" | "refunded";
+  paid_at: string | null;
+  // Клиент не пришёл: встреча закрыта без итогов.
+  no_show: boolean;
+  // Клиент отменил позже срока бесплатной отмены.
+  late_cancel: boolean;
   cancel_reason: string | null;
   cancelled_by: string | null;
 };

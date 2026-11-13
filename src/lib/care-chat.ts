@@ -92,7 +92,7 @@ export async function careNotices(
     const href =
       role === "pro"
         ? r.kind.startsWith("task.") && peer
-          ? `/pro/clients/${peer}#tasks`
+          ? `/pro/clients/${peer}?tab=tasks`
           : session && r.kind !== "session.cancelled"
           ? `/pro/sessions/${session}`
           : r.kind === "link.requested"

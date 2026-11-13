@@ -1,5 +1,8 @@
 "use server";
 
+import { ensurePsychologist } from "@/lib/pro-create";
+import { esc, sendEmail, siteUrl } from "@/lib/email";
+import { cabinetMessages } from "@/i18n/cabinet";
 import { isGuest } from "@/lib/trial";
 import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
@@ -9,7 +12,7 @@ import { hasConsent } from "@/lib/consent";
 import { getLocale } from "@/i18n/server";
 import { careMessages } from "@/i18n/care";
 import { proMessages, SPECIALIZATIONS, SESSION_LANGUAGES, FORMATS, CURRENCIES } from "@/i18n/pro";
-import { CARE_CONSENT_VERSION, SLUG_RE, isScope, myPsychologist, slugify, type Education } from "@/lib/pro";
+import { CARE_CONSENT_VERSION, SLUG_RE, isScope, myPsychologist, type Education } from "@/lib/pro";
 
 async function authed() {
   const { supabase, user } = await requireUser();
@@ -56,17 +59,24 @@ export async function createPsychologist() {
   if (isGuest((await supabase.auth.getClaims()).data?.claims)) redirect("/trial?state=need");
   if (await myPsychologist(supabase, user.id)) redirect("/pro");
   const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).maybeSingle();
-  const base = slugify(profile?.name ?? "") || "psy";
-  for (let i = 0; i < 4; i++) {
-    const slug = (i === 0 && base.length >= 3 ? base : `${base}-${randomBytes(2).toString("hex")}`).slice(0, 40);
-    const { error } = await supabase.from("psychologists").insert({ user_id: user.id, slug, full_name: profile?.name ?? "" });
-    if (!error) break;
-    if (error.code !== "23505") throw new Error((await errors()).generic);
-  }
+  if (!(await ensurePsychologist(supabase, user.id, profile?.name ?? ""))) throw new Error((await errors()).generic);
   redirect("/pro/profile");
 }
 
 type State = { ok?: string; error?: string } | undefined;
+
+async function notifyAdmins(name: string) {
+  const to = process.env.ADMIN_NOTIFY_EMAIL;
+  if (!to || !process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) return;
+  const m = cabinetMessages.ru.adminMail;
+  const url = `${siteUrl()}/admin/psychologists`;
+  const text = m.text(name || "Психолог", url);
+  try {
+    await sendEmail({ to, subject: m.subject(name || "без имени"), text, html: `<p>${esc(text).replace(/\n/g, "<br>")}</p>`, signal: AbortSignal.timeout(5000) });
+  } catch (e) {
+    console.error("admin notify failed", e);
+  }
+}
 
 export async function savePsychologist(_: State, formData: FormData): Promise<State> {
   const { supabase, user } = await authed();
@@ -101,8 +111,11 @@ export async function savePsychologist(_: State, formData: FormData): Promise<St
 
   if (formData.get("intent") === "submit") {
     if (formData.get("terms") !== "on") return { error: m.errors.terms };
+    const { data: before } = await supabase.from("psychologists").select("status").eq("user_id", user.id).maybeSingle();
     const { error: submitError } = await supabase.rpc("submit_psychologist");
     if (submitError) return { error: /incomplete/.test(submitError.message) ? m.errors.incomplete : m.errors.generic };
+    // Новая заявка: письмо на почту команды, чтобы анкета не ждала, пока кто-то зайдёт в админку.
+    if (before && !["pending", "approved"].includes(before.status)) await notifyAdmins(String(update.full_name ?? ""));
   }
   revalidatePath("/pro", "layout");
   return { ok: m.saved };
