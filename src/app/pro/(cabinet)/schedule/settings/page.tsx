@@ -26,7 +26,7 @@ export default async function ScheduleSettings() {
 
   return (
     <>
-      <Link href="/pro/schedule" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
+      <Link href="/pro/more" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
         <BackIcon className="h-4 w-4" /> {common[locale].back}
       </Link>
       <PageHeader title={m.hours}>{m.hoursHint}</PageHeader>
@@ -36,7 +36,7 @@ export default async function ScheduleSettings() {
         </Card>
         <Card className="p-6 sm:p-7">
           <h2 className="mb-4 text-[15px] font-medium text-ink">{m.settings}</h2>
-          <BookingSettingsForm tz={me.timezone} buffer={me.buffer_minutes} notice={me.booking_notice_hours} horizon={me.booking_horizon_days} />
+          <BookingSettingsForm tz={me.timezone} buffer={me.buffer_minutes} notice={me.booking_notice_hours} horizon={me.booking_horizon_days} cancel={me.cancel_hours} />
         </Card>
         <Card className="p-6 sm:p-7">
           <h2 className="text-[15px] font-medium text-ink">{m.timeOff}</h2>

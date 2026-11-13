@@ -4,6 +4,7 @@ import { PUBLIC_COLUMNS, type Psychologist } from "@/lib/pro";
 import { freeSlots } from "@/lib/sessions";
 import { getLocale } from "@/i18n/server";
 import { scheduleMessages } from "@/i18n/schedule";
+import { cabinetMessages } from "@/i18n/cabinet";
 import { Card } from "@/components/ui";
 import { PublicShell } from "@/components/pro/PublicShell";
 import { Avatar } from "@/components/pro/bits";
@@ -49,7 +50,12 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
           ) : !linked && !p.accepting_clients ? (
             <p className="text-[15px] text-ink-soft">{m.notAccepting}</p>
           ) : (
-            <BookForm psychologist={p.user_id} slots={slots} formats={p.formats} firstTime={!linked} />
+            <>
+              <BookForm psychologist={p.user_id} slots={slots} formats={p.formats} firstTime={!linked} />
+              <p className="mt-5 border-t border-line/60 pt-4 text-sm leading-relaxed text-ink-soft" data-cancel-rule>
+                {cabinetMessages[locale].cancelRule.client(p.cancel_hours ?? 24)}
+              </p>
+            </>
           )}
         </Card>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useActionState } from "react";
+import { Suspense, useActionState, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signUp } from "@/lib/auth-actions";
 import { Field, Notice } from "@/components/ui";
@@ -10,6 +10,7 @@ import { ConsentChecks } from "@/components/ConsentChecks";
 import { Track } from "@/components/Track";
 import { useMsg } from "@/i18n/client";
 import { authMessages } from "@/i18n/auth";
+import { cabinetMessages } from "@/i18n/cabinet";
 
 export default function SignupPage() {
   return (
@@ -22,7 +23,11 @@ export default function SignupPage() {
 function SignupForm() {
   const [state, action] = useActionState(signUp, undefined);
   const m = useMsg(authMessages);
-  const next = useSearchParams().get("next") ?? "";
+  const role = useMsg(cabinetMessages).role;
+  const from = useSearchParams().get("next") ?? "";
+  // Роль спрашиваем только при обычной регистрации: по приглашению или из анкеты психолога путь уже известен.
+  const [pro, setPro] = useState(false);
+  const next = from || (pro ? "/pro/join" : "");
   if (state?.ok) {
     return (
       <div className="text-center">
@@ -40,6 +45,27 @@ function SignupForm() {
       <p className="mb-7 text-[15px] text-ink-soft">{m.signup.subtitle}</p>
       <form action={action} className="space-y-4">
         <input type="hidden" name="next" value={next} />
+        {!from && (
+          <fieldset data-role-choice>
+            <legend className="mb-2 text-sm text-ink-soft">{role.title}</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {([false, true] as const).map((isPro) => (
+                <button
+                  key={String(isPro)}
+                  type="button"
+                  aria-pressed={pro === isPro}
+                  onClick={() => setPro(isPro)}
+                  className={`rounded-[18px] border-2 px-4 py-3 text-left transition ${pro === isPro ? "border-lilac-deep/60 bg-lilac-soft/60" : "border-transparent bg-milk hover:bg-sand/60"}`}
+                  data-role={isPro ? "pro" : "client"}
+                >
+                  <span className="block text-[15px] font-medium text-ink">{isPro ? role.pro : role.client}</span>
+                  <span className="mt-0.5 block text-xs leading-snug text-ink-soft">{isPro ? role.proHint : role.clientHint}</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-ink-faint">{role.later}</p>
+          </fieldset>
+        )}
         <Field label={m.signup.name} name="name" autoComplete="given-name" placeholder={m.signup.namePlaceholder} />
         <Field label={m.email} name="email" type="email" autoComplete="email" required />
         <Field label={m.password} name="password" type="password" autoComplete="new-password" minLength={8} placeholder={m.signup.passwordPlaceholder} required />

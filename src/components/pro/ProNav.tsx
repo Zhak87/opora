@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GridIcon, UsersIcon, LinkIcon, IdIcon, HomeIcon, CalendarIcon, TalkIcon } from "../icons";
+import { UsersIcon, HomeIcon, CalendarIcon, TalkIcon, TodayIcon, MoreIcon } from "../icons";
 import { Orb } from "../Orb";
 import { useMsg } from "@/i18n/client";
 import { proMessages } from "@/i18n/pro";
 import { common } from "@/i18n/common";
+import { cabinetMessages } from "@/i18n/cabinet";
 
-// mobile: false — пункт не помещается в нижнюю панель телефона, туда ведут ссылки с обзора.
+// Пять разделов кабинета. Анкета, приглашения, оплаты и настройки живут в «Ещё».
 const ITEMS = [
-  { href: "/pro", key: "overview", Icon: GridIcon, mobile: true },
-  { href: "/pro/schedule", key: "schedule", Icon: CalendarIcon, mobile: true },
-  { href: "/pro/messages", key: "messages", Icon: TalkIcon, mobile: true },
-  { href: "/pro/clients", key: "clients", Icon: UsersIcon, mobile: true },
-  { href: "/pro/invites", key: "invites", Icon: LinkIcon, mobile: false },
-  { href: "/pro/profile", key: "profile", Icon: IdIcon, mobile: true },
+  { href: "/pro", key: "today", Icon: TodayIcon },
+  { href: "/pro/clients", key: "clients", Icon: UsersIcon },
+  { href: "/pro/schedule", key: "calendar", Icon: CalendarIcon },
+  { href: "/pro/messages", key: "messages", Icon: TalkIcon },
+  { href: "/pro/more", key: "more", Icon: MoreIcon },
 ] as const;
+
+const MORE = ["/pro/more", "/pro/profile", "/pro/invites", "/pro/payments", "/pro/schedule/settings"];
+const under = (path: string, href: string) => path === href || path.startsWith(href + "/");
 
 function Badge({ n, className = "" }: { n: number; className?: string }) {
   if (!n) return null;
@@ -27,16 +30,20 @@ function Badge({ n, className = "" }: { n: number; className?: string }) {
   );
 }
 
-const isActive = (path: string, href: string) =>
-  href === "/pro"
-    ? path === "/pro"
-    : path === href || path.startsWith(href + "/") || (href === "/pro/schedule" && path.startsWith("/pro/sessions/"));
+const isActive = (path: string, href: string) => {
+  const more = MORE.some((h) => under(path, h));
+  if (href === "/pro/more") return more;
+  if (more) return false;
+  if (href === "/pro") return path === "/pro";
+  return under(path, href) || (href === "/pro/schedule" && path.startsWith("/pro/sessions/"));
+};
 
 // Навигация кабинета специалиста: своя, отдельная от личного пространства.
 export function ProNav({ unread = 0 }: { unread?: number }) {
   const path = usePathname();
   const m = useMsg(proMessages);
   const c = useMsg(common);
+  const nav = useMsg(cabinetMessages).nav;
   return (
     <>
       <aside className="fixed inset-y-3 left-3 z-30 hidden w-[76px] flex-col items-center rounded-[30px] bg-paper/90 py-5 shadow-soft backdrop-blur-xl md:flex lg:w-[236px] lg:items-stretch lg:px-4">
@@ -54,7 +61,7 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
               <Link
                 key={href}
                 href={href}
-                title={m.nav[key]}
+                title={nav[key]}
                 className={`flex h-12 items-center gap-3 rounded-[18px] px-3 transition-all duration-300 lg:px-3.5 ${
                   active ? "bg-lilac-soft text-ink" : "text-ink-soft hover:bg-sand/40 hover:text-ink"
                 }`}
@@ -63,7 +70,7 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
                   <Icon className="h-[22px] w-[22px] shrink-0" />
                   {key === "messages" && <Badge n={unread} className="absolute -right-2 -top-2 lg:hidden" />}
                 </span>
-                <span className="hidden flex-1 text-[15px] lg:inline">{m.nav[key]}</span>
+                <span className="hidden flex-1 text-[15px] lg:inline">{nav[key]}</span>
                 {key === "messages" && <Badge n={unread} className="hidden lg:flex" />}
               </Link>
             );
@@ -82,7 +89,7 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
 
       <nav className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 rounded-[26px] bg-paper/90 shadow-lift backdrop-blur-xl md:hidden">
         <div className="mx-auto flex max-w-md items-stretch justify-around px-2">
-          {ITEMS.filter((i) => i.mobile).map(({ href, key, Icon }) => {
+          {ITEMS.map(({ href, key, Icon }) => {
             const active = isActive(path, href);
             return (
               <Link
@@ -94,7 +101,7 @@ export function ProNav({ unread = 0 }: { unread?: number }) {
                   <Icon className="h-[21px] w-[21px]" />
                   {key === "messages" && <Badge n={unread} className="absolute -top-1 right-1" />}
                 </span>
-                {m.nav[key]}
+                {nav[key]}
               </Link>
             );
           })}

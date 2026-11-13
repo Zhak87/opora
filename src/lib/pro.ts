@@ -30,6 +30,8 @@ export type Psychologist = {
   price: number | null;
   currency: string;
   session_minutes: number;
+  // За сколько часов до встречи клиент может отменить её бесплатно.
+  cancel_hours: number;
   timezone: string;
   accepting_clients: boolean;
   status: PsyStatus;
@@ -40,7 +42,7 @@ export type Psychologist = {
 };
 
 export const PUBLIC_COLUMNS =
-  "user_id, slug, full_name, photo_url, headline, about, approach, specializations, education, experience_years, languages, formats, city, price, currency, session_minutes, accepting_clients, status, reviewed_at";
+  "user_id, slug, full_name, photo_url, headline, about, approach, specializations, education, experience_years, languages, formats, city, price, currency, session_minutes, cancel_hours, accepting_clients, status, reviewed_at";
 
 export async function myPsychologist(supabase: SupabaseClient, userId: string) {
   const { data } = await supabase.from("psychologists").select("*").eq("user_id", userId).maybeSingle();
@@ -70,6 +72,7 @@ export type Link = {
   created_at: string;
   activated_at: string | null;
   ended_at: string | null;
+  paused_at?: string | null;
 };
 
 export type Grant = { link_id: string; scope: Scope; granted_at: string };
@@ -116,7 +119,7 @@ export type ClientRow = { link: Link; name: string | null; scopes: Scope[] };
 export async function myClients(supabase: SupabaseClient, psychologistId: string, withEnded = false) {
   let q = supabase
     .from("client_links")
-    .select("id, psychologist_id, client_id, status, source, invite_id, created_at, activated_at, ended_at")
+    .select("id, psychologist_id, client_id, status, source, invite_id, created_at, activated_at, ended_at, paused_at")
     .eq("psychologist_id", psychologistId)
     .order("created_at", { ascending: false });
   if (!withEnded) q = q.in("status", ["pending", "active"]);

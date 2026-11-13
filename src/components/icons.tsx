@@ -92,3 +92,9 @@ export const TelegramIcon = ({ className }: P) => (
 export const MailIcon = ({ className }: P) => (
   <svg {...base} className={className}><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>
 );
+export const TodayIcon = ({ className }: P) => (
+  <svg {...base} className={className}><circle cx="12" cy="12" r="3.8" /><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18" /></svg>
+);
+export const MoreIcon = ({ className }: P) => (
+  <svg {...base} className={className}><circle cx="5.5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="18.5" cy="12" r="1.3" /></svg>
+);

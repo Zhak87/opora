@@ -211,6 +211,7 @@ export async function saveBookingSettings(_: State, formData: FormData): Promise
       buffer_minutes: clamp("buffer_minutes", 0, 60, 10),
       booking_notice_hours: clamp("booking_notice_hours", 0, 168, 12),
       booking_horizon_days: clamp("booking_horizon_days", 1, 90, 30),
+      cancel_hours: clamp("cancel_hours", 0, 168, 24),
     })
     .eq("user_id", user.id);
   if (error) return { error: m.pro.errors.generic };
