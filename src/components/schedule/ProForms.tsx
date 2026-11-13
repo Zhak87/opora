@@ -3,7 +3,6 @@
 import { useActionState, useState } from "react";
 import {
   addTimeOff,
-  completeSession,
   createSessionForClient,
   rescheduleSession,
   saveAvailability,
@@ -19,9 +18,6 @@ import { minutesToTime } from "@/lib/time";
 
 const input =
   "h-11 rounded-xl border border-line bg-paper px-3 text-[15px] text-ink outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
-const area =
-  "w-full rounded-2xl border border-line bg-paper px-4 py-3 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-lilac-deep/60 focus:ring-4 focus:ring-lilac-soft";
-
 type Window = { start_min: number; end_min: number };
 
 export function AvailabilityForm({ initial }: { initial: Record<number, Window[]> }) {
@@ -188,28 +184,6 @@ export function MoveSessionForm({ session, tz, value }: { session: string; tz: s
         {m.move}
       </SubmitButton>
       {state?.error && <Notice tone="error">{state.error}</Notice>}
-    </form>
-  );
-}
-
-export function SummaryForm({ session, summary, tasks, completed }: { session: string; summary: string; tasks: string; completed: boolean }) {
-  const [state, action] = useActionState(completeSession, undefined);
-  const m = useMsg(scheduleMessages);
-  return (
-    <form action={action} className="space-y-4">
-      <input type="hidden" name="session" value={session} />
-      <p className="text-sm text-ink-soft">{m.pro.summaryHint}</p>
-      <label className="block">
-        <span className="mb-2 block text-sm text-ink-soft">{m.care.summary}</span>
-        <textarea name="summary" defaultValue={summary} rows={4} maxLength={4000} placeholder={m.pro.summaryPlaceholder} className={area} />
-      </label>
-      <label className="block">
-        <span className="mb-2 block text-sm text-ink-soft">{m.care.tasks}</span>
-        <textarea name="tasks" defaultValue={tasks} rows={3} maxLength={4000} placeholder={m.pro.tasksPlaceholder} className={area} />
-      </label>
-      {state?.error && <Notice tone="error">{state.error}</Notice>}
-      {state?.ok && <Notice>{state.ok}</Notice>}
-      <SubmitButton>{completed ? m.pro.saveNotes : m.pro.complete}</SubmitButton>
     </form>
   );
 }

@@ -1,17 +1,18 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useState } from "react";
-import { completeSession } from "@/lib/session-actions";
 import { generateDraft, saveDraft } from "@/lib/consult/draft-actions";
 import type { Draft } from "@/lib/consult/assistant";
 import { useMsg } from "@/i18n/client";
 import { consultMessages } from "@/i18n/consult";
-import { scheduleMessages } from "@/i18n/schedule";
 import { Notice } from "../ui";
 import { SubmitButton } from "../SubmitButton";
 
-// Итоги встречи в два шага. Сверху — приватный черновик психолога (ИИ или вручную), снизу — то, что увидит клиент.
-// Клиент получает итоги и задания только после нажатия «Завершить встречу» / «Сохранить итоги».
+// Приватный черновик психолога (ИИ или вручную). Клиенту отсюда ничего не уходит:
+// кнопка «Перенести» только подставляет текст в блоки записи встречи, где психолог его правит,
+// видит предпросмотр и сам нажимает «Поделиться с клиентом».
+
+export type DraftTransfer = { summary: string; tasks: string[]; next: string };
 
 const KEYS = ["topics", "agreements", "tasks", "next", "gaps"] as const;
 const area =
@@ -19,35 +20,27 @@ const area =
 
 const toText = (items: Draft[keyof Draft]) => items.map((i) => (i.assumption ? `~ ${i.text}` : i.text)).join("\n");
 
-export function ConsultSummary({
+export function AiDraft({
   session,
   draft: initialDraft,
-  summary,
-  tasks,
-  completed,
   ai,
   hasTranscript,
   autoGenerate,
   keepNote,
+  onTransfer,
 }: {
   session: string;
   draft: Draft | null;
-  summary: string;
-  tasks: string;
-  completed: boolean;
   ai: boolean;
   hasTranscript: boolean;
   autoGenerate: boolean;
   keepNote: string | null;
+  onTransfer: (t: DraftTransfer) => void;
 }) {
   const m = useMsg(consultMessages).draft;
-  const sm = useMsg(scheduleMessages);
   const [genState, genAction, generating] = useActionState(generateDraft, undefined);
   const [saveState, saveAction] = useActionState(saveDraft, undefined);
-  const [publishState, publishAction] = useActionState(completeSession, undefined);
   const [fields, setFields] = useState(() => Object.fromEntries(KEYS.map((k) => [k, initialDraft ? toText(initialDraft[k]) : ""])) as Record<(typeof KEYS)[number], string>);
-  const [clientSummary, setClientSummary] = useState(summary);
-  const [clientTasks, setClientTasks] = useState(tasks);
   const [autoTried, setAutoTried] = useState(false);
 
   // Новый черновик от ИИ заменяет поля (психолог видит и правит его до публикации).
@@ -57,12 +50,12 @@ export function ConsultSummary({
 
   // После завершения звонка черновик готовится сам, если включён ИИ и черновика ещё нет.
   useEffect(() => {
-    if (!autoGenerate || autoTried || !ai || initialDraft || completed) return;
+    if (!autoGenerate || autoTried || !ai || initialDraft) return;
     setAutoTried(true);
     const fd = new FormData();
     fd.set("session", session);
     startTransition(() => genAction(fd));
-  }, [autoGenerate, autoTried, ai, initialDraft, completed, session, genAction]);
+  }, [autoGenerate, autoTried, ai, initialDraft, session, genAction]);
 
   const transfer = () => {
     const plain = (k: (typeof KEYS)[number]) =>
@@ -70,14 +63,15 @@ export function ConsultSummary({
         .split("\n")
         .map((l) => l.trim())
         .filter((l) => l && !l.startsWith("~"));
-    const sum = [...plain("topics"), ...plain("agreements")].map((l) => `• ${l}`).join("\n");
-    const tsk = plain("tasks").map((l) => `• ${l}`).join("\n");
-    if (sum) setClientSummary(sum);
-    if (tsk) setClientTasks(tsk);
+    onTransfer({
+      summary: [...plain("topics"), ...plain("agreements")].map((l) => `• ${l}`).join("\n"),
+      tasks: plain("tasks"),
+      next: plain("next").join("\n"),
+    });
   };
 
   return (
-    <div className="space-y-8" id="draft">
+    <div className="space-y-8">
       <section className="space-y-4">
         <div>
           <h2 className="text-[17px] font-medium text-ink">{m.title}</h2>
@@ -124,21 +118,6 @@ export function ConsultSummary({
         </form>
       </section>
 
-      <form action={publishAction} className="space-y-4 border-t border-line/60 pt-6" id="summary" data-publish-form>
-        <input type="hidden" name="session" value={session} />
-        <p className="text-sm text-ink-soft">{sm.pro.summaryHint}</p>
-        <label className="block">
-          <span className="mb-2 block text-sm text-ink-soft">{sm.care.summary}</span>
-          <textarea name="summary" value={clientSummary} onChange={(e) => setClientSummary(e.target.value)} rows={4} maxLength={4000} placeholder={sm.pro.summaryPlaceholder} className={area} />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-sm text-ink-soft">{sm.care.tasks}</span>
-          <textarea name="tasks" value={clientTasks} onChange={(e) => setClientTasks(e.target.value)} rows={3} maxLength={4000} placeholder={sm.pro.tasksPlaceholder} className={area} />
-        </label>
-        {publishState?.error && <Notice tone="error">{publishState.error}</Notice>}
-        {publishState?.ok && <Notice>{publishState.ok}</Notice>}
-        <SubmitButton>{completed ? sm.pro.saveNotes : sm.pro.complete}</SubmitButton>
-      </form>
     </div>
   );
 }

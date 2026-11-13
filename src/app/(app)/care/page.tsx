@@ -18,6 +18,9 @@ import { careChatMessages } from "@/i18n/care-chat";
 import { getTimeZone } from "@/lib/tz";
 import { scheduleMessages } from "@/i18n/schedule";
 import { buttonStyles } from "@/components/ui";
+import { TaskList } from "@/components/record/Tasks";
+import { listTasks } from "@/lib/records";
+import { recordMessages } from "@/i18n/record";
 
 // «Мой психолог»: с кем человек работает и что разрешил видеть. Каждое разрешение выключается одним касанием.
 export default async function CarePage({
@@ -33,6 +36,8 @@ export default async function CarePage({
   const sm = scheduleMessages[locale];
   const tz = await getTimeZone();
   const cm = careChatMessages[locale];
+  const rm = recordMessages[locale];
+  const tasks = await listTasks(supabase, { client: user!.id });
   const [care, log, sessions, unread] = await Promise.all([
     myCare(supabase, user!.id),
     auditFor(supabase, { client: user!.id }, 30),
@@ -120,6 +125,14 @@ export default async function CarePage({
                 locale={locale}
               />
             </div>
+
+            {tasks.some((t) => t.psychologist_id === link.psychologist_id) && (
+              <div className="scroll-mt-6 border-b border-line/60 p-6 sm:p-7" id="tasks" data-my-tasks>
+                <h3 className="text-[15px] font-medium text-ink">{rm.tasks.mine}</h3>
+                <p className="mb-4 mt-1 text-sm text-ink-soft">{rm.tasks.mineLead}</p>
+                <TaskList tasks={tasks.filter((t) => t.psychologist_id === link.psychologist_id)} role="client" me={user!.id} tz={tz} />
+              </div>
+            )}
 
             <div className="p-6 sm:p-7">
               <h3 className="text-[15px] font-medium text-ink">{m.care.shareTitle}</h3>
