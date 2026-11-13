@@ -110,6 +110,13 @@ async function handle(request: NextRequest) {
     }
   }
 
+  // Психолог, открывший сайт заново (адрес, закладка, ссылка извне), попадает сразу в кабинет.
+  // Переходы внутри сайта не трогаем: личное пространство с ИИ остаётся ему доступно по «Моё пространство».
+  if (user && !guest && path === "/" && ["none", "cross-site"].includes(request.headers.get("sec-fetch-site") ?? "")) {
+    const { count } = await supabase.from("psychologists").select("user_id", { count: "exact", head: true }).eq("user_id", user.sub);
+    if (count) return withCookies(NextResponse.redirect(new URL("/pro", request.url)), response);
+  }
+
   return response;
 }
 
