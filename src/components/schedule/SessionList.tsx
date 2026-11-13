@@ -7,6 +7,7 @@ import { scheduleMessages } from "@/i18n/schedule";
 import { proLabels } from "@/i18n/pro";
 import { ConfirmForm } from "../ConfirmForm";
 import { JoinCard } from "../consult/JoinCard";
+import { recordMessages } from "@/i18n/record";
 
 const STATUS_TONE = { scheduled: "bg-mist text-sky-deep", completed: "bg-sage-soft text-sage-deep", cancelled: "bg-sand text-ink-faint" };
 
@@ -18,6 +19,7 @@ export function SessionList({
   empty,
   manage = false,
   href,
+  noted,
 }: {
   sessions: Session[];
   tz: string;
@@ -26,9 +28,12 @@ export function SessionList({
   manage?: boolean;
   // Ссылка на страницу встречи (для кабинета психолога).
   href?: (s: Session) => string;
+  // Кабинет психолога: у каких встреч есть личная заметка. Тогда у прошедших встреч видно, что заполнено и что отправлено.
+  noted?: Set<string>;
 }) {
   const m = scheduleMessages[locale];
   const formats = proLabels[locale].formats;
+  const rm = recordMessages[locale];
   if (!sessions.length) return empty ? <p className="text-sm text-ink-faint">{empty}</p> : null;
   return (
     <ul className="space-y-3">
@@ -55,6 +60,16 @@ export function SessionList({
               <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
                 <span className={`rounded-full px-2 py-0.5 ${STATUS_TONE[s.status]}`}>{m.status[s.status]}</span>
                 {formats[s.format]}
+                {noted && s.status !== "cancelled" && Date.parse(s.starts_at) < Date.now() && (
+                  <>
+                    <span className={noted.has(s.id) ? "text-ink-soft" : "text-[#b0702a]"} data-mark-note>
+                      {noted.has(s.id) ? `🔒 ${rm.marks.note}` : rm.marks.noNote}
+                    </span>
+                    <span className={s.summary_shared_at ? "text-sage-deep" : "text-ink-faint"} data-mark-summary>
+                      {s.summary_shared_at ? rm.marks.shared : rm.marks.notShared}
+                    </span>
+                  </>
+                )}
                 {s.video_url && s.status === "scheduled" && (
                   <a href={s.video_url} target="_blank" rel="noopener noreferrer" className="text-sky-deep hover:text-ink">
                     {m.care.video}
@@ -79,7 +94,10 @@ export function SessionList({
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {s.summary && (
                 <div className="rounded-xl bg-sage-soft/50 px-3 py-2.5">
-                  <p className="text-xs uppercase tracking-[0.12em] text-sage-deep">{m.care.summary}</p>
+                  <p className="text-xs uppercase tracking-[0.12em] text-sage-deep">
+                    {m.care.summary}
+                    {s.summary_edited_at && <span className="ml-2 normal-case tracking-normal text-ink-faint" data-edited>· {rm.summary.edited}</span>}
+                  </p>
                   <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink">{s.summary}</p>
                 </div>
               )}

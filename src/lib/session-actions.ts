@@ -156,25 +156,6 @@ export async function callClientNow(_: State, formData: FormData): Promise<State
   redirect(`/pro/sessions/${sid}/call`);
 }
 
-export async function completeSession(_: State, formData: FormData): Promise<State> {
-  const { supabase } = await authed();
-  const m = await msg();
-  const id = String(formData.get("session") ?? "");
-  if (!UUID_RE.test(id)) return { error: m.pro.errors.generic };
-  const { error } = await supabase.rpc("complete_session", {
-    p_session: id,
-    p_summary: String(formData.get("summary") ?? ""),
-    p_tasks: String(formData.get("tasks") ?? ""),
-  });
-  if (error) return { error: m.pro.errors.generic };
-  // Встреча завершена: видеокомната закрывается, черновик (если был) отмечается опубликованным.
-  await closeConsultRooms(id);
-  await supabase.from("consult_drafts").update({ published_at: new Date().toISOString() }).eq("session_id", id);
-  revalidatePath("/pro", "layout");
-  revalidatePath("/care", "layout");
-  return { ok: m.pro.saved };
-}
-
 export async function acceptRequest(formData: FormData) {
   const { supabase } = await authed();
   await supabase.rpc("accept_request", { p_link: String(formData.get("link") ?? "") });

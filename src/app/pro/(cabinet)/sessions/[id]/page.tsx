@@ -14,12 +14,15 @@ import { Card, Notice } from "@/components/ui";
 import { Avatar } from "@/components/pro/bits";
 import { ConfirmForm } from "@/components/ConfirmForm";
 import { MoveSessionForm, NewSessionForm } from "@/components/schedule/ProForms";
-import { BackIcon, SparkIcon } from "@/components/icons";
+import { BackIcon, ShieldIcon, SparkIcon } from "@/components/icons";
 import { listNotes, listReports } from "@/lib/analytics";
 import { analyticsMessages } from "@/i18n/analytics";
 import { NotesPanel } from "@/components/analytics/Notes";
 import { JoinCard } from "@/components/consult/JoinCard";
-import { ConsultSummary } from "@/components/consult/ConsultSummary";
+import { SessionRecord } from "@/components/record/SessionRecord";
+import { TaskList } from "@/components/record/Tasks";
+import { clientSessionNotes, listTasks, noteHasText } from "@/lib/records";
+import { recordMessages } from "@/i18n/record";
 import { consultMessages } from "@/i18n/consult";
 import { consultAiEnabled } from "@/lib/consult/server";
 import { normalizeDraft, transcriptOf } from "@/lib/consult/assistant";
@@ -48,6 +51,12 @@ export default async function ProSession({ params, searchParams }: { params: Pro
     transcriptOf(supabase, s.id),
     supabase.from("client_links").select("status").eq("psychologist_id", s.psychologist_id).eq("client_id", s.client_id).eq("status", "active").maybeSingle(),
   ]);
+  // Три уровня записей: личные заметки по клиенту (эта встреча и прошлая), задания клиента.
+  const rm = recordMessages[locale];
+  const [sessionNotes, clientTasks] = await Promise.all([clientSessionNotes(supabase, user!.id, s.client_id, 20), listTasks(supabase, { psychologist: user!.id, client: s.client_id })]);
+  const note = sessionNotes.find((n) => n.session_id === s.id) ?? null;
+  const prevNote = sessionNotes.find((n) => n.session_id !== s.id && noteHasText(n)) ?? null;
+  const openTasks = clientTasks.filter((t) => t.session_id !== s.id && (t.status === "open" || t.replies.length > 0)).slice(0, 5);
   const { count: hintCount } = await supabase.from("consult_ai_messages").select("id", { count: "exact", head: true }).eq("session_id", s.id);
   const dateFmt = (iso: string) => new Intl.DateTimeFormat(INTL[locale], { timeZone: tz, day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
   const hasPrivate = Boolean(draftRow || transcript.length || hintCount);
@@ -84,20 +93,73 @@ export default async function ProSession({ params, searchParams }: { params: Pro
         {sp.moved && <Notice>{m.care.rescheduled}</Notice>}
         {s.status === "cancelled" && s.cancel_reason && <Notice tone="error">{s.cancel_reason}</Notice>}
         {s.status === "scheduled" && s.format === "online" && <JoinCard session={s} href={`/pro/sessions/${s.id}/call`} tz={tz} locale={locale} />}
+        {s.status === "scheduled" && (prevNote || openTasks.length > 0) && (
+          <Card className="space-y-4 p-6 sm:p-7">
+            <div data-prep>
+              <h2 className="text-[15px] font-medium text-ink">{rm.prep.title}</h2>
+              {prevNote && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-faint">
+                  <ShieldIcon className="h-3.5 w-3.5" /> {rm.prep.lock}
+                </p>
+              )}
+            </div>
+            {prevNote && (
+              <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                {prevNote.topic && (
+                  <div>
+                    <dt className="text-xs text-ink-faint">{rm.prep.topic}</dt>
+                    <dd className="text-ink">
+                      {prevNote.topic}
+                      {prevNote.client_state != null && <span className="text-ink-faint"> · {rm.prep.state} {prevNote.client_state}/10</span>}
+                    </dd>
+                  </div>
+                )}
+                {prevNote.next_questions && (
+                  <div>
+                    <dt className="text-xs text-ink-faint">{rm.prep.next}</dt>
+                    <dd className="whitespace-pre-line text-ink">{prevNote.next_questions}</dd>
+                  </div>
+                )}
+                {prevNote.hypotheses && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-ink-faint">{rm.prep.hypotheses}</dt>
+                    <dd className="whitespace-pre-line text-ink">{prevNote.hypotheses}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+            {openTasks.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs text-ink-faint">{rm.prep.tasks}</p>
+                <TaskList tasks={openTasks} role="pro" me={user!.id} tz={tz} />
+              </div>
+            )}
+          </Card>
+        )}
         {s.status !== "cancelled" && (past || s.status === "completed") && (
+          <SessionRecord
+            session={s.id}
+            client={s.client_id}
+            me={user!.id}
+            tz={tz}
+            note={note}
+            shared={{ summary: s.summary, sharedAt: s.summary_shared_at, editedAt: s.summary_edited_at }}
+            canFinish={s.status === "scheduled"}
+            canAssign={Boolean(link)}
+            tasks={clientTasks.filter((t) => t.session_id === s.id)}
+            aiDraft={{
+              draft: draftRow ? normalizeDraft(draftRow.body) : null,
+              ai: consultAiEnabled(),
+              hasTranscript: transcript.length > 0,
+              autoGenerate: sp.after === "1",
+              keepNote: draftRow ? cm.draft.keep(dateFmt(draftRow.expires_at)) : null,
+            }}
+          />
+        )}
+        {s.status !== "cancelled" && s.tasks && (
           <Card className="p-6 sm:p-7">
-            <ConsultSummary
-              session={s.id}
-              draft={draftRow ? normalizeDraft(draftRow.body) : null}
-              summary={s.summary ?? ""}
-              tasks={s.tasks ?? ""}
-              completed={s.status === "completed"}
-              ai={consultAiEnabled()}
-              hasTranscript={transcript.length > 0}
-              autoGenerate={sp.after === "1"}
-              keepNote={draftRow ? cm.draft.keep(dateFmt(draftRow.expires_at)) : null}
-            />
-            {draftRow?.published_at && <p className="mt-3 text-xs text-sage-deep">{cm.draft.published(dateFmt(draftRow.published_at))}</p>}
+            <p className="text-xs uppercase tracking-[0.12em] text-sky-deep">{m.care.tasks}</p>
+            <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink">{s.tasks}</p>
           </Card>
         )}
         {transcript.length > 0 && (
@@ -159,9 +221,14 @@ export default async function ProSession({ params, searchParams }: { params: Pro
             </ol>
           </Card>
         )}
-        {client && (
+        {client && notes.length > 0 && (
           <Card className="p-6 sm:p-7">
-            <NotesPanel notes={notes} client={s.client_id} session={s.id} locale={locale} tz={tz} />
+            <details>
+              <summary className="cursor-pointer text-[15px] font-medium text-ink">{rm.legacyNotes}</summary>
+              <div className="mt-4">
+                <NotesPanel notes={notes} client={s.client_id} session={s.id} locale={locale} tz={tz} />
+              </div>
+            </details>
           </Card>
         )}
       </div>

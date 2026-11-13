@@ -26,6 +26,9 @@ import { listNotes, listReports } from "@/lib/analytics";
 import { analyticsMessages } from "@/i18n/analytics";
 import { NotesPanel } from "@/components/analytics/Notes";
 import { CallNowButton } from "@/components/consult/CallNowButton";
+import { AssignForm, TaskList } from "@/components/record/Tasks";
+import { clientSessionNotes, listTasks, noteHasText } from "@/lib/records";
+import { recordMessages } from "@/i18n/record";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -70,6 +73,9 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
   }
   // Сам факт просмотра попадает в журнал, который видит клиент.
   await supabase.rpc("log_client_view", { p_client: id, p_what: "card" });
+  const rm = recordMessages[locale];
+  const [tasks, sessionNotes] = await Promise.all([listTasks(supabase, { psychologist: user!.id, client: id }), clientSessionNotes(supabase, user!.id, id, 200)]);
+  const noted = new Set(sessionNotes.filter(noteHasText).map((n) => n.session_id));
   const [log, me, sessions, notes, [report]] = await Promise.all([
     auditFor(supabase, { client: id, psychologist: user!.id }, 20),
     myPsychologist(supabase, user!.id),
@@ -163,10 +169,20 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
           </Card>
           <Card className="p-6 sm:p-7">
             <h2 className="mb-4 text-[15px] font-medium text-ink">{sm.upcomingForClient}</h2>
-            <SessionList sessions={[...upcoming, ...past]} tz={me!.timezone} locale={locale} empty={sm.noSessions} href={(s) => `/pro/sessions/${s.id}`} />
+            <SessionList sessions={[...upcoming, ...past]} tz={me!.timezone} locale={locale} empty={sm.noSessions} href={(s) => `/pro/sessions/${s.id}`} noted={noted} />
             <div className="mt-6 border-t border-line/60 pt-5">
               <p className="mb-3 text-sm text-ink-soft">{sm.newSession}</p>
               <NewSessionForm clients={[{ id, name: client.name ?? m.noName }]} tz={me!.timezone} minutes={me!.session_minutes} formats={me!.formats} />
+            </div>
+          </Card>
+          <Card className="p-6 sm:p-7">
+            <div id="tasks" className="mb-4 scroll-mt-6">
+              <h2 className="text-[15px] font-medium text-ink">{rm.tasks.title}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-ink-faint">{rm.tasks.lead}</p>
+            </div>
+            <div className="space-y-4">
+              <AssignForm client={id} />
+              <TaskList tasks={tasks} role="pro" me={user!.id} tz={me!.timezone} />
             </div>
           </Card>
           <Card className="p-6 sm:p-7">

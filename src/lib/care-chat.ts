@@ -91,7 +91,9 @@ export async function careNotices(
     const session = typeof r.details?.session === "string" ? r.details.session : "";
     const href =
       role === "pro"
-        ? session && r.kind !== "session.cancelled"
+        ? r.kind.startsWith("task.") && peer
+          ? `/pro/clients/${peer}#tasks`
+          : session && r.kind !== "session.cancelled"
           ? `/pro/sessions/${session}`
           : r.kind === "link.requested"
             ? "/pro/schedule"
@@ -100,7 +102,9 @@ export async function careNotices(
               : peer && r.kind !== "link.ended"
                 ? `/pro/clients/${peer}`
                 : "/pro"
-        : "/care";
+        : r.kind.startsWith("task.")
+          ? "/care#tasks"
+          : "/care";
     return {
       id: r.id,
       text: templates[r.kind]({

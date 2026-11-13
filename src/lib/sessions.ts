@@ -18,6 +18,9 @@ export type Session = {
   currency: string | null;
   summary: string | null;
   tasks: string | null;
+  // Когда психолог поделился итогом с клиентом и когда исправлял его после этого.
+  summary_shared_at: string | null;
+  summary_edited_at: string | null;
   video_url: string | null;
   video_epoch: number;
   speech_ver: number;

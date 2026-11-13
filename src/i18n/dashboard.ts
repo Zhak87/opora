@@ -18,9 +18,9 @@ export const dashboardMessages = defineMessages<{
   ru: {
     week: (n) => plural("ru", n, { one: "встреча за 7 дней", few: "встречи за 7 дней", many: "встреч за 7 дней" }),
     needSummary: {
-      title: "Подведите итоги",
-      hint: "Эти встречи уже прошли, но не завершены. Клиент увидит итоги и задачи, когда вы их запишете.",
-      action: "Подвести итоги",
+      title: "Запишите встречу",
+      hint: "Эти встречи уже прошли. Заметка для себя, итог и задания заполняются на одном экране. Клиент получит только то, чем вы поделитесь.",
+      action: "Записать",
     },
     funnel: {
       title: "Как работают ссылки",
@@ -36,9 +36,9 @@ export const dashboardMessages = defineMessages<{
   kk: {
     week: () => "7 күндегі кездесу",
     needSummary: {
-      title: "Қорытынды жазыңыз",
-      hint: "Бұл кездесулер өтіп кетті, бірақ аяқталмаған. Қорытынды мен тапсырмаларды жазғанда клиент оларды көреді.",
-      action: "Қорытынды жазу",
+      title: "Кездесуді жазып алыңыз",
+      hint: "Бұл кездесулер өтіп кетті. Жеке жазба, қорытынды және тапсырмалар бір экранда толтырылады. Клиент тек сіз бөліскенді алады.",
+      action: "Жазу",
     },
     funnel: {
       title: "Сілтемелер қалай жұмыс істейді",
@@ -54,9 +54,9 @@ export const dashboardMessages = defineMessages<{
   en: {
     week: (n) => plural("en", n, { one: "session in 7 days", other: "sessions in 7 days" }),
     needSummary: {
-      title: "Write session outcomes",
-      hint: "These sessions are over but not completed. The client sees the outcome and tasks once you write them.",
-      action: "Write outcome",
+      title: "Record your sessions",
+      hint: "These sessions are over. Your private note, the summary and assignments are on one screen. The client gets only what you share.",
+      action: "Record",
     },
     funnel: {
       title: "How your links perform",
