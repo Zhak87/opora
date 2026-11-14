@@ -9,6 +9,7 @@ import { unreadTotal } from "@/lib/care-chat";
 import { TrialBadge } from "@/components/trial/TrialBadge";
 import { Track } from "@/components/Track";
 import { isGuest, trialUntil } from "@/lib/trial";
+import homeStyles from "./Home.module.css";
 
 export const metadata = { robots: { index: false } };
 
@@ -30,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ])
     : [0, false, false, 0, null];
   return (
-    <div className="min-h-dvh md:pl-[100px] lg:pl-[244px]">
+    <div className="min-h-dvh md:pl-[100px] lg:pl-[244px]" data-trial={guest || undefined}>
       <Track name="app_open" once="day" />
       {guest && <TrialBadge until={trialUntil(session?.claims)} />}
       <Nav unread={unread} care={care} pro={pro} careUnread={careUnread} adminPending={admin} />
@@ -38,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Bell unread={unread} />
         <MusicToggle />
       </div>
-      <main className="mx-auto w-full max-w-3xl px-5 pb-32 pt-8 sm:px-8 sm:pt-12 md:pb-16">{children}</main>
+      <main className={`${homeStyles.appMain} mx-auto w-full max-w-3xl px-5 pb-32 pt-8 sm:px-8 sm:pt-12 md:pb-16`}>{children}</main>
     </div>
   );
 }

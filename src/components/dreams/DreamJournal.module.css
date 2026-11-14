@@ -51,28 +51,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 7.25rem;
-  margin-bottom: 2.5rem;
-  padding: 1.25rem clamp(1rem, 4vw, 1.75rem);
+  min-height: 84px;
+  border-radius: 16px;
+  padding: 0.875rem 1rem;
+  background-image: linear-gradient(90deg, #21192fef 18%, #21192f80), url("/brand/dreams-alatau.webp");
   background-position: center, center 38%;
 }
 
 .homeLink strong {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 650;
 }
 
 .homeLink strong + span {
   display: block;
   margin-top: 0.15rem;
   color: #e6dded;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .homeArrow {
   display: grid;
-  flex: 0 0 2.75rem;
-  height: 2.75rem;
+  flex: 0 0 2rem;
+  height: 2rem;
   place-items: center;
   border: 1px solid rgb(255 249 239 / 0.32);
   border-radius: 50%;
@@ -425,8 +426,7 @@
 }
 
 @media (max-width: 639px) {
-  .banner,
-  .homeLink {
+  .banner {
     background-image: linear-gradient(90deg, #21192feb 12%, #21192f72 70%), url("/brand/dreams-alatau.webp");
     background-position: center, 84% center;
   }

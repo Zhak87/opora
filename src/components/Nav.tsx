@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, TalkIcon, UsersIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon, ShieldIcon } from "./icons";
@@ -8,7 +7,7 @@ import { MusicToggle } from "./Music";
 import { Bell } from "./Bell";
 import { useMsg } from "@/i18n/client";
 import { common } from "@/i18n/common";
-import sidebar from "./Nav.module.css";
+import { Sidebar, SidebarLink } from "./Sidebar";
 
 const BASE = [
   { href: "/", key: "home", Icon: HomeIcon },
@@ -26,23 +25,8 @@ function isActive(path: string, href: string) {
   return path === href || path.startsWith(href + "/");
 }
 
-function SidebarLink({ href, label, Icon, path, count = 0 }: {
-  href: string;
-  label: string;
-  Icon: typeof HomeIcon;
-  path: string;
-  count?: number;
-}) {
-  const name = count > 0 ? `${label} (${count})` : label;
-  const current = path === href ? "page" : isActive(path, href) ? "location" : undefined;
-
-  return (
-    <Link href={href} className={sidebar.row} aria-label={name} title={name} aria-current={current}>
-      <span className={sidebar.icon} aria-hidden="true"><Icon /></span>
-      <span className={sidebar.label}>{label}</span>
-      {count > 0 && <span className={sidebar.count} aria-hidden="true">{count > 99 ? "99+" : count}</span>}
-    </Link>
-  );
+function currentPage(path: string, href: string) {
+  return path === href ? "page" : isActive(path, href) ? "location" : undefined;
 }
 
 export function Nav({
@@ -66,35 +50,30 @@ export function Nav({
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col overflow-y-auto border-r border-line bg-paper px-3 pb-4 pt-5 font-sans md:flex lg:w-[244px] lg:px-4 lg:pb-5 lg:pt-6">
-        <Link href="/" aria-label={m.brand} className="mb-6 flex h-12 shrink-0 items-center justify-center rounded-xl lg:justify-start lg:px-3">
-          <Image src="/brand/opora-mark-opi.svg" alt="" width={40} height={40} className="lg:hidden" />
-          <Image src="/brand/opora-logo-horizontal.svg" alt="" width={180} height={37} className="hidden lg:block" />
-        </Link>
-
+      <Sidebar href="/" brand={m.brand}>
         <nav aria-label={m.navigation} className="grid gap-1">
           {sections.map(({ href, key, Icon }) => (
-            <SidebarLink key={href} href={href} label={m.nav[key]} Icon={Icon} path={path} count={key === "care" ? careUnread : undefined} />
+            <SidebarLink key={href} href={href} label={m.nav[key]} Icon={Icon} current={currentPage(path, href)} count={key === "care" ? careUnread : undefined} />
           ))}
         </nav>
 
         {(pro || adminPending !== null) && (
           <nav aria-label={m.staffNavigation} className="mt-4 grid gap-1 border-t border-line pt-4">
-            {pro && <SidebarLink href="/pro" label={m.nav.pro} Icon={GridIcon} path={path} />}
+            {pro && <SidebarLink href="/pro" label={m.nav.pro} Icon={GridIcon} current={currentPage(path, "/pro")} />}
             {adminPending !== null && (
-              <SidebarLink href="/admin/psychologists" label={m.nav.admin} Icon={ShieldIcon} path={path} count={adminPending} />
+              <SidebarLink href="/admin/psychologists" label={m.nav.admin} Icon={ShieldIcon} current={currentPage(path, "/admin/psychologists")} count={adminPending} />
             )}
           </nav>
         )}
 
         <div className="mt-auto pt-5">
           <div className="grid gap-1 border-t border-line pt-4">
-            <SidebarLink href={PROFILE.href} label={m.nav.profile} Icon={PROFILE.Icon} path={path} />
+            <SidebarLink href={PROFILE.href} label={m.nav.profile} Icon={PROFILE.Icon} current={currentPage(path, PROFILE.href)} />
             <Bell unread={unread} variant="sidebar" />
             <MusicToggle variant="sidebar" />
           </div>
         </div>
-      </aside>
+      </Sidebar>
 
       {/* Телефон: нижняя панель */}
       {!inChat && (

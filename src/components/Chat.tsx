@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { BackIcon, SendIcon, LeafIcon, TrashIcon } from "./icons";
+import { ArrowIcon, BackIcon, SendIcon, LeafIcon, TrashIcon, TalkIcon, MoreIcon } from "./icons";
 import { Orb } from "./Orb";
 import { Breathe } from "./Breathe";
 import { MusicToggle } from "./Music";
@@ -18,6 +18,7 @@ import { chatMessages } from "@/i18n/chat";
 import { gamesMessages } from "@/i18n/games";
 import { PLACE_STEPS, isStep, splitStep, stepHref, visibleText, type StepCode } from "@/lib/steps";
 import { sendEvent } from "./Track";
+import styles from "./Chat.module.css";
 
 // pending: реплика ещё не точно сохранена на сервере, отменять её пока нельзя.
 // step: «следующий шаг», который собеседник предложил в этой реплике (кнопка под ответом).
@@ -277,15 +278,16 @@ export function Chat({
   };
 
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="sticky top-0 z-20 bg-milk/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-3xl items-center gap-2 px-3 sm:px-6">
-          <Link href="/talk" aria-label={t.back} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink">
+    <div className={styles.chat}>
+      <header className={styles.header}>
+        <div className={styles.toolbar}>
+          <Link href="/talk" aria-label={t.back} title={t.back} className={styles.tool}>
             <BackIcon className="h-5 w-5" />
           </Link>
+          <Orb size={40} still face className="hidden sm:block" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold text-ink">{title}</p>
-            <p className="text-xs text-ink-faint">{label}</p>
+            <h1 className="truncate text-[15px] font-semibold text-ink" title={title}>{title}</h1>
+            <p className="truncate text-xs text-ink-soft">{label === t.defaultLabel || label === title ? t.companion : label}</p>
           </div>
           <button
             onClick={() => {
@@ -299,33 +301,45 @@ export function Chat({
             aria-pressed={voice.auto}
             title={voice.auto ? t.autoOnTitle : t.autoOn}
             aria-label={voice.auto ? t.autoOff : t.autoOn}
-            className={`flex h-10 w-10 items-center justify-center rounded-full transition ${voice.auto ? "bg-lilac-soft text-lilac-deep" : "text-ink-soft hover:bg-sand hover:text-ink"}`}
+            className={styles.tool}
           >
             <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M4 10v4h3.5L12 18V6L7.5 10z" />
               {voice.auto ? <path d="M15.5 9.5a3.5 3.5 0 010 5M18 7a7 7 0 010 10" /> : <path d="M16 10l4 4M20 10l-4 4" />}
             </svg>
           </button>
-          <MusicToggle className="[&>span]:h-9 [&>span]:w-9 [&>span]:shadow-none [&>span]:bg-transparent" />
-          <button
-            onClick={() => setBreathing(true)}
-            className="flex h-10 items-center gap-2 rounded-full px-3 text-sm text-ink-soft transition hover:bg-sage-soft hover:text-sage-deep"
-          >
-            <LeafIcon className="h-[18px] w-[18px]" />
-            <span className="hidden sm:inline">{t.breathe}</span>
-          </button>
-          <form
-            action={deleteConversation}
-            onSubmit={(e) => {
-              if (!confirm(t.confirmDelete)) e.preventDefault();
+          <details
+            className={styles.options}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.currentTarget.open = false;
+              event.currentTarget.querySelector("summary")?.focus();
             }}
           >
-            <input type="hidden" name="id" value={conversationId} />
-            <input type="hidden" name="redirect" value="1" />
-            <button type="submit" aria-label={t.delete} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint transition hover:bg-[#ffeeec] hover:text-[#c2453d]">
-              <TrashIcon className="h-[18px] w-[18px]" />
-            </button>
-          </form>
+            <summary className={styles.tool} title={t.options} aria-label={t.options}><MoreIcon className="size-5" /></summary>
+            <div className={styles.optionsPanel}>
+              <MusicToggle withLabel className={styles.menuItem} />
+              <button type="button" onClick={(event) => {
+                const options = event.currentTarget.closest("details");
+                if (options) options.open = false;
+                setBreathing(true);
+              }} className={styles.menuItem}>
+                <LeafIcon className="size-[18px]" /> {t.breathe}
+              </button>
+              <form action={deleteConversation} onSubmit={(event) => {
+                if (!confirm(t.confirmDelete)) event.preventDefault();
+              }}>
+                <input type="hidden" name="id" value={conversationId} />
+                <input type="hidden" name="redirect" value="1" />
+                <button type="submit" className={`${styles.menuItem} ${styles.danger}`}>
+                  <TrashIcon className="size-[18px]" /> {t.delete}
+                </button>
+              </form>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -335,33 +349,40 @@ export function Chat({
           const { scrollHeight, scrollTop, clientHeight } = e.currentTarget;
           followReply.current = scrollHeight - scrollTop - clientHeight < 80;
         }}
-        className="flex-1 overflow-y-auto"
+        className={styles.transcript}
       >
-        <div className="mx-auto max-w-2xl px-5 pb-8 pt-8 sm:px-8">
+        <div className={styles.content}>
           {empty && (
-            <div className="flex animate-fade flex-col items-center pt-[8vh] text-center">
-              <Orb size={150} face />
-              <p className="mt-8 font-serif text-[26px] leading-snug text-ink">{t.emptyTitle}</p>
-              <p className="mt-2 max-w-sm text-[15px] text-ink-soft">{t.emptyHint}</p>
-              <div className="mt-8 flex flex-wrap justify-center gap-2">
+            <section className={styles.welcome} aria-labelledby="chat-welcome">
+              <div className={styles.welcomeHero}>
+                <Orb size={88} face />
+                <div>
+                  <h2 id="chat-welcome">{t.emptyTitle}</h2>
+                  <p>{t.emptyHint}</p>
+                </div>
+              </div>
+              <div className={styles.starters}>
                 {t.starters.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="rounded-full border-2 border-sand-deep bg-paper/60 px-4 py-2 text-sm text-ink transition hover:-translate-y-0.5 hover:border-lilac hover:bg-paper"
+                    type="button"
+                    className={styles.starter}
                   >
+                    <TalkIcon className="size-4 shrink-0 text-[#5148c5]" />
                     {s}
+                    <ArrowIcon className="ml-auto size-4 shrink-0 text-ink-soft" />
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="space-y-7">
+          <div className="space-y-5 sm:space-y-6">
             {messages.map((m) =>
               m.role === "user" ? (
-                <div key={m.id} className="flex animate-rise flex-col items-end">
-                  <p className="max-w-[85%] whitespace-pre-wrap rounded-[24px] rounded-br-[8px] bg-lilac-deep px-5 py-3.5 text-[15.5px] leading-relaxed text-paper shadow-soft">
+                <div key={m.id} className="flex flex-col items-end">
+                  <p className={`${styles.bubble} ${styles.own}`}>
                     {m.content}
                   </p>
                   {m.id === lastUser?.id && !m.pending && (
@@ -381,11 +402,11 @@ export function Chat({
                   )}
                 </div>
               ) : (
-                <div key={m.id} className="flex animate-rise gap-3.5">
-                  <Orb size={34} still face className="-mt-1 hidden sm:block" />
+                <div key={m.id} className="flex items-start gap-2 sm:gap-3">
+                  <Orb size={32} still face />
                   {m.content || m.error ? (
-                    <div className="min-w-0 max-w-[92%]">
-                      <p className="whitespace-pre-wrap rounded-[24px] rounded-bl-[8px] bg-paper px-5 py-3.5 text-[16px] leading-[1.6] text-ink shadow-soft">
+                    <div className="min-w-0 max-w-full">
+                      <p className={styles.bubble}>
                         {m.content || m.error}
                       </p>
                       {m.content && m.error && <p className="mt-1.5 px-2 text-sm text-ink-soft" role="status">{m.error}</p>}
@@ -499,8 +520,8 @@ export function Chat({
         </div>
       </div>
 
-      <div className="bg-gradient-to-t from-milk via-milk/95 to-milk/0 pb-[env(safe-area-inset-bottom)]">
-        <form onSubmit={submit} className="mx-auto flex max-w-2xl items-end gap-2 px-4 py-3 sm:px-8 sm:py-5">
+      <div className={styles.footer}>
+        <form onSubmit={submit} className={styles.composer}>
           <label className="sr-only" htmlFor="chat-input">{t.inputLabel}</label>
           <textarea
             id="chat-input"
@@ -511,37 +532,28 @@ export function Chat({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={t.placeholder}
-            className="max-h-[200px] min-h-[52px] flex-1 resize-none rounded-[20px] border-2 border-transparent bg-paper px-5 py-[13px] text-[16px] leading-relaxed text-ink shadow-soft outline-none transition placeholder:text-ink-faint focus:border-lilac-deep/50 focus:ring-4 focus:ring-lilac-soft"
+            className={styles.input}
           />
-          {input.trim() ? (
-            <button
-              type="submit"
-              disabled={busy || undoing}
-              aria-label={t.send}
-              className="flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-[18px] bg-ink text-paper shadow-soft transition-all duration-300 hover:bg-lilac-deep active:scale-90 disabled:bg-sand-deep disabled:text-paper"
-            >
-              <SendIcon className="h-5 w-5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={busy || undoing}
-              onClick={() => {
-                speech.unlock();
-                setTalking(true);
-              }}
-              aria-label={t.voice}
-              title={t.voice}
-              className="relative flex h-[52px] w-[52px] shrink-0 animate-fade items-center justify-center rounded-[18px] bg-ink text-paper shadow-soft transition-all duration-300 hover:scale-105 hover:bg-lilac-deep active:scale-90 disabled:opacity-50"
-            >
-              <span className="absolute inset-0 animate-breathe rounded-[18px] bg-lilac-deep/30 [animation-duration:4s]" aria-hidden />
-              <svg viewBox="0 0 24 24" className="relative h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M4 12h1M8 8v8M12 5v14M16 8v8M20 12h-1" />
-              </svg>
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={busy || undoing}
+            onClick={() => {
+              speech.unlock();
+              setTalking(true);
+            }}
+            aria-label={t.voice}
+            title={t.voice}
+            className={`${styles.tool} ${styles.voice}`}
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 12h1M8 8v8M12 5v14M16 8v8M20 12h-1" />
+            </svg>
+          </button>
+          <button type="submit" disabled={!input.trim() || busy || undoing} aria-label={t.send} title={t.send} className={`${styles.tool} ${styles.send}`}>
+            <SendIcon className="size-5" />
+          </button>
         </form>
-        <p className="hidden pb-3 text-center text-[11px] text-ink-faint sm:block">
+        <p className={styles.disclaimer}>
           {t.disclaimer}
         </p>
       </div>

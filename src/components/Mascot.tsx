@@ -42,10 +42,10 @@ export function Mascot({ mood = 3 }: { mood?: number }) {
   return (
     <div className="relative flex flex-col items-center">
       <button type="button" onClick={tap} aria-label={m.tap} className="rounded-full outline-none transition-transform duration-300 active:scale-90 focus-visible:ring-4 focus-visible:ring-lilac-soft">
-        <Orb size={168} face mood={mood} emotion={emotion} className="sm:hidden" />
-        <Orb size={208} face mood={mood} emotion={emotion} className="hidden sm:block" />
+        <Orb size={86} face mood={mood} emotion={emotion} className="sm:hidden" />
+        <Orb size={156} face mood={mood} emotion={emotion} className="hidden sm:block" />
       </button>
-      <p aria-live="polite" className="pointer-events-none absolute -top-3 left-1/2 z-10 w-max max-w-[260px] -translate-x-1/2">
+      <p aria-live="polite" className="pointer-events-none absolute bottom-full right-0 z-10 w-max max-w-[min(13rem,calc(100vw-5rem))] text-center sm:right-1/2 sm:translate-x-1/2">
         {say && (
           <span key={say} className="block animate-rise rounded-[18px] rounded-bl-[6px] bg-ink px-4 py-2 text-sm text-paper shadow-lift">{say}</span>
         )}
