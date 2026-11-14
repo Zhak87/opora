@@ -5,7 +5,7 @@ export const PRACTICE_STEPS = [
   "breath", "bubbles", "grounding", "light", "jar", "garden", "values", "what-if", "strengths", "letter", "wheel",
   "empty-bowl", "thought-jar", "emotion", "one-step", "boundaries", "mirror", "wins", "unsaid",
 ] as const;
-export const PLACE_STEPS = ["rooms", "specialists", "journal"] as const;
+export const PLACE_STEPS = ["rooms", "specialists", "journal", "dreams"] as const;
 export type StepCode = (typeof PRACTICE_STEPS)[number] | (typeof PLACE_STEPS)[number];
 
 const ALL = [...PRACTICE_STEPS, ...PLACE_STEPS] as readonly string[];
@@ -38,5 +38,6 @@ export function stepHref(step: StepCode) {
   if (step === "rooms") return "/rooms";
   if (step === "specialists") return "/specialists";
   if (step === "journal") return "/journal";
+  if (step === "dreams") return "/dreams/new";
   return `/play/${step}`;
 }

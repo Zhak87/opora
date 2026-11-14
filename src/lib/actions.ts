@@ -221,6 +221,9 @@ export async function deleteAccount(formData: FormData) {
   const word = String(formData.get("confirm") ?? "").trim().toLowerCase();
   if (!Object.values(profileMessages).some((m) => m.confirmWord === word)) redirect("/profile?confirm=1");
   const { supabase } = await authed();
+  // Картинки снов лежат в хранилище отдельно от таблиц: убираем их до удаления аккаунта.
+  const { data: pictures } = await supabase.from("dream_panels").select("image_path").not("image_path", "is", null);
+  if (pictures?.length) await supabase.storage.from("dreams").remove(pictures.map((p) => p.image_path as string));
   const { error } = await supabase.rpc("delete_own_account");
   if (error) redirect("/profile?error=1");
   await supabase.auth.signOut();

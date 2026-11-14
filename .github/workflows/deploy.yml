@@ -66,6 +66,7 @@ jobs:
         env:
           GEMINI: ${{ secrets.GEMINI_API_KEY }}
           RESEND: ${{ secrets.RESEND_API_KEY }}
+          CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           PROD_ENV: ${{ secrets.PROD_ENV }}
         run: |
           docker save opora:${{ github.sha }} | gzip -1 | ssh prod 'gunzip | docker load'
@@ -83,6 +84,7 @@ jobs:
             echo "DOMAIN=${NEXT_PUBLIC_SITE_URL#https://}"
             echo "GEMINI_API_KEY=$GEMINI"
             if [ -n "$RESEND" ]; then echo "RESEND_API_KEY=$RESEND"; echo "SMTP_PASS=$RESEND"; fi
+            if [ -n "$CLOUDFLARE" ]; then echo "CLOUDFLARE_API_TOKEN=$CLOUDFLARE"; fi
             if [ -n "$PROD_ENV" ]; then printf '%s\n' "$PROD_ENV" | tr -d '\r'; fi
           } | ssh prod 'umask 077 && cat > /opt/opora/.env'
           ssh prod 'set -e; cd /opt/opora; chmod +x dc.sh migrate.sh supabase/gen-keys.sh

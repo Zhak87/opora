@@ -63,6 +63,7 @@ export const chatMessages = defineMessages({
     stepPlaces: {
       rooms: { title: "Комнаты", hint: "Послушать людей с похожим опытом или поговорить самому" },
       specialists: { title: "Психологи", hint: "Выбрать проверенного специалиста" },
+      dreams: { title: "Записать сон", hint: "Комикс по сну и вопросы к себе" },
       journal: { title: "Дневник", hint: "Записать мысли, пока они свежие" },
     },
     rateQuestion: "Этот разговор вам помогает?",
@@ -131,6 +132,7 @@ export const chatMessages = defineMessages({
     stepPlaces: {
       rooms: { title: "Бөлмелер", hint: "Тәжірибесі ұқсас адамдарды тыңдау немесе өзіңіз сөйлесу" },
       specialists: { title: "Психологтар", hint: "Тексерілген маманды таңдау" },
+      dreams: { title: "Түсті жазу", hint: "Түс бойынша комикс және өзіңізге сұрақтар" },
       journal: { title: "Күнделік", hint: "Ойларыңызды ұмытпай тұрғанда жазып алу" },
     },
     rateQuestion: "Бұл әңгіме сізге көмектесіп жатыр ма?",
@@ -199,6 +201,7 @@ export const chatMessages = defineMessages({
     stepPlaces: {
       rooms: { title: "Rooms", hint: "Listen to people with similar experience, or speak yourself" },
       specialists: { title: "Psychologists", hint: "Choose a verified specialist" },
+      dreams: { title: "Write down a dream", hint: "A comic of the dream and questions for yourself" },
       journal: { title: "Journal", hint: "Write your thoughts down while they are fresh" },
     },
     rateQuestion: "Is this conversation helping you?",
