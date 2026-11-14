@@ -9,7 +9,7 @@ import { CrisisHelp } from "@/components/course/CrisisHelp";
 import { MicRecorder } from "@/lib/recorder";
 import { DREAMERS, DREAM_EMOTIONS, DREAM_TEXT_MAX, DREAM_TYPES, isDreamer, type DreamEmotion, type DreamType, type Dreamer } from "@/lib/dreams";
 import { buildStoryboard, saveDream } from "@/lib/dream-actions";
-import type { Dream } from "@/lib/dream-data";
+import type { Dream, DreamLimits } from "@/lib/dream-data";
 import { DreamerFigure } from "./DreamerFigure";
 
 const DRAFT_KEY = "opora-dream-draft";
@@ -20,7 +20,7 @@ const label = "mb-2.5 block text-[13px] uppercase tracking-[0.12em] text-paper/5
 
 // Запись сна: быстрый текст или голос, а потом необязательные детали по подсказкам.
 // Тёмная сцена — по умолчанию: сон чаще записывают утром, едва открыв глаза.
-export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
+export function DreamForm({ dream, today, limits }: { dream?: Dream; today: string; limits?: DreamLimits }) {
   const m = useMsg(dreamMessages);
   const f = m.form;
   const router = useRouter();
@@ -139,6 +139,10 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
       if ("crisis" in board) {
         setBusy(false);
         return setCrisis(true);
+      }
+      if ("limit" in board) {
+        router.push(`/dreams/${saved.id}?limit=1`);
+        return;
       }
       if ("error" in board) {
         // Сон уже сохранён: открываем его, а сценарий можно собрать ещё раз оттуда.
@@ -319,6 +323,11 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
           <button type="button" onClick={() => void submit()} disabled={busy || mic !== "idle"} className={nightPrimary}>
             {busy ? f.working : dream && dream.panels.length > 0 ? f.save : f.submit}
           </button>
+          {limits && (
+            <p className="max-w-md text-[13px] leading-relaxed text-paper/70">
+              {limits.boards > 0 ? m.limits.today(limits.boards, limits.boardsMax, limits.panels) : m.limits.boardsOutBefore}
+            </p>
+          )}
           <p className="max-w-md text-xs leading-relaxed text-paper/45">{f.aiNote}</p>
         </div>
       </div>
