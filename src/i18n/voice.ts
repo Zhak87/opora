@@ -47,6 +47,7 @@ export const voiceMessages = defineMessages({
       savedNote: "Всё сказанное сохраняется в этом разговоре текстом.",
     },
     music: {
+      background: "Фоновая музыка",
       turnOff: "Выключить музыку",
       turnOn: "Включить спокойную музыку",
       playing: "Музыка играет",
@@ -102,6 +103,7 @@ export const voiceMessages = defineMessages({
       savedNote: "Айтылғанның бәрі осы әңгімеде мәтін түрінде сақталады.",
     },
     music: {
+      background: "Фондық музыка",
       turnOff: "Музыканы өшіру",
       turnOn: "Тыныш музыканы қосу",
       playing: "Музыка ойнап тұр",
@@ -157,6 +159,7 @@ export const voiceMessages = defineMessages({
       savedNote: "Everything said is saved as text in this conversation.",
     },
     music: {
+      background: "Background music",
       turnOff: "Turn off music",
       turnOn: "Turn on calm music",
       playing: "Music is playing",

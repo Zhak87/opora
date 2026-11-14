@@ -7,6 +7,7 @@ import { speech } from "@/lib/speech";
 import { useMsg } from "@/i18n/client";
 import { common } from "@/i18n/common";
 import { voiceMessages } from "@/i18n/voice";
+import sidebar from "./Nav.module.css";
 
 const KEY = "opora-music";
 const MusicContext = createContext<{ playing: boolean; toggle: () => void; duck: (on: boolean) => void }>({
@@ -109,10 +110,25 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function MusicToggle({ className = "", withLabel = false }: { className?: string; withLabel?: boolean }) {
+export function MusicToggle({ className = "", withLabel = false, variant = "default" }: {
+  className?: string;
+  withLabel?: boolean;
+  variant?: "default" | "sidebar";
+}) {
   const { playing, toggle } = useContext(MusicContext);
   const m = useMsg(voiceMessages).music;
   const label = playing ? m.turnOff : m.turnOn;
+
+  if (variant === "sidebar") {
+    return (
+      <button type="button" onClick={toggle} data-music-toggle aria-pressed={playing} aria-label={m.background} title={label} className={sidebar.row}>
+        <span className={sidebar.icon}><Waves playing={false} /></span>
+        <span className={sidebar.label}>{m.background}</span>
+        <span className={sidebar.switch} aria-hidden="true" />
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

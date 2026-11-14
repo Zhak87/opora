@@ -1,13 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, TalkIcon, UsersIcon, JournalIcon, HopeIcon, ProfileIcon, HeartHandIcon, GridIcon, ShieldIcon } from "./icons";
-import { Orb } from "./Orb";
 import { MusicToggle } from "./Music";
 import { Bell } from "./Bell";
 import { useMsg } from "@/i18n/client";
 import { common } from "@/i18n/common";
+import sidebar from "./Nav.module.css";
 
 const BASE = [
   { href: "/", key: "home", Icon: HomeIcon },
@@ -15,14 +16,33 @@ const BASE = [
   { href: "/rooms", key: "rooms", Icon: UsersIcon },
   { href: "/journal", key: "journal", Icon: JournalIcon },
   { href: "/hope", key: "hope", Icon: HopeIcon },
-  { href: "/profile", key: "profile", Icon: ProfileIcon },
 ] as const;
 // Пункт «Психолог» появляется, только когда человек работает со специалистом.
 const CARE = { href: "/care", key: "care", Icon: HeartHandIcon } as const;
+const PROFILE = { href: "/profile", key: "profile", Icon: ProfileIcon } as const;
 
 function isActive(path: string, href: string) {
   if (href === "/") return path === "/" || path.startsWith("/explore") || path.startsWith("/play") || path.startsWith("/course") || path.startsWith("/dreams");
   return path === href || path.startsWith(href + "/");
+}
+
+function SidebarLink({ href, label, Icon, path, count = 0 }: {
+  href: string;
+  label: string;
+  Icon: typeof HomeIcon;
+  path: string;
+  count?: number;
+}) {
+  const name = count > 0 ? `${label} (${count})` : label;
+  const current = path === href ? "page" : isActive(path, href) ? "location" : undefined;
+
+  return (
+    <Link href={href} className={sidebar.row} aria-label={name} title={name} aria-current={current}>
+      <span className={sidebar.icon} aria-hidden="true"><Icon /></span>
+      <span className={sidebar.label}>{label}</span>
+      {count > 0 && <span className={sidebar.count} aria-hidden="true">{count > 99 ? "99+" : count}</span>}
+    </Link>
+  );
 }
 
 export function Nav({
@@ -39,81 +59,48 @@ export function Nav({
   adminPending?: number | null;
 }) {
   const path = usePathname();
-  const ITEMS = care ? [...BASE.slice(0, 5), CARE, BASE[5]] : BASE;
+  const sections = care ? [...BASE, CARE] : BASE;
   // В разговоре и внутри комнаты нижняя панель прячется: там своё управление внизу экрана.
   const inChat = /^\/talk\/.+/.test(path) || /^\/rooms\/[0-9a-f-]{36}/.test(path);
   const m = useMsg(common);
 
   return (
     <>
-      {/* Компьютер и планшет: тихая боковая панель */}
-      <aside className="fixed inset-y-3 left-3 z-30 hidden w-[76px] flex-col items-center rounded-[30px] bg-paper/90 py-5 shadow-soft backdrop-blur-xl md:flex lg:w-[220px] lg:items-stretch lg:px-4">
-        <Link href="/" className="mb-9 flex items-center gap-2.5 lg:px-2">
-          <Orb size={40} face />
-          <span className="hidden font-display text-[19px] font-semibold lowercase tracking-[-0.03em] text-ink lg:inline">{m.brand}</span>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col overflow-y-auto border-r border-line bg-paper px-3 pb-4 pt-5 font-sans md:flex lg:w-[244px] lg:px-4 lg:pb-5 lg:pt-6">
+        <Link href="/" aria-label={m.brand} className="mb-6 flex h-12 shrink-0 items-center justify-center rounded-xl lg:justify-start lg:px-3">
+          <Image src="/brand/opora-mark-opi.svg" alt="" width={40} height={40} className="lg:hidden" />
+          <Image src="/brand/opora-logo-horizontal.svg" alt="" width={180} height={37} className="hidden lg:block" />
         </Link>
-        <nav className="flex flex-col gap-1.5">
-          {ITEMS.map(({ href, key, Icon }) => {
-            const label = m.nav[key];
-            const active = isActive(path, href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={label}
-                className={`group relative flex h-12 items-center gap-3 rounded-[18px] px-3 transition-all duration-300 lg:px-3.5 ${
-                  active ? "bg-ink text-paper shadow-soft" : "text-ink-soft hover:bg-sand hover:text-ink"
-                }`}
-              >
-                <span className="relative">
-                  <Icon className="h-[22px] w-[22px] shrink-0" />
-                  {key === "care" && careUnread > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-lilac-deep" aria-label={String(careUnread)} />}
-                </span>
-                <span className="hidden text-[15px] font-medium lg:inline">{label}</span>
-              </Link>
-            );
-          })}
+
+        <nav aria-label={m.navigation} className="grid gap-1">
+          {sections.map(({ href, key, Icon }) => (
+            <SidebarLink key={href} href={href} label={m.nav[key]} Icon={Icon} path={path} count={key === "care" ? careUnread : undefined} />
+          ))}
         </nav>
-        <Bell unread={unread} withLabel className="mt-4 lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
-        {pro && (
-          <Link
-            href="/pro"
-            title={m.nav.pro}
-            className="mt-1.5 flex h-12 items-center gap-3 rounded-[18px] px-3 text-lilac-deep transition hover:bg-lilac-soft lg:px-3.5"
-          >
-            <GridIcon className="h-[22px] w-[22px] shrink-0" />
-            <span className="hidden text-[15px] lg:inline">{m.nav.pro}</span>
-          </Link>
+
+        {(pro || adminPending !== null) && (
+          <nav aria-label={m.staffNavigation} className="mt-4 grid gap-1 border-t border-line pt-4">
+            {pro && <SidebarLink href="/pro" label={m.nav.pro} Icon={GridIcon} path={path} />}
+            {adminPending !== null && (
+              <SidebarLink href="/admin/psychologists" label={m.nav.admin} Icon={ShieldIcon} path={path} count={adminPending} />
+            )}
+          </nav>
         )}
-        {/* Только для администраторов: проверка анкет психологов, с числом ждущих */}
-        {adminPending !== null && (
-          <Link
-            href="/admin"
-            title={m.nav.admin}
-            className="mt-1.5 flex h-12 items-center gap-3 rounded-[18px] px-3 text-sky-deep transition hover:bg-mist lg:px-3.5"
-          >
-            <span className="relative">
-              <ShieldIcon className="h-[22px] w-[22px] shrink-0" />
-              {adminPending > 0 && (
-                <span className="absolute -right-2 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-paper bg-lilac-deep px-1 text-[10px] font-semibold text-paper">
-                  {adminPending}
-                </span>
-              )}
-            </span>
-            <span className="hidden text-[15px] lg:inline">{m.nav.admin}</span>
-          </Link>
-        )}
-        <MusicToggle withLabel className="mt-auto lg:px-1.5 [&>span:last-child]:hidden lg:[&>span:last-child]:inline" />
-        <p className="mt-6 hidden px-3 text-xs leading-relaxed text-ink-faint lg:block">
-          {m.navTagline}
-        </p>
+
+        <div className="mt-auto pt-5">
+          <div className="grid gap-1 border-t border-line pt-4">
+            <SidebarLink href={PROFILE.href} label={m.nav.profile} Icon={PROFILE.Icon} path={path} />
+            <Bell unread={unread} variant="sidebar" />
+            <MusicToggle variant="sidebar" />
+          </div>
+        </div>
       </aside>
 
       {/* Телефон: нижняя панель */}
       {!inChat && (
         <nav data-mobile-nav className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 rounded-[26px] bg-paper/90 shadow-lift backdrop-blur-xl md:hidden">
           <div className="mx-auto flex max-w-md items-stretch justify-around px-1.5">
-            {ITEMS.map(({ href, key, Icon }) => {
+            {[...sections, PROFILE].map(({ href, key, Icon }) => {
               const label = m.nav[key];
               const active = isActive(path, href);
               return (
