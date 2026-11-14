@@ -4,6 +4,15 @@
   padding-top: calc(4.25rem + env(safe-area-inset-top));
 }
 
+.appMain:has([data-hope]) {
+  max-width: 70rem;
+  padding-top: calc(4.5rem + env(safe-area-inset-top));
+}
+
+@media (min-width: 48rem) {
+  .appMain:has([data-hope]) { padding-top: 2.75rem; }
+}
+
 .home {
   --accent: #5148c5;
   --accent-light: #f0eeff;

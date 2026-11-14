@@ -1,12 +1,26 @@
 export const dynamic = "force-dynamic";
 
-import { hopePrompts, hopeQuestions, hopeThoughts, reflections, pickForDay } from "@/lib/content";
-import { getLocale } from "@/i18n/server";
-import { hope } from "@/i18n/hope";
-import { StartForm } from "@/components/StartForm";
+import Link from "next/link";
 import { Gratitude } from "@/components/Gratitude";
-import { PageHeader } from "@/components/ui";
-import { ArrowIcon } from "@/components/icons";
+import { StartForm } from "@/components/StartForm";
+import {
+  ArrowIcon,
+  CompassIcon,
+  HopeIcon,
+  JournalIcon,
+  LeafIcon,
+  PenIcon,
+  PlusIcon,
+  SparkIcon,
+  TalkIcon,
+  TodayIcon,
+} from "@/components/icons";
+import { hope } from "@/i18n/hope";
+import { getLocale } from "@/i18n/server";
+import { hopePrompts, hopeQuestions, hopeThoughts, pickForDay, reflections } from "@/lib/content";
+import styles from "./Hope.module.css";
+
+const topicIcons = [TodayIcon, SparkIcon, HopeIcon, CompassIcon];
 
 export default async function HopePage() {
   const locale = await getLocale();
@@ -15,75 +29,114 @@ export default async function HopePage() {
   const question = pickForDay(hopeQuestions(locale), 2);
 
   return (
-    <>
-      <PageHeader title={m.title}>{m.intro}</PageHeader>
+    <div className={styles.page} data-hope>
+      <header className={styles.header}>
+        <span className={styles.pageIcon} aria-hidden="true"><HopeIcon /></span>
+        <div>
+          <h1>{m.title}</h1>
+          <p>{m.intro}</p>
+        </div>
+      </header>
 
-      <div className="stagger space-y-12">
-        <section className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-[#a9b4ff] via-[#c7b2f5] to-[#ffc9b5] px-7 pb-12 pt-10 shadow-lift sm:px-12 sm:pb-14 sm:pt-12">
-          <span className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 animate-morph bg-paper/30" aria-hidden />
-          <span className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 animate-morph bg-paper/20 [animation-delay:-6s]" aria-hidden />
-          <p className="relative mb-16 inline-flex rounded-full bg-paper/40 px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-ink/70 sm:mb-20">{m.thoughtToday}</p>
-          <blockquote className="relative max-w-xl font-serif text-[23px] leading-[1.25] text-ink sm:text-[32px]">
-            {thought.text}
-          </blockquote>
-          <p className="relative mt-5 max-w-md text-[15px] text-ink/70">{thought.note}</p>
-        </section>
+      <section className={styles.hero} aria-labelledby="hope-thought">
+        <div className={styles.heroContent}>
+          <h2 id="hope-thought" className={styles.eyebrow}>
+            <TodayIcon /> {m.thoughtToday}
+          </h2>
+          <blockquote>{thought.text}</blockquote>
+          <p>{thought.note}</p>
+          <div className={styles.heroActions}>
+            <a className={styles.primary} href="#hope-practice">
+              <PenIcon /> {m.startPractice}
+            </a>
+            <a className={styles.heroSecondary} href="#hope-talk">
+              <TalkIcon /> {m.chooseTopic}
+            </a>
+          </div>
+        </div>
+      </section>
 
-        <section>
-          <h2 className="mb-1 font-serif text-[22px] text-ink">{m.talkImportant}</h2>
-          <p className="mb-5 text-[15px] text-ink-soft">{m.talkImportantHint}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {hopePrompts(locale).map((p) => (
-              <StartForm
-                key={p.title}
-                mode="hope"
-                title={p.title}
-                prompt={p.text}
-                className="group flex w-full items-center justify-between gap-3 lift rounded-[22px] bg-paper shadow-soft px-5 py-4 text-left"
-              >
-                <span className="text-[15px] text-ink">{p.title}</span>
-                <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
-              </StartForm>
-            ))}
+      <div className={styles.grid}>
+        <section id="hope-talk" tabIndex={-1} className={styles.panel} aria-labelledby="hope-talk-title">
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionIcon} aria-hidden="true"><TalkIcon /></span>
+            <div>
+              <h2 id="hope-talk-title">{m.talkImportant}</h2>
+              <p>{m.talkImportantHint}</p>
+            </div>
+          </div>
+          <div className={styles.topics}>
+            {hopePrompts(locale).map((prompt, index) => {
+              const Icon = topicIcons[index];
+              return (
+                <StartForm
+                  key={prompt.title}
+                  mode="hope"
+                  title={prompt.title}
+                  prompt={prompt.text}
+                  pendingText={m.openingConversation}
+                  className={styles.topic}
+                >
+                  <Icon />
+                  <span>{prompt.title}</span>
+                  <ArrowIcon className={styles.topicArrow} />
+                </StartForm>
+              );
+            })}
           </div>
         </section>
 
-        <section className="rounded-[30px] bg-sage-soft p-6 sm:p-8">
-          <h2 className="mb-1 font-serif text-[22px] text-ink">{m.threeGood}</h2>
-          <p className="mb-6 text-[15px] text-ink-soft">
-            {m.threeGoodHint}
-          </p>
-          <Gratitude />
+        <section id="hope-practice" tabIndex={-1} className={`${styles.panel} ${styles.practice}`} aria-labelledby="hope-practice-title">
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionIcon} aria-hidden="true"><LeafIcon /></span>
+            <div>
+              <h2 id="hope-practice-title">{m.threeGood}</h2>
+              <p id="hope-practice-hint">{m.threeGoodHint}</p>
+            </div>
+          </div>
+          <Gratitude describedBy="hope-practice-hint" />
         </section>
 
-        <section>
-          <h2 className="mb-5 font-serif text-[22px] text-ink">{m.reflections}</h2>
-          <div className="space-y-3">
-            {reflections(locale).map((r) => (
-              <details key={r.title} className="group rounded-[22px] bg-paper shadow-soft px-6 py-5 open:shadow-soft">
-                <summary className="flex cursor-pointer list-none items-center justify-between text-[16px] text-ink">
-                  {r.title}
-                  <span className="text-ink-faint transition group-open:rotate-45">+</span>
+        <section className={styles.panel} aria-labelledby="hope-reflections">
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionIcon} aria-hidden="true"><JournalIcon /></span>
+            <div>
+              <h2 id="hope-reflections">{m.reflections}</h2>
+              <p>{m.reflectionsHint}</p>
+            </div>
+          </div>
+          <div className={styles.reflections}>
+            {reflections(locale).map((reflection) => (
+              <details key={reflection.title}>
+                <summary>
+                  {reflection.title}
+                  <PlusIcon />
                 </summary>
-                <p className="mt-4 text-[16.5px] leading-[1.75] text-ink-soft">{r.body}</p>
+                <p>{reflection.body}</p>
               </details>
             ))}
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-dashed border-lilac/60 px-6 py-8 text-center sm:px-10">
-          <p className="mb-3 text-xs uppercase tracking-[0.16em] text-lilac-deep">{m.questionTitle}</p>
-          <p className="mx-auto max-w-lg font-serif text-[21px] leading-snug text-ink">{question}</p>
-          <StartForm
-            mode="hope"
-            title={m.questionTitle}
-            prompt={m.questionPrompt(question)}
-            className="mt-6 rounded-full bg-paper px-5 py-2.5 text-sm text-ink shadow-soft transition hover:shadow-lift"
-          >
-            {m.thinkTogether}
-          </StartForm>
+        <section className={`${styles.panel} ${styles.question}`} aria-labelledby="hope-question">
+          <h2 id="hope-question" className={styles.eyebrow}><SparkIcon /> {m.questionTitle}</h2>
+          <p>{question}</p>
+          <div className={styles.questionActions}>
+            <StartForm
+              mode="hope"
+              title={m.questionTitle}
+              prompt={m.questionPrompt(question)}
+              pendingText={m.openingConversation}
+              className={styles.primary}
+            >
+              <TalkIcon /> {m.thinkTogether}
+            </StartForm>
+            <Link className={styles.textLink} href={{ pathname: "/journal", query: { q: question } }}>
+              <PenIcon /> {m.answerInJournal}
+            </Link>
+          </div>
         </section>
       </div>
-    </>
+    </div>
   );
 }
