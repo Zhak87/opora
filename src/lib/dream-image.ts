@@ -1,12 +1,15 @@
 import { AIError } from "@/lib/ai";
 
-// Рисование кадров комикса. Два провайдера на выбор (переменная DREAM_IMAGES):
+// Рисование кадров комикса. Провайдер выбирает переменная DREAM_IMAGES:
 //   cloudflare — FLUX.1 schnell в Cloudflare Workers AI. Бесплатно 10 000 «нейронов» в сутки
 //                (около 170 картинок 1024 px), без логотипа, запросы не хранятся. Героя держит
 //                одно и то же описание и стиль во всех кадрах. Выбирается сам, если заданы ключи.
-//   gemini     — картинки Gemini на уже подключённом ключе. Платно (несколько центов за кадр),
-//                зато умеет рисовать по образцу: первый кадр передаётся как эталон героя и стиля.
+//   gemini     — Gemini Flash Image на уже подключённом ключе. Платно (несколько центов за кадр),
+//                зато умеет рисовать по образцу: готовый кадр передаётся как эталон героя и стиля.
 //   off        — без картинок: комикс собирается из подписей на фоне палитры.
+// Смешанная схема: DREAM_FALLBACK=gemini. Сначала бесплатный Cloudflare, а если он не нарисовал
+// (кончился суточный запас, сбой), кадр рисует Gemini. Платных кадров на весь сайт в сутки
+// не больше DREAM_GEMINI_PER_DAY, чтобы картинки не съели бюджет ключа, на котором работает собеседник.
 // Наружу уходит только обезличенное английское описание сцены: без имён, текста сна и номера человека.
 
 export type ImageProvider = "cloudflare" | "gemini";
@@ -18,16 +21,45 @@ export function imageProvider(): ImageProvider | null {
   if (choice === "off") return null;
   const cloudflare = Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN);
   if (choice === "gemini") return process.env.GEMINI_API_KEY ? "gemini" : null;
-  return cloudflare ? "cloudflare" : null;
+  if (cloudflare) return "cloudflare";
+  return geminiFallback() ? "gemini" : null;
 }
 
-// Умеет ли провайдер рисовать по образцу (эталон героя из первого кадра).
-export const usesReference = (provider: ImageProvider) => provider === "gemini";
+const geminiFallback = () => (process.env.DREAM_FALLBACK || "").trim().toLowerCase() === "gemini" && Boolean(process.env.GEMINI_API_KEY);
+
+// Нужен ли образец героя (уже нарисованный кадр): только если кадр может рисовать Gemini.
+export const usesReference = (provider: ImageProvider) => provider === "gemini" || geminiFallback();
+
+// Счётчик платных кадров на весь сервер за текущие сутки (UTC). Мягкая граница: сбрасывается при перезапуске.
+const GEMINI_PER_DAY = Math.max(0, Number(process.env.DREAM_GEMINI_PER_DAY ?? 10) || 0);
+let geminiDay = "";
+let geminiUsed = 0;
+function takeGeminiSlot() {
+  const day = new Date().toISOString().slice(0, 10);
+  if (day !== geminiDay) {
+    geminiDay = day;
+    geminiUsed = 0;
+  }
+  if (geminiUsed >= GEMINI_PER_DAY) return false;
+  geminiUsed++;
+  return true;
+}
 
 export async function drawPanel(prompt: string, reference?: Reference | null): Promise<Picture> {
   const provider = imageProvider();
   if (!provider) throw new AIError(503, "Dream images: not configured");
-  return provider === "gemini" ? drawGemini(prompt, reference) : drawCloudflare(prompt);
+  if (provider === "gemini") {
+    if (process.env.DREAM_IMAGES?.trim().toLowerCase() !== "gemini" && !takeGeminiSlot()) throw new AIError(429, "Gemini image: daily budget used");
+    return drawGemini(prompt, reference);
+  }
+  try {
+    return await drawCloudflare(prompt);
+  } catch (e) {
+    if (!geminiFallback()) throw e;
+    if (!takeGeminiSlot()) throw e;
+    console.log(`[dreams] Cloudflare failed (${(e as AIError).status ?? "?"}), drawing with Gemini`);
+    return drawGemini(prompt, reference);
+  }
 }
 
 const TIMEOUT = 45_000;
@@ -75,7 +107,7 @@ async function drawCloudflare(prompt: string): Promise<Picture> {
 
 async function drawGemini(prompt: string, reference?: Reference | null): Promise<Picture> {
   const base = (process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com").replace(/\/$/, "");
-  const models = (process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image")
+  const models = (process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image,gemini-2.5-flash-image")
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);

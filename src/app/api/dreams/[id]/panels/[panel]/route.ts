@@ -91,7 +91,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   // В дневной лимит идут только нарисованные кадры: неудачная попытка человека не наказывает.
-  await supabase.from("dream_generations").insert({ provider });
+  await supabase.from("dream_generations").insert({ provider: picture.provider });
   const version = (panel.version ?? 0) + 1;
   const path = `${user.id}/${id}/${panel.id}-${version}.${extension(picture.mime)}`;
   const { error: uploadError } = await supabase.storage.from(DREAM_BUCKET).upload(path, picture.bytes, { contentType: picture.mime, upsert: true });
@@ -102,10 +102,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (panel.image_path && panel.image_path !== path) await supabase.storage.from(DREAM_BUCKET).remove([panel.image_path]);
   await supabase
     .from("dream_panels")
-    .update({ image_path: path, status: "ready", visual_prompt: symbolic ? panel.visual_prompt : visual, softened, provider, version })
+    .update({ image_path: path, status: "ready", visual_prompt: symbolic ? panel.visual_prompt : visual, softened, provider: picture.provider, version })
     .eq("id", panel.id);
   await supabase.from("dreams").update({ status: "comic" }).eq("id", id).in("status", ["draft", "storyboard"]);
-  await track("dream_panel", { provider, redo: version > 1 });
+  await track("dream_panel", { provider: picture.provider, redo: version > 1 });
 
   const { data: signed } = await supabase.storage.from(DREAM_BUCKET).createSignedUrl(path, 60 * 60 * 6);
   return Response.json({ url: signed?.signedUrl ?? null, softened, left: left - 1 });
