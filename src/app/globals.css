@@ -361,3 +361,35 @@ body[data-practice] [data-mobile-nav] { transform: translateY(140%); opacity: 0;
 [data-parallax] {
   will-change: transform;
 }
+
+/* Дневник снов: кадр «проявляется» из тумана, потом едва заметно дышит. */
+@keyframes dream-reveal {
+  0% { opacity: 0; filter: blur(18px) saturate(0.4) brightness(1.4); transform: scale(1.08); }
+  60% { opacity: 1; filter: blur(2px) saturate(0.9) brightness(1.08); }
+  100% { opacity: 1; filter: none; transform: scale(1); }
+}
+@keyframes dream-drift {
+  from { transform: scale(1) translate(0, 0); }
+  to { transform: scale(1.06) translate(-1.5%, -1%); }
+}
+@keyframes dream-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.95; }
+}
+@keyframes dream-moon {
+  0%, 100% { filter: drop-shadow(0 0 2px rgb(242 213 138 / 0.4)); }
+  50% { filter: drop-shadow(0 0 9px rgb(242 213 138 / 0.9)); }
+}
+@keyframes dream-caption {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dream-note {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-3px) rotate(-8deg); }
+}
+.dream-reveal { animation: dream-reveal 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both, dream-drift 22s ease-in-out 1.6s infinite alternate; }
+.dream-twinkle { animation: dream-twinkle 3.2s ease-in-out infinite; }
+.dream-moon { animation: dream-moon 5s ease-in-out infinite; }
+.dream-caption { animation: dream-caption 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s both; }
+.dream-note { display: inline-block; animation: dream-note 1.4s ease-in-out infinite; }

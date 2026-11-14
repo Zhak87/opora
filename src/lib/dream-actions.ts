@@ -14,7 +14,8 @@ import {
   hasForbidden, isDreamer, isMood, isQuote,
   type DreamEmotion, type DreamReflection, type DreamType, type EmotionMark, type Mood,
 } from "@/lib/dreams";
-import { DREAM_BUCKET } from "@/lib/dream-data";
+import { BOARD_MARK, DREAM_BUCKET, dreamLimits } from "@/lib/dream-data";
+import { isGuest } from "@/lib/trial";
 
 // Дневник снов: запись, сценарий комикса, размышление. Картинки рисует /api/dreams/[id]/panels/[panel].
 // Порядок шагов по ТЗ: сначала проверка безопасности текста, потом всё остальное.
@@ -110,13 +111,15 @@ function dreamBrief(d: { text: string; dream_type: string; emotions: unknown; da
     .join("\n");
 }
 
-export async function buildStoryboard(id: string): Promise<{ ok: true } | { crisis: true } | { error: true }> {
+export async function buildStoryboard(id: string): Promise<{ ok: true } | { crisis: true } | { limit: true } | { error: true }> {
   const { supabase, user } = await requireUser();
   if (!user || !UUID.test(id)) return { error: true };
   const { data: d } = await supabase.from("dreams").select("id, text, dream_type, emotions, title").eq("id", id).maybeSingle();
   if (!d) return { error: true };
   if (looksLikeCrisis(d.text)) return { crisis: true };
   if (!aiConfigured() || tooMany(`dream-board:${user.id}`, 20, HOUR)) return { error: true };
+  const { data: session } = await supabase.auth.getClaims();
+  if ((await dreamLimits(supabase, isGuest(session?.claims))).boards <= 0) return { limit: true };
   const locale = await getLocale();
 
   let raw: { safety?: unknown; title?: unknown; panels?: unknown };
@@ -149,6 +152,8 @@ export async function buildStoryboard(id: string): Promise<{ ok: true } | { cris
     .filter((p) => p.scene && p.visual_prompt)
     .slice(0, MAX_PANELS);
   if (panels.length < 2) return { error: true };
+  // В лимит идут только удачные разборы.
+  await supabase.from("dream_generations").insert({ provider: BOARD_MARK });
 
   await clearPanels(supabase, user.id, id);
   const { error } = await supabase
