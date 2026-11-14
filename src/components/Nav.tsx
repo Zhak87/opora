@@ -21,7 +21,7 @@ const BASE = [
 const CARE = { href: "/care", key: "care", Icon: HeartHandIcon } as const;
 
 function isActive(path: string, href: string) {
-  if (href === "/") return path === "/" || path.startsWith("/explore") || path.startsWith("/play") || path.startsWith("/course");
+  if (href === "/") return path === "/" || path.startsWith("/explore") || path.startsWith("/play") || path.startsWith("/course") || path.startsWith("/dreams");
   return path === href || path.startsWith(href + "/");
 }
 
