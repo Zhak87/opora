@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Onest, Unbounded } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { OG_IMAGE } from "@/lib/og";
 import { MusicProvider } from "@/components/Music";
@@ -11,8 +11,8 @@ import { savedTimeZone } from "@/lib/tz";
 import { siteUrl } from "@/lib/seo";
 
 // Основной текст — Onest, заголовки — округлый Unbounded. Оба с казахскими буквами (cyrillic-ext).
-const onest = Onest({ variable: "--font-onest", subsets: ["latin", "cyrillic", "cyrillic-ext"] });
-const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin", "cyrillic", "cyrillic-ext"], weight: ["400", "500", "600"] });
+const onest = localFont({ src: "./fonts/onest.woff2", variable: "--font-onest", weight: "100 900" });
+const unbounded = localFont({ src: "./fonts/unbounded.woff2", variable: "--font-unbounded", weight: "200 900", adjustFontFallback: false });
 
 export async function generateMetadata(): Promise<Metadata> {
   const m = common[await getLocale()];
