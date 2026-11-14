@@ -29,6 +29,7 @@ import { PushOptIn } from "@/components/PushOptIn";
 import { pushConfig } from "@/lib/push-config";
 import { isGuest } from "@/lib/trial";
 import { dreamMessages } from "@/i18n/dreams";
+import { DreamHomeLink } from "@/components/dreams/DreamJournal";
 
 // Плитки настроения 1–5 на главной: ведут к отметке дня.
 const MOOD_TILES = [
@@ -171,23 +172,7 @@ export default async function HomePage() {
         <ArrowIcon className="h-4 w-4 text-ink-faint transition group-hover:translate-x-0.5 group-hover:text-ink" />
       </Link>
 
-      <Link
-        href="/dreams"
-        className="group mb-10 flex items-center gap-5 overflow-hidden lift rounded-[30px] p-5 text-paper shadow-lift sm:p-6"
-        style={{ background: "radial-gradient(120% 140% at 0% 100%, #6E5BA8 0%, #2E2A4F 62%)" }}
-      >
-        <span className="relative flex h-14 w-14 shrink-0 items-center justify-center" aria-hidden>
-          <span className="absolute h-10 w-10 rounded-full bg-[#F2D58A] shadow-[0_0_28px_4px_rgba(242,213,138,0.45)]" />
-          <span className="absolute left-[18px] top-[8px] h-9 w-9 rounded-full bg-[#2E2A4F]" />
-          <span className="absolute right-1 top-1 h-1 w-1 rounded-full bg-paper" />
-          <span className="absolute bottom-2 left-1 h-1 w-1 rounded-full bg-paper/70" />
-        </span>
-        <span className="flex-1">
-          <span className="block text-[17px] font-medium">{dreamMessages[locale].homeTitle}</span>
-          <span className="mt-0.5 block text-sm text-paper/65">{dreamMessages[locale].homeHint}</span>
-        </span>
-        <ArrowIcon className="h-4 w-4 text-paper/50 transition group-hover:translate-x-0.5 group-hover:text-paper" />
-      </Link>
+      <DreamHomeLink title={dreamMessages[locale].homeTitle} hint={dreamMessages[locale].homeHint} />
 
       {stored && (
         <section className="mb-10 rounded-[30px] bg-sage-soft p-6 sm:p-8">

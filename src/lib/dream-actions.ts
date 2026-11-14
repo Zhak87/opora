@@ -233,14 +233,16 @@ export async function reopenStoryboard(id: string) {
 // «Не рисовать этот кадр»: остаётся подпись на фоне палитры.
 export async function skipPanel(panelId: string, skipped: boolean) {
   const { supabase, user } = await requireUser();
-  if (!user || !UUID.test(panelId)) return;
+  if (!user || !UUID.test(panelId)) return { error: true };
   const { data } = await supabase.from("dream_panels").select("image_path").eq("id", panelId).maybeSingle();
-  if (!data) return;
-  if (skipped) await removeImages(supabase, [data.image_path]);
-  await supabase
+  if (!data) return { error: true };
+  const { error } = await supabase
     .from("dream_panels")
     .update(skipped ? { skipped: true, image_path: null, status: "pending" } : { skipped: false })
     .eq("id", panelId);
+  if (error) return { error: true };
+  if (skipped) await removeImages(supabase, [data.image_path]);
+  return { ok: true };
 }
 
 export async function rateSimilarity(id: string, value: number) {

@@ -8,13 +8,14 @@ import { dreamMessages } from "@/i18n/dreams";
 import { buttonStyles } from "@/components/ui";
 import { CrisisHelp } from "@/components/course/CrisisHelp";
 import { PlusIcon, TrashIcon } from "@/components/icons";
-import { MAX_PANELS, MOODS, NIGHT, type DreamPanel, type DreamReflection } from "@/lib/dreams";
+import { MAX_PANELS, NIGHT, type DreamPanel, type DreamReflection } from "@/lib/dreams";
 import {
   buildReflection, buildStoryboard, deleteDream, rateSimilarity, reopenStoryboard, saveReflection, saveStoryboard, skipPanel,
 } from "@/lib/dream-actions";
 import type { Dream } from "@/lib/dream-data";
 
-type Draw = "idle" | "queued" | "drawing" | "failed";
+import { ComicReader, type Draw } from "./ComicReader";
+import styles from "./DreamJournal.module.css";
 
 // Страница одного сна: сценарий → комикс → размышление. Каждый шаг можно поправить и вернуться назад.
 export function DreamFlow({
@@ -63,21 +64,23 @@ export function DreamFlow({
       {error && <p role="alert" className="rounded-2xl bg-[#ffeeec] px-4 py-3 text-sm text-[#b23b33]">{error}</p>}
 
       {!crisis && stage === "draft" && (
-        <section className="rounded-[30px] bg-paper p-6 shadow-soft sm:p-8">
+        <section className={styles.surface}>
           <p className="whitespace-pre-line text-[15px] leading-relaxed text-ink-soft">{dream.text}</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <button type="button" onClick={() => void rebuild()} disabled={busy} className={buttonStyles.primary}>
+            <button type="button" onClick={() => void rebuild()} disabled={busy} className={styles.button}>
               {busy ? m.form.working : m.form.submit}
             </button>
-            <Link href={`/dreams/${dream.id}/edit`} className={buttonStyles.soft}>{m.board.editDream}</Link>
+            <Link href={`/dreams/${dream.id}/edit`} className={styles.secondary}>{m.board.editDream}</Link>
           </div>
         </section>
       )}
 
       {!crisis && stage === "board" && <Board dream={dream} busy={busy} onRebuild={() => void rebuild()} />}
-      {!crisis && stage === "comic" && <Comic dream={dream} imagesOn={imagesOn} left={leftInitial} onCrisis={() => setCrisis(true)} />}
-
-      {!crisis && stage === "comic" && children}
+      {!crisis && stage === "comic" && (
+        <Comic dream={dream} imagesOn={imagesOn} left={leftInitial} onCrisis={() => setCrisis(true)}>
+          {children}
+        </Comic>
+      )}
 
       <footer className="border-t border-line pt-6">
         {!confirm ? (
@@ -127,17 +130,17 @@ function Board({ dream, busy, onRebuild }: { dream: Dream; busy: boolean; onRebu
     else setSaving(false);
   };
 
-  const field = "w-full rounded-[16px] border-2 border-transparent bg-milk px-4 py-3 text-[15px] leading-relaxed text-ink outline-none transition focus:border-lilac-deep/60 focus:bg-paper";
+  const field = styles.field;
   const filled = rows.filter((r) => r.scene.trim());
 
   return (
     <section>
-      <h2 className="font-serif text-[22px] text-ink sm:text-[26px]">{b.heading}</h2>
+      <h2 className="text-[24px] font-semibold tracking-tight text-ink sm:text-[28px]">{b.heading}</h2>
       <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-ink-soft">{b.intro}</p>
       {rows.length === 0 && <p className="mt-5 text-sm text-ink-faint">{b.empty}</p>}
       <ol className="mt-6 space-y-4">
         {rows.map((r, i) => (
-          <li key={r.key} className="rounded-[26px] bg-paper p-5 shadow-soft sm:p-6">
+          <li key={r.key} className={styles.surface}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="inline-flex h-8 items-center rounded-full px-3 text-[13px] font-medium text-paper" style={{ background: NIGHT.violet }}>
                 {b.panel(i + 1)}
@@ -177,10 +180,10 @@ function Board({ dream, busy, onRebuild }: { dream: Dream; busy: boolean; onRebu
         </button>
       )}
       <div className="mt-8 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => void draw()} disabled={saving || busy || filled.length === 0} className={buttonStyles.primary}>
+        <button type="button" onClick={() => void draw()} disabled={saving || busy || filled.length === 0} className={styles.button}>
           {saving ? b.saving : b.draw}
         </button>
-        <Link href={`/dreams/${dream.id}/edit`} className={buttonStyles.soft}>{b.editDream}</Link>
+        <Link href={`/dreams/${dream.id}/edit`} className={styles.secondary}>{b.editDream}</Link>
         <button type="button" onClick={onRebuild} disabled={busy || saving} className={buttonStyles.ghost}>
           {busy ? m.form.working : b.rebuild}
         </button>
@@ -191,16 +194,20 @@ function Board({ dream, busy, onRebuild }: { dream: Dream; busy: boolean; onRebu
 
 /* ---------- Комикс и размышление ---------- */
 
-function Comic({ dream, imagesOn, left: leftInitial, onCrisis }: { dream: Dream; imagesOn: boolean; left: number; onCrisis: () => void }) {
+function Comic({ dream, imagesOn, left: leftInitial, onCrisis, children }: {
+  dream: Dream; imagesOn: boolean; left: number; onCrisis: () => void; children?: React.ReactNode;
+}) {
   const m = useMsg(dreamMessages);
   const c = m.comic;
   const router = useRouter();
   const [panels, setPanels] = useState<DreamPanel[]>(dream.panels);
   const [draw, setDraw] = useState<Record<string, Draw>>(() =>
-    Object.fromEntries(dream.panels.map((p) => [p.id, p.status === "failed" ? "failed" : imagesOn && !p.skipped && !p.url ? "queued" : "idle"])),
+    Object.fromEntries(dream.panels.map((p) => [p.id, p.status === "failed" ? "failed" : imagesOn && leftInitial > 0 && !p.skipped && !p.url ? "queued" : "idle"])),
   );
   const [left, setLeft] = useState(leftInitial);
-  const [limit, setLimit] = useState(false);
+  const [complete, setComplete] = useState(false);
+  const [hasViewedComic, setHasViewedComic] = useState(false);
+  const [updating, setUpdating] = useState<ReadonlySet<string>>(() => new Set());
   const [similarity, setSimilarity] = useState<number | null>(dream.similarity);
   const [reflection, setReflection] = useState<DreamReflection | null>(dream.reflection);
   const [thinking, setThinking] = useState(false);
@@ -209,8 +216,8 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis }: { dream: Dream;
 
   // Кадры рисуются по одному, по порядку: готовые сразу видны, ошибка в одном не мешает остальным.
   useEffect(() => {
-    if (working.current || limit) return;
-    const next = panels.find((p) => draw[p.id] === "queued");
+    if (working.current || left <= 0) return;
+    const next = panels.find((p) => !p.skipped && draw[p.id] === "queued");
     if (!next) return;
     working.current = true;
     setDraw((d) => ({ ...d, [next.id]: "drawing" }));
@@ -221,11 +228,11 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis }: { dream: Dream;
         const json = (await res.json().catch(() => ({}))) as { url?: string; softened?: boolean; left?: number; error?: string };
         if (res.ok && json.url) {
           state = "idle";
-          setPanels((cur) => cur.map((p) => (p.id === next.id ? { ...p, url: json.url!, softened: Boolean(json.softened), status: "ready" } : p)));
+          const { url } = json;
+          setPanels((cur) => cur.map((p) => (p.id === next.id ? { ...p, url, softened: Boolean(json.softened), status: "ready" } : p)));
           if (typeof json.left === "number") setLeft(json.left);
         } else if (json.error === "limit") {
           state = "idle";
-          setLimit(true);
           setLeft(0);
         } else if (json.error === "crisis") {
           state = "idle";
@@ -235,17 +242,33 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis }: { dream: Dream;
       working.current = false;
       setDraw((d) => ({ ...d, [next.id]: state }));
     })();
-  }, [draw, panels, limit, dream.id, onCrisis]);
+  }, [draw, panels, left, dream.id, onCrisis]);
 
   const queue = (id: string) => {
-    setLimit(false);
+    if (updating.has(id) || left <= 0) return;
     setDraw((d) => ({ ...d, [id]: "queued" }));
   };
   const toggleSkip = async (p: DreamPanel) => {
+    if (updating.has(p.id)) return false;
     const skipped = !p.skipped;
-    setPanels((cur) => cur.map((x) => (x.id === p.id ? { ...x, skipped, url: skipped ? null : x.url } : x)));
-    setDraw((d) => ({ ...d, [p.id]: !skipped && imagesOn ? "queued" : "idle" }));
-    await skipPanel(p.id, skipped);
+    setUpdating((current) => new Set(current).add(p.id));
+    try {
+      const result = await skipPanel(p.id, skipped);
+      if ("error" in result) return false;
+      setPanels((cur) => cur.map((x) => (x.id === p.id ? { ...x, skipped, url: skipped ? null : x.url } : x)));
+      setDraw((d) => ({ ...d, [p.id]: !skipped && imagesOn ? "queued" : "idle" }));
+      return true;
+    } finally {
+      setUpdating((current) => {
+        const next = new Set(current);
+        next.delete(p.id);
+        return next;
+      });
+    }
+  };
+  const showComic = (isComplete: boolean) => {
+    setComplete(isComplete);
+    if (isComplete) setHasViewedComic(true);
   };
   const rate = (n: number) => {
     setSimilarity(n);
@@ -265,48 +288,35 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis }: { dream: Dream;
     router.refresh();
   };
 
-  const drawingNow = Object.values(draw).some((s) => s === "drawing" || s === "queued");
+  const hasArt = panels.some((p) => p.url);
+  const limit = imagesOn && left <= 0 && panels.some((p) => !p.skipped && !p.url);
+  const drawingNow = Object.values(draw).some((s) => s === "drawing" || (left > 0 && s === "queued"));
 
   return (
     <>
-      <section>
-        <h2 className="font-serif text-[22px] text-ink sm:text-[26px]">{c.heading}</h2>
-        <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-faint">{imagesOn ? c.honest : c.noImages}</p>
-        <ol className="mt-6 grid gap-4 sm:grid-cols-2">
-          {panels.map((p, i) => (
-            <li key={p.id}>
-              <Frame panel={p} n={i + 1} state={draw[p.id]} />
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[13px] text-ink-faint">
-                {p.softened && !p.skipped && <span className="text-ink-soft">{c.symbolic}</span>}
-                {draw[p.id] === "failed" && (
-                  <span role="alert" className="text-[#b23b33]">
-                    {c.failed(i + 1)}
-                  </span>
-                )}
-                {imagesOn && !p.skipped && draw[p.id] !== "drawing" && draw[p.id] !== "queued" && (
-                  <button type="button" onClick={() => queue(p.id)} disabled={left <= 0} className="underline-offset-4 transition hover:text-ink hover:underline disabled:opacity-40">
-                    {draw[p.id] === "failed" || !p.url ? c.retry : c.redraw}
-                  </button>
-                )}
-                {imagesOn && draw[p.id] !== "drawing" && (
-                  <button type="button" onClick={() => void toggleSkip(p)} className="underline-offset-4 transition hover:text-ink hover:underline">
-                    {p.skipped ? c.unskip : c.skip}
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ol>
+      <div>
+        <ComicReader
+          panels={panels}
+          draw={draw}
+          imagesOn={imagesOn}
+          canDraw={left > 0}
+          complete={complete}
+          updating={updating}
+          onComplete={showComic}
+          onRedraw={queue}
+          onSkip={toggleSkip}
+        />
+        <p className="mt-3 text-sm leading-relaxed text-ink-soft">{imagesOn || hasArt ? c.honest : c.noImages}</p>
         {limit && <p role="status" className="mt-5 rounded-2xl bg-lilac-soft px-4 py-3 text-sm text-ink">{c.limit}</p>}
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-ink-faint">
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 text-[13px] text-ink-soft">
           {imagesOn && !limit && <span>{c.left(left)}</span>}
-          <button type="button" onClick={() => void backToBoard()} disabled={drawingNow} className="underline-offset-4 transition hover:text-ink hover:underline disabled:opacity-40">
+          <button type="button" onClick={() => void backToBoard()} disabled={drawingNow || updating.size > 0} className="min-h-11 underline-offset-4 transition hover:text-ink hover:underline disabled:opacity-50">
             {c.editBoard}
           </button>
         </div>
 
-        {imagesOn && panels.some((p) => p.url) && (
-          <div className="mt-8 rounded-[26px] bg-paper p-5 shadow-soft sm:p-6">
+        {complete && hasArt && (
+          <div className={`mt-7 ${styles.surface}`}>
             <p className="text-[15px] text-ink">{c.similarity}</p>
             <div className="mt-3 flex items-center gap-2">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -332,75 +342,24 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis }: { dream: Dream;
             {similarity && <p role="status" className="mt-3 text-sm text-ink-soft">{c.thanks}</p>}
           </div>
         )}
-      </section>
+      </div>
 
-      {!reflection ? (
-        <section>
-          <button type="button" onClick={() => void reflect()} disabled={thinking} className={buttonStyles.primary}>
-            {thinking ? c.thinking : c.next}
-          </button>
-          {reflectError && <p role="alert" className="mt-3 text-sm text-[#b23b33]">{m.reflect.failed}</p>}
-        </section>
-      ) : (
-        <Reflection dream={dream} reflection={reflection} onCrisis={onCrisis} />
+      {hasViewedComic && (
+        <div hidden={!complete} className="space-y-6">
+          {reflection ? (
+            <Reflection dream={dream} reflection={reflection} onCrisis={onCrisis} />
+          ) : (
+            <section>
+              <button type="button" onClick={() => void reflect()} disabled={thinking} className={styles.button}>
+                {thinking ? c.thinking : c.next}
+              </button>
+              {reflectError && <p role="alert" className="mt-3 text-sm text-[#b23b33]">{m.reflect.failed}</p>}
+            </section>
+          )}
+          {children}
+        </div>
       )}
     </>
-  );
-}
-
-// Один кадр 4:5. Подпись накладывает интерфейс: генераторы пишут кириллицу с ошибками.
-function Frame({ panel: p, n, state }: { panel: DreamPanel; n: number; state: Draw }) {
-  const c = useMsg(dreamMessages).comic;
-  const mood = MOODS[p.mood];
-  const showImage = Boolean(p.url) && !p.skipped;
-  return (
-    <figure
-      className="relative aspect-[4/5] overflow-hidden rounded-[22px] shadow-soft"
-      style={{ border: `3px solid ${NIGHT.sky}`, background: `linear-gradient(165deg, ${mood.from} 0%, ${mood.to} 100%)` }}
-    >
-      {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={p.url!} alt={p.scene} className="absolute inset-0 h-full w-full animate-fade object-cover" />
-      ) : (
-        <>
-          <svg viewBox="0 0 200 250" className="absolute inset-0 h-full w-full" aria-hidden>
-            <circle cx="150" cy="52" r="24" fill={NIGHT.gold} opacity=".9" />
-            <circle cx="140" cy="46" r="22" fill={mood.from} opacity=".55" />
-            {[[30, 40], [62, 78], [96, 30], [176, 110], [24, 128], [120, 96]].map(([x, y], i) => (
-              <circle key={i} cx={x} cy={y} r={i % 2 ? 1.4 : 2} fill={NIGHT.cream} opacity=".8" />
-            ))}
-            <path d="M0 196c40-26 70-8 100-20s60-30 100-10v84H0z" fill={NIGHT.sky} opacity=".45" />
-          </svg>
-          <p className="absolute inset-x-5 top-[24%] text-center text-[15px] leading-snug text-paper/90">
-            {state === "drawing" ? c.drawing : state === "queued" ? c.queued : p.scene}
-          </p>
-          {(state === "drawing" || state === "queued") && (
-            <span className="absolute left-1/2 top-[44%] h-9 w-9 -translate-x-1/2 animate-breathe rounded-full" style={{ background: NIGHT.gold, opacity: state === "drawing" ? 0.9 : 0.35 }} aria-hidden />
-          )}
-        </>
-      )}
-      <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-[14px] font-semibold" style={{ background: NIGHT.cream, color: NIGHT.sky }}>
-        {n}
-      </span>
-      {p.added.length > 0 && showImage && (
-        <span
-          title={c.addedHint(p.added.join(", "))}
-          aria-label={c.addedHint(p.added.join(", "))}
-          className="absolute right-3 top-3 flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium"
-          style={{ background: NIGHT.gold, color: NIGHT.graphite }}
-        >
-          ✦<span className="hidden sm:inline">{c.added}</span>
-        </span>
-      )}
-      {p.caption && (
-        <figcaption
-          className="absolute inset-x-3 bottom-3 rounded-[14px] px-3.5 py-2.5 text-[14px] leading-snug shadow-soft"
-          style={{ background: "rgb(251 247 240 / 0.94)", color: NIGHT.graphite }}
-        >
-          «{p.caption}»
-        </figcaption>
-      )}
-    </figure>
   );
 }
 
@@ -410,7 +369,7 @@ function Reflection({ dream, reflection, onCrisis }: { dream: Dream; reflection:
   const [answers, setAnswers] = useState<string[]>(reflection.questions.map((_, i) => dream.answers[i] ?? ""));
   const [notes, setNotes] = useState(dream.notes);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
-  const field = "w-full rounded-[16px] border-2 border-transparent bg-milk px-4 py-3 text-[15px] leading-relaxed text-ink outline-none transition focus:border-lilac-deep/60 focus:bg-paper";
+  const field = styles.field;
 
   const save = async () => {
     setState("saving");
@@ -421,7 +380,7 @@ function Reflection({ dream, reflection, onCrisis }: { dream: Dream; reflection:
 
   return (
     <section>
-      <h2 className="font-serif text-[22px] text-ink sm:text-[26px]">{r.heading}</h2>
+      <h2 className="text-[24px] font-semibold tracking-tight text-ink sm:text-[28px]">{r.heading}</h2>
       <p className="mt-3 rounded-[18px] px-4 py-3 text-[13.5px] leading-relaxed" style={{ background: NIGHT.haze, color: NIGHT.graphite }}>
         {r.disclaimer}
       </p>
@@ -436,7 +395,7 @@ function Reflection({ dream, reflection, onCrisis }: { dream: Dream; reflection:
       <h3 className="mt-7 text-[15px] font-medium text-ink">{r.questions}</h3>
       <ol className="mt-3 space-y-4">
         {reflection.questions.map((q, i) => (
-          <li key={i} className="rounded-[22px] bg-paper p-5 shadow-soft">
+          <li key={i} className={styles.surface}>
             <p className="text-[15.5px] leading-relaxed text-ink">{q}</p>
             <textarea
               value={answers[i] ?? ""}
@@ -477,7 +436,7 @@ function Reflection({ dream, reflection, onCrisis }: { dream: Dream; reflection:
       )}
 
       <div className="mt-7 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => void save()} disabled={state === "saving"} className={buttonStyles.primary}>
+        <button type="button" onClick={() => void save()} disabled={state === "saving"} className={styles.button}>
           {state === "saved" ? `✓ ${r.saved}` : r.save}
         </button>
       </div>

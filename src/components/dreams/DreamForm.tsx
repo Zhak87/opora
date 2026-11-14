@@ -4,22 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMsg } from "@/i18n/client";
 import { dreamMessages } from "@/i18n/dreams";
-import { Night, nightChip, nightInput, nightPrimary } from "@/components/games/Night";
 import { CrisisHelp } from "@/components/course/CrisisHelp";
 import { MicRecorder } from "@/lib/recorder";
 import { DREAMERS, DREAM_EMOTIONS, DREAM_TEXT_MAX, DREAM_TYPES, isDreamer, type DreamEmotion, type DreamType, type Dreamer } from "@/lib/dreams";
 import { buildStoryboard, saveDream } from "@/lib/dream-actions";
 import type { Dream } from "@/lib/dream-data";
 import { DreamerFigure } from "./DreamerFigure";
+import { DreamBanner } from "./DreamJournal";
+import styles from "./DreamJournal.module.css";
 
 const DRAFT_KEY = "opora-dream-draft";
 const DREAMER_KEY = "opora-dreamer";
 
-const chipOn = "rounded-full border border-[#F2D58A] bg-[#F2D58A] px-3.5 py-2 text-[13.5px] font-medium text-[#2B2838] transition";
-const label = "mb-2.5 block text-[13px] uppercase tracking-[0.12em] text-paper/55";
+const chipOn = `${styles.chip} ${styles.chipOn}`;
+const label = "mb-2.5 block text-sm font-semibold text-ink";
 
 // Запись сна: быстрый текст или голос, а потом необязательные детали по подсказкам.
-// Тёмная сцена — по умолчанию: сон чаще записывают утром, едва открыв глаза.
 export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
   const m = useMsg(dreamMessages);
   const f = m.form;
@@ -34,7 +34,6 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
   const [day, setDay] = useState(dream?.dayContext ?? "");
   const [date, setDate] = useState(dream?.date ?? today);
   const [dreamer, setDreamer] = useState<Dreamer>(dream?.dreamer ?? "mint");
-  const [more, setMore] = useState(Boolean(dream));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [crisis, setCrisis] = useState(false);
@@ -63,7 +62,7 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
   useEffect(() => () => recorder.current?.cancel(), []);
 
   const addHint = (start: string) => {
-    setText((t) => `${t.trimEnd()}${t.trim() ? "\n\n" : ""}${start} `);
+    setText((t) => `${t.trimEnd()}${t.trim() ? "\n\n" : ""}${start} `.slice(0, DREAM_TEXT_MAX));
     requestAnimationFrame(() => {
       const el = area.current;
       if (!el) return;
@@ -153,53 +152,53 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
   if (crisis) return <CrisisHelp lead={f.crisisLead} />;
 
   return (
-    <Night className="px-5 py-7 sm:px-9 sm:py-10" glow="#6E5BA8">
-      <div className="relative">
-        <h1 className="font-serif text-[26px] leading-tight sm:text-[34px]">{dream ? f.editHeading : f.heading}</h1>
-
-        <div className="mt-5">
-          <textarea
-            ref={area}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={DREAM_TEXT_MAX}
-            rows={7}
-            placeholder={f.placeholder}
-            className={`${nightInput} min-h-[180px] resize-y text-[16px] leading-relaxed`}
-          />
-          <button
-            type="button"
-            onClick={mic === "on" ? () => void stopMic() : mic === "idle" ? () => void startMic() : undefined}
-            disabled={mic === "wait" || busy}
-            aria-label={mic === "on" ? f.stop : f.speak}
-            title={mic === "on" ? f.stop : f.speak}
-            className={`mt-3 flex h-11 items-center gap-2 rounded-full px-4 text-[13.5px] font-medium transition ${
-              mic === "on" ? "bg-[#F4B9A0] text-[#2B2838]" : "bg-paper/15 text-paper hover:bg-paper/25"
-            }`}
-            style={mic === "on" ? { boxShadow: `0 0 0 ${4 + level * 14}px rgb(244 185 160 / 0.25)` } : undefined}
-          >
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-              <rect x="9" y="3" width="6" height="11" rx="3" />
-              <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
-            </svg>
-            {mic === "on" ? f.listening : mic === "wait" ? f.transcribing : f.speak}
-          </button>
-        </div>
-        {!dream && <p className="mt-2 text-xs text-paper/45">{f.draftSaved}</p>}
+    <div className="space-y-4">
+      <DreamBanner title={dream ? f.editHeading : f.heading} />
+      <div className={styles.surface}>
+        <textarea
+          ref={area}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={DREAM_TEXT_MAX}
+          rows={7}
+          aria-label={f.heading}
+          placeholder={f.placeholder}
+          className={`${styles.field} min-h-36 resize-y`}
+        />
+        <button
+          type="button"
+          onClick={mic === "on" ? () => void stopMic() : mic === "idle" ? () => void startMic() : undefined}
+          disabled={mic === "wait" || busy}
+          aria-label={mic === "on" ? f.stop : f.speak}
+          title={mic === "on" ? f.stop : f.speak}
+          className={`mt-3 flex h-11 items-center gap-2 rounded-full px-4 text-[13.5px] font-medium transition ${
+            mic === "on" ? "bg-[#F4B9A0] text-[#2B2838]" : "bg-[#f4eff8] text-[#483967] hover:bg-[#e9e0f2]"
+          }`}
+          style={mic === "on" ? { boxShadow: `0 0 0 ${4 + level * 14}px rgb(244 185 160 / 0.25)` } : undefined}
+        >
+          <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            <rect x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+          </svg>
+          {mic === "on" ? f.listening : mic === "wait" ? f.transcribing : f.speak}
+        </button>
+        {!dream && <p className="mt-2 text-xs text-ink-soft">{f.draftSaved}</p>}
 
         <p className={`${label} mt-6`}>{f.hintsTitle}</p>
         <div className="flex flex-wrap gap-2">
           {f.hints.map(([title, start]) => (
-            <button key={title} type="button" onClick={() => addHint(start)} className={nightChip}>
+            <button key={title} type="button" onClick={() => addHint(start)} className={styles.chip}>
               {title}
             </button>
           ))}
         </div>
+      </div>
 
-        <p className={`${label} mt-7`}>{f.emotions}</p>
+      <div className={styles.surface}>
+        <p className={label}>{f.emotions}</p>
         <div className="flex flex-wrap gap-2">
           {DREAM_EMOTIONS.map((e) => (
-            <button key={e} type="button" aria-pressed={Boolean(emotions[e])} onClick={() => toggleEmotion(e)} className={emotions[e] ? chipOn : nightChip}>
+            <button key={e} type="button" aria-pressed={Boolean(emotions[e])} onClick={() => toggleEmotion(e)} className={emotions[e] ? chipOn : styles.chip}>
               {m.emotions[e]}
             </button>
           ))}
@@ -207,8 +206,8 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
         {Object.keys(emotions).length > 0 && (
           <ul className="mt-4 space-y-2.5">
             {(Object.keys(emotions) as DreamEmotion[]).map((e) => (
-              <li key={e} className="flex items-center gap-3 text-[14px] text-paper/80">
-                <span className="w-32 shrink-0 truncate">{m.emotions[e]}</span>
+              <li key={e} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-soft">
+                <span className="min-w-24">{m.emotions[e]}</span>
                 <span className="flex gap-1.5" role="group" aria-label={f.intensity}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
@@ -217,8 +216,8 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
                       aria-label={`${f.intensity}: ${n}`}
                       aria-pressed={emotions[e] === n}
                       onClick={() => setEmotions((cur) => ({ ...cur, [e]: n }))}
-                      className={`h-7 w-7 rounded-full border text-[12px] transition ${
-                        (emotions[e] ?? 0) >= n ? "border-[#F2D58A] bg-[#F2D58A] text-[#2B2838]" : "border-paper/25 text-paper/50"
+                      className={`size-9 rounded-lg border text-[12px] transition ${
+                        (emotions[e] ?? 0) >= n ? "border-[#b7a4cf] bg-[#eee5f6] text-[#493266]" : "border-[#ded5e7] text-ink-soft hover:bg-[#f4eff8]"
                       }`}
                     >
                       {n}
@@ -233,7 +232,7 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
         <p className={`${label} mt-7`}>{f.type}</p>
         <div className="flex flex-wrap gap-2">
           {DREAM_TYPES.map((t) => (
-            <button key={t} type="button" aria-pressed={type === t} onClick={() => setType(t)} className={type === t ? chipOn : nightChip}>
+            <button key={t} type="button" aria-pressed={type === t} onClick={() => setType(t)} className={type === t ? chipOn : styles.chip}>
               {m.types[t]}
             </button>
           ))}
@@ -249,79 +248,76 @@ export function DreamForm({ dream, today }: { dream?: Dream; today: string }) {
               aria-label={f.dreamers[d]}
               title={f.dreamers[d]}
               onClick={() => setDreamer(d)}
-              className={`rounded-full p-1 transition ${dreamer === d ? "bg-[#F2D58A]" : "bg-paper/10 hover:bg-paper/25"}`}
+              className={`rounded-full p-1 transition ${dreamer === d ? "bg-[#705a95]" : "bg-[#f1ebf6] hover:bg-[#e2d6ed]"}`}
             >
               <DreamerFigure dreamer={d} />
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs text-paper/45">{f.dreamerHint}</p>
+        <p className="mt-2 text-xs text-ink-soft">{f.dreamerHint}</p>
+      </div>
 
-        {!more ? (
-          <button type="button" onClick={() => setMore(true)} className="mt-6 text-sm text-paper/60 underline-offset-4 hover:text-paper hover:underline">
-            + {f.day}, {f.after.toLowerCase()}, {f.vividness.toLowerCase()}
-          </button>
-        ) : (
-          <>
-            <p className={`${label} mt-7`}>
-              {f.day} <span className="normal-case tracking-normal text-paper/35">· {f.optional}</span>
-            </p>
-            <input value={day} onChange={(e) => setDay(e.target.value)} maxLength={600} placeholder={f.dayPlaceholder} className={nightInput} />
+      <details className={styles.surface} open={Boolean(dream)}>
+        <summary className="w-fit cursor-pointer text-sm font-semibold text-ink">{f.more}</summary>
+        <label className="mt-7 block">
+          <span className={label}>{f.day} <span className="font-normal text-ink-soft">· {f.optional}</span></span>
+          <input value={day} onChange={(e) => setDay(e.target.value)} maxLength={600} placeholder={f.dayPlaceholder} className={styles.field} />
+        </label>
 
-            <p className={`${label} mt-7`}>
-              {f.after} <span className="normal-case tracking-normal text-paper/35">· {f.optional}</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {DREAM_EMOTIONS.map((e) => (
+        <p className={`${label} mt-7`}>
+          {f.after} <span className="font-normal text-ink-soft">· {f.optional}</span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {DREAM_EMOTIONS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              aria-pressed={after.includes(e)}
+              onClick={() => setAfter((cur) => (cur.includes(e) ? cur.filter((x) => x !== e) : [...cur, e]))}
+              className={after.includes(e) ? chipOn : styles.chip}
+            >
+              {m.emotions[e]}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-7 flex flex-wrap items-end gap-x-10 gap-y-6">
+          <div>
+            <p className={label}>{f.vividness}</p>
+            <span className="flex gap-1.5">
+              {[1, 2, 3, 4, 5].map((n) => (
                 <button
-                  key={e}
+                  key={n}
                   type="button"
-                  aria-pressed={after.includes(e)}
-                  onClick={() => setAfter((cur) => (cur.includes(e) ? cur.filter((x) => x !== e) : [...cur, e]))}
-                  className={after.includes(e) ? chipOn : nightChip}
+                  aria-label={`${f.vividness}: ${n}`}
+                  aria-pressed={vividness === n}
+                  onClick={() => setVividness(vividness === n ? null : n)}
+                  className={`h-9 w-9 rounded-full border text-[13px] transition ${
+                    (vividness ?? 0) >= n ? "border-[#b7a4cf] bg-[#eee5f6] text-[#493266]" : "border-[#ded5e7] text-ink-soft hover:bg-[#f4eff8]"
+                  }`}
                 >
-                  {m.emotions[e]}
+                  {n}
                 </button>
               ))}
-            </div>
+            </span>
+          </div>
+          <label>
+            <span className={label}>{f.date}</span>
+            <input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} className={`${styles.field} max-w-full`} />
+          </label>
+        </div>
+      </details>
 
-            <div className="mt-7 flex flex-wrap items-end gap-x-10 gap-y-6">
-              <div>
-                <p className={label}>{f.vividness}</p>
-                <span className="flex gap-1.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      aria-label={`${f.vividness}: ${n}`}
-                      aria-pressed={vividness === n}
-                      onClick={() => setVividness(vividness === n ? null : n)}
-                      className={`h-9 w-9 rounded-full border text-[13px] transition ${
-                        (vividness ?? 0) >= n ? "border-[#F2D58A] bg-[#F2D58A] text-[#2B2838]" : "border-paper/25 text-paper/50"
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </span>
-              </div>
-              <label>
-                <span className={label}>{f.date}</span>
-                <input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} className={`${nightInput} w-auto [color-scheme:dark]`} />
-              </label>
-            </div>
-          </>
-        )}
+      <div className={styles.surface}>
+        {error && <p role="alert" className="mb-4 rounded-xl bg-[#ffeeec] px-4 py-3 text-sm text-[#a03630]">{error}</p>}
 
-        {error && <p role="alert" className="mt-6 rounded-2xl bg-[#F4B9A0]/20 px-4 py-3 text-sm text-[#FBE3D8]">{error}</p>}
-
-        <div className="mt-8 flex flex-col items-start gap-3">
-          <button type="button" onClick={() => void submit()} disabled={busy || mic !== "idle"} className={nightPrimary}>
+        <div className="flex flex-col items-start gap-3">
+          <button type="button" onClick={() => void submit()} disabled={busy || mic !== "idle"} className={styles.button}>
             {busy ? f.working : dream && dream.panels.length > 0 ? f.save : f.submit}
           </button>
-          <p className="max-w-md text-xs leading-relaxed text-paper/45">{f.aiNote}</p>
+          <p className="max-w-md text-xs leading-relaxed text-ink-soft">{f.aiNote}</p>
         </div>
       </div>
-    </Night>
+    </div>
   );
 }
