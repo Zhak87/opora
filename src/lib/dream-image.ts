@@ -3,7 +3,7 @@ import { AIError } from "@/lib/ai";
 // Рисование кадров комикса. Два провайдера на выбор (переменная DREAM_IMAGES):
 //   cloudflare — FLUX.1 schnell в Cloudflare Workers AI. Бесплатно 10 000 «нейронов» в сутки
 //                (около 170 картинок 1024 px), без логотипа, запросы не хранятся. Героя держит
-//                одинаковым общий seed и одно и то же описание. Выбирается сам, если заданы ключи.
+//                одно и то же описание и стиль во всех кадрах. Выбирается сам, если заданы ключи.
 //   gemini     — картинки Gemini на уже подключённом ключе. Платно (несколько центов за кадр),
 //                зато умеет рисовать по образцу: первый кадр передаётся как эталон героя и стиля.
 //   off        — без картинок: комикс собирается из подписей на фоне палитры.
@@ -24,15 +24,15 @@ export function imageProvider(): ImageProvider | null {
 // Умеет ли провайдер рисовать по образцу (эталон героя из первого кадра).
 export const usesReference = (provider: ImageProvider) => provider === "gemini";
 
-export async function drawPanel(prompt: string, seed: number, reference?: Reference | null): Promise<Picture> {
+export async function drawPanel(prompt: string, reference?: Reference | null): Promise<Picture> {
   const provider = imageProvider();
   if (!provider) throw new AIError(503, "Dream images: not configured");
-  return provider === "gemini" ? drawGemini(prompt, reference) : drawCloudflare(prompt, seed);
+  return provider === "gemini" ? drawGemini(prompt, reference) : drawCloudflare(prompt);
 }
 
 const TIMEOUT = 45_000;
 
-async function drawCloudflare(prompt: string, seed: number): Promise<Picture> {
+async function drawCloudflare(prompt: string): Promise<Picture> {
   const base = (process.env.CLOUDFLARE_API_BASE || "https://api.cloudflare.com").replace(/\/$/, "");
   const model = process.env.DREAM_CF_MODEL || "@cf/black-forest-labs/flux-1-schnell";
   let last: AIError | null = null;
@@ -42,15 +42,17 @@ async function drawCloudflare(prompt: string, seed: number): Promise<Picture> {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
         // Больше шагов — чище линии. Максимум у модели 8; шаги почти не влияют на расход.
-        body: JSON.stringify({ prompt: prompt.slice(0, 2040), steps: 8, seed }),
+        // Параметр seed эта модель в Cloudflare не принимает (ошибка 400), поэтому один и тот же
+        // герой держится только одинаковым описанием и стилем во всех кадрах.
+        body: JSON.stringify({ prompt: prompt.slice(0, 2040), steps: 8 }),
         signal: AbortSignal.timeout(TIMEOUT),
       });
       if (!res.ok) {
         const text = await res.text();
         last = new AIError(res.status, `Cloudflare image ${res.status}: ${text.slice(0, 300)}`);
         console.error(last.message);
-        // Суточный запас исчерпан или ключ неверный: повторять бессмысленно.
-        if (res.status === 401 || res.status === 403 || res.status === 429) break;
+        // Суточный запас исчерпан, ключ неверный или запрос не принят: повторять бессмысленно.
+        if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 429) break;
         continue;
       }
       const type = res.headers.get("content-type") || "";

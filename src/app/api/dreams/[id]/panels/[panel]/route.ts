@@ -24,7 +24,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!UUID.test(id) || !UUID.test(panelId)) return Response.json({ error: "not found" }, { status: 404 });
 
   const [{ data: dream }, { data: panels }] = await Promise.all([
-    supabase.from("dreams").select("id, text, dreamer, seed").eq("id", id).maybeSingle(),
+    supabase.from("dreams").select("id, text, dreamer").eq("id", id).maybeSingle(),
     supabase.from("dream_panels").select("id, position, scene, visual_prompt, mood, softened, skipped, image_path, version").eq("dream_id", id).order("position"),
   ]);
   const panel = panels?.find((p) => p.id === panelId);
@@ -84,14 +84,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   let picture;
   try {
-    // Счётчик пополняем до запроса: платная попытка учитывается, даже если ответ потерялся по дороге.
-    await supabase.from("dream_generations").insert({ provider });
-    picture = await drawPanel(prompt, dream.seed, reference);
+    picture = await drawPanel(prompt, reference);
   } catch (e) {
     const status = (e as { status?: number }).status;
     return fail(status === 429 ? "limit" : status === 422 ? "refused" : "failed", status === 429 ? 429 : 502);
   }
 
+  // В дневной лимит идут только нарисованные кадры: неудачная попытка человека не наказывает.
+  await supabase.from("dream_generations").insert({ provider });
   const version = (panel.version ?? 0) + 1;
   const path = `${user.id}/${id}/${panel.id}-${version}.${extension(picture.mime)}`;
   const { error: uploadError } = await supabase.storage.from(DREAM_BUCKET).upload(path, picture.bytes, { contentType: picture.mime, upsert: true });
