@@ -1,6 +1,3 @@
-import type { RoomFormat } from "@/lib/rooms/types";
-import { TalkIcon } from "../icons";
-
 type P = { className?: string };
 const base = {
   fill: "none",
@@ -35,15 +32,6 @@ export function OnlineDot({ active }: { active: boolean }) {
     <span className="relative flex h-2 w-2">
       {active && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage opacity-60" />}
       <span className={`relative inline-flex h-2 w-2 rounded-full ${active ? "bg-sage-deep" : "bg-ink-faint/60"}`} />
-    </span>
-  );
-}
-
-export function FormatChip({ format, label }: { format: RoomFormat; label: string }) {
-  const Icon = format === "voice" ? MicIcon : TalkIcon;
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-lilac-soft px-3 py-1 text-lilac-deep">
-      <Icon className="h-3.5 w-3.5" /> {label}
     </span>
   );
 }
