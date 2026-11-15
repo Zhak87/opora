@@ -5,7 +5,11 @@ import { LOCALE_COOKIE, fromAcceptLanguage, isLocale, type Locale, type Messages
 export async function getLocale(): Promise<Locale> {
   const saved = (await cookies()).get(LOCALE_COOKIE)?.value;
   if (isLocale(saved)) return saved;
-  return fromAcceptLanguage((await headers()).get("accept-language"));
+  const h = await headers();
+  // Мобильное приложение присылает выбранный язык заголовком.
+  const app = h.get("x-opora-lang");
+  if (isLocale(app)) return app;
+  return fromAcceptLanguage(h.get("accept-language"));
 }
 
 // Тексты раздела на языке запроса: const m = await getMsg(homeMessages).
