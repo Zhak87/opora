@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# Мобильное приложение живёт в отдельном закрытом репозитории GitLab; его клон кладут сюда, в папку mobile.
+/mobile/

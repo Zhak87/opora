@@ -65,7 +65,9 @@ async function handle(request: NextRequest) {
     },
   );
 
-  const { data } = await supabase.auth.getClaims();
+  // Запросы мобильного приложения к /api приходят с токеном в заголовке, а не с куки.
+  const bearer = pathname.startsWith("/api") ? /^Bearer\s+([A-Za-z0-9._-]+)$/.exec(request.headers.get("authorization")?.trim() ?? "")?.[1] : undefined;
+  const { data } = bearer ? await supabase.auth.getClaims(bearer) : await supabase.auth.getClaims();
   const user = data?.claims ?? null;
 
   const path = request.nextUrl.pathname;
