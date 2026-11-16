@@ -18,6 +18,7 @@ import * as cabinet from "@/lib/cabinet-actions";
 import * as draft from "@/lib/consult/draft-actions";
 import * as rooms from "@/lib/rooms/actions";
 import * as consult from "@/lib/consult/actions";
+import { consultPrep } from "@/lib/consult/mobile";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -138,6 +139,7 @@ const ACTIONS: Record<string, [Kind, Fn]> = {
 
   joinConsult: ["args", consult.joinConsult],
   consultState: ["args", consult.consultState],
+  consultPrep: ["args", consultPrep],
   setSpeechConsent: ["args", consult.setSpeechConsent],
   startConsultNow: ["args", consult.startConsultNow],
   generateDraft: ["state", draft.generateDraft],
