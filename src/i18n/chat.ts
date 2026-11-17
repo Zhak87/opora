@@ -38,6 +38,7 @@ export const chatMessages = defineMessages({
     busy: "Сейчас со мной разговаривает очень много людей, и я не успеваю ответить. Ваши слова сохранены. Попробуйте, пожалуйста, через минуту.",
     keyProblem:
       "Опи сейчас не может ответить. Ваши слова сохранены. Попробуйте, пожалуйста, через пару минут.",
+    dailyLimit: "Мы сегодня уже много поговорили, и Опи нужно немного отдохнуть. Ваши слова сохранены. Давайте продолжим завтра. Если тяжело прямо сейчас, позвоните 150 или 112.",
     failed: "Простите, мне не удалось ответить прямо сейчас. Ваши слова сохранены. Попробуйте, пожалуйста, ещё раз чуть позже.",
     // Действия (lib/actions.ts).
     hopeTitle: "Надежда",
@@ -118,6 +119,7 @@ export const chatMessages = defineMessages({
     busy: "Қазір менімен өте көп адам сөйлесіп жатыр, жауап беріп үлгермей жатырмын. Сөздеріңіз сақталды. Бір минуттан кейін қайта көріңізші.",
     keyProblem:
       "Опи қазір жауап бере алмайды. Сөздеріңіз сақталды. Бірнеше минуттан кейін қайта көріңізші.",
+    dailyLimit: "Бүгін біз көп сөйлестік, Опиге аздап демалу керек. Сөздеріңіз сақталды. Ертең жалғастырайық. Қазір қиын болса, 150 немесе 112 нөміріне қоңырау шалыңыз.",
     failed: "Кешіріңіз, дәл қазір жауап бере алмадым. Сөздеріңіз сақталды. Сәлден кейін қайта көріңізші.",
     hopeTitle: "Үміт",
     newConversation: "Жаңа әңгіме",
@@ -197,6 +199,7 @@ export const chatMessages = defineMessages({
     busy: "A lot of people are talking with me right now, and I can't keep up. Your words are saved. Please try again in a minute.",
     keyProblem:
       "Opi can't reply right now. Your words are saved. Please try again in a couple of minutes.",
+    dailyLimit: "We've talked a lot today, and Opi needs a little rest. Your words are saved. Let's continue tomorrow. If things are hard right now, call 150 or 112.",
     failed: "Sorry, I couldn't reply just now. Your words are saved. Please try again a little later.",
     hopeTitle: "Hope",
     newConversation: "New conversation",
