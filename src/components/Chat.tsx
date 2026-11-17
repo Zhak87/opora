@@ -16,13 +16,15 @@ import { looksAnxious, looksLikeCrisis } from "@/lib/prompt";
 import { useLocale } from "@/i18n/client";
 import { chatMessages } from "@/i18n/chat";
 import { gamesMessages } from "@/i18n/games";
-import { PLACE_STEPS, isStep, splitStep, stepHref, visibleText, type StepCode } from "@/lib/steps";
+import { PLACE_STEPS, isStep, splitStep, stepHref, visibleText, type ReplyMeta, type StepCode } from "@/lib/steps";
+import { SaveInsight, ScaleChips } from "./ChatExtras";
 import { sendEvent } from "./Track";
 import styles from "./Chat.module.css";
 
 // pending: реплика ещё не точно сохранена на сервере, отменять её пока нельзя.
 // step: «следующий шаг», который собеседник предложил в этой реплике (кнопка под ответом).
-type Message = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; error?: string; step?: string | null };
+// meta: служебные метки собеседника v3 — кнопки шкалы 0–10 и вывод для дневника (src/lib/steps.ts).
+type Message = { id: string; role: "user" | "assistant"; content: string; pending?: boolean; error?: string; step?: string | null; meta?: ReplyMeta | null };
 type ReplyListener = (text: string, complete: boolean) => void;
 
 // Оценку разговора спрашиваем, когда собеседник ответил хотя бы столько раз.
@@ -171,9 +173,9 @@ export function Chat({
         } finally {
           reader.releaseLock();
         }
-        const { text: clean, step } = splitStep(acc);
+        const { text: clean, step, meta } = splitStep(acc);
         if (!clean) throw new Error("empty");
-        setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: clean, step } : m)));
+        setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, content: clean, step, meta } : m)));
         updateVoice(clean, true);
         return clean;
       } catch {
@@ -426,6 +428,10 @@ export function Chat({
                           </span>
                           <BackIcon className="h-5 w-5 shrink-0 rotate-180 text-lilac-deep transition group-hover:translate-x-0.5" />
                         </Link>
+                      )}
+                      {m.meta?.save && !(busy && m.id === messages[messages.length - 1]?.id) && <SaveInsight text={m.meta.save} />}
+                      {m.meta?.scale && !busy && m.id === messages[messages.length - 1]?.id && (
+                        <ScaleChips onPick={(n) => send(t.scaleAnswer.replace("{n}", String(n)))} />
                       )}
                     </div>
                   ) : (
