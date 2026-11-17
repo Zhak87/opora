@@ -32,12 +32,12 @@ export const chatMessages = defineMessages({
     disclaimer: "Собеседник — это ИИ. Он поддерживает, но не заменяет специалиста.",
     modeLabel: { talk: "Разговор", hope: "Надежда", journal: "Дневник" } as Record<string, string>,
     defaultLabel: "Разговор",
-    // Ответы сервера, которые человек видит в чате.
+    // Ответы сервера, которые человек видит в чате. Никаких технических причин (ключи, настройки): они только в журнале сервера.
     notConfigured:
-      "Я пока не могу ответить: ИИ ещё не подключён к приложению. Но ваши слова сохранены, и вы сможете вернуться к этому разговору позже.",
+      "Опи сейчас не может ответить. Ваши слова сохранены. Попробуйте, пожалуйста, через пару минут.",
     busy: "Сейчас со мной разговаривает очень много людей, и я не успеваю ответить. Ваши слова сохранены. Попробуйте, пожалуйста, через минуту.",
     keyProblem:
-      "Я не могу ответить: ключ ИИ не подходит или не настроен. Ваши слова сохранены. Владельцу сайта стоит проверить переменную GEMINI_API_KEY.",
+      "Опи сейчас не может ответить. Ваши слова сохранены. Попробуйте, пожалуйста, через пару минут.",
     failed: "Простите, мне не удалось ответить прямо сейчас. Ваши слова сохранены. Попробуйте, пожалуйста, ещё раз чуть позже.",
     // Действия (lib/actions.ts).
     hopeTitle: "Надежда",
@@ -114,10 +114,10 @@ export const chatMessages = defineMessages({
     modeLabel: { talk: "Әңгіме", hope: "Үміт", journal: "Күнделік" } as Record<string, string>,
     defaultLabel: "Әңгіме",
     notConfigured:
-      "Әзірге жауап бере алмаймын: жасанды интеллект қосымшаға әлі қосылмаған. Бірақ сөздеріңіз сақталды, бұл әңгімеге кейін орала аласыз.",
+      "Опи қазір жауап бере алмайды. Сөздеріңіз сақталды. Бірнеше минуттан кейін қайта көріңізші.",
     busy: "Қазір менімен өте көп адам сөйлесіп жатыр, жауап беріп үлгермей жатырмын. Сөздеріңіз сақталды. Бір минуттан кейін қайта көріңізші.",
     keyProblem:
-      "Жауап бере алмаймын: жасанды интеллект кілті жарамсыз немесе бапталмаған. Сөздеріңіз сақталды. Сайт иесі GEMINI_API_KEY айнымалысын тексергені жөн.",
+      "Опи қазір жауап бере алмайды. Сөздеріңіз сақталды. Бірнеше минуттан кейін қайта көріңізші.",
     failed: "Кешіріңіз, дәл қазір жауап бере алмадым. Сөздеріңіз сақталды. Сәлден кейін қайта көріңізші.",
     hopeTitle: "Үміт",
     newConversation: "Жаңа әңгіме",
@@ -193,10 +193,10 @@ export const chatMessages = defineMessages({
     modeLabel: { talk: "Conversation", hope: "Hope", journal: "Journal" } as Record<string, string>,
     defaultLabel: "Conversation",
     notConfigured:
-      "I can't reply yet: the AI isn't connected to the app. But your words are saved, and you can come back to this conversation later.",
+      "Opi can't reply right now. Your words are saved. Please try again in a couple of minutes.",
     busy: "A lot of people are talking with me right now, and I can't keep up. Your words are saved. Please try again in a minute.",
     keyProblem:
-      "I can't reply: the AI key is invalid or not set up. Your words are saved. The site owner should check the GEMINI_API_KEY variable.",
+      "Opi can't reply right now. Your words are saved. Please try again in a couple of minutes.",
     failed: "Sorry, I couldn't reply just now. Your words are saved. Please try again a little later.",
     hopeTitle: "Hope",
     newConversation: "New conversation",
