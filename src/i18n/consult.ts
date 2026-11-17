@@ -19,7 +19,7 @@ export const consultMessages = defineMessages({
       opensAt: (t: string) => `Вход откроется в ${t}`,
       opensHint: "Комната открывается за 15 минут до начала.",
       ended: "Время встречи прошло",
-      videoOff: "Видеосвязь пока не настроена на сервере",
+      videoOff: "Видеосвязь сейчас недоступна",
       onlineHint: "Встреча пройдёт по видеосвязи прямо в «Опоре». Ссылка не нужна.",
     },
     lobby: {
@@ -47,7 +47,7 @@ export const consultMessages = defineMessages({
       cancelled: "Встреча отменена.",
       completed: "Встреча завершена.",
       offline: "Эта встреча проходит очно.",
-      video_off: "Видеосвязь пока не настроена на сервере.",
+      video_off: "Видеосвязь сейчас недоступна.",
       failed: "Не получилось подключиться. Попробуйте ещё раз.",
     },
     call: {
@@ -177,7 +177,7 @@ export const consultMessages = defineMessages({
       opensAt: (t: string) => `Кіру ${t} уақытында ашылады`,
       opensHint: "Бөлме басталуға 15 минут қалғанда ашылады.",
       ended: "Кездесу уақыты өтті",
-      videoOff: "Бейнебайланыс серверде әлі бапталмаған",
+      videoOff: "Бейнебайланыс қазір қолжетімсіз",
       onlineHint: "Кездесу бейнебайланыс арқылы тікелей «Опорада» өтеді. Сілтеме керек емес.",
     },
     lobby: {
@@ -205,7 +205,7 @@ export const consultMessages = defineMessages({
       cancelled: "Кездесу тоқтатылды.",
       completed: "Кездесу аяқталды.",
       offline: "Бұл кездесу бетпе-бет өтеді.",
-      video_off: "Бейнебайланыс серверде әлі бапталмаған.",
+      video_off: "Бейнебайланыс қазір қолжетімсіз.",
       failed: "Қосылу мүмкін болмады. Қайта көріңіз.",
     },
     call: {
@@ -335,7 +335,7 @@ export const consultMessages = defineMessages({
       opensAt: (t: string) => `Opens at ${t}`,
       opensHint: "The room opens 15 minutes before the start.",
       ended: "The session time has passed",
-      videoOff: "Video calls are not set up on the server yet",
+      videoOff: "Video calls are unavailable right now",
       onlineHint: "The session takes place by video right inside Opora. No link needed.",
     },
     lobby: {
@@ -363,7 +363,7 @@ export const consultMessages = defineMessages({
       cancelled: "The session was cancelled.",
       completed: "The session is completed.",
       offline: "This session is in person.",
-      video_off: "Video calls are not set up on the server yet.",
+      video_off: "Video calls are unavailable right now.",
       failed: "Could not connect. Please try again.",
     },
     call: {
