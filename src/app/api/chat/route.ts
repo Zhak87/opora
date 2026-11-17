@@ -7,6 +7,7 @@ import { practiceNote, recentRuns } from "@/lib/practice-memory";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { HOUR, tooMany } from "@/lib/rate-limit";
+import { takeAI } from "@/lib/ai-limits";
 import { track } from "@/lib/track";
 import { joinTags, readMeta, splitStep } from "@/lib/steps";
 import { insightNote, recentInsights } from "@/lib/insights";
@@ -17,7 +18,8 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_INPUT = 4000;
-const HISTORY_LIMIT = 40;
+// Меньше истории — меньше токенов в каждом запросе: последних 24 реплик хватает, остальное помнят выводы и анкета.
+const HISTORY_LIMIT = 24;
 // Больше, чем успевает живой человек даже голосом, но не даёт выжечь ключ ИИ скриптом.
 const PER_HOUR = 150;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -155,6 +157,10 @@ export async function POST(req: Request) {
     currentProgram(supabase),
     myScreenings(supabase, 12),
   ]);
+  // Дневной лимит ответов: защищает бюджет на ИИ. Слова человека уже сохранены.
+  if (!(await takeAI(supabase, "chat", !user.email))) {
+    return textResponse(t.dailyLimit, 429, persistedId);
+  }
   let upstream: ReadableStream<string>;
   try {
     upstream = await streamReply({
