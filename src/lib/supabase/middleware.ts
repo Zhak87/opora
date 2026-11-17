@@ -86,6 +86,8 @@ async function handle(request: NextRequest) {
     const over = trialOver(user);
     const closed = closedForGuest(path);
     if (path.startsWith("/api")) {
+      // Срок пробного доступа приложение получает здесь, до этого гость считается просроченным.
+      if (path === "/api/mobile/trial") return response;
       if (over || closed) return withCookies(NextResponse.json({ error: over ? "trial over" : "account required" }, { status: 403 }), response);
     } else if ((over && !GUEST_ALWAYS.some((p) => path === p || path.startsWith(p + "/"))) || closed || path === "/signup") {
       const url = request.nextUrl.clone();

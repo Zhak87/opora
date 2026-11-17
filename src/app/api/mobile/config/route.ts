@@ -5,6 +5,7 @@ import { voiceConfigured } from "@/lib/rooms/voice";
 import { adminConfigured } from "@/lib/supabase/admin";
 import { consultAiEnabled } from "@/lib/consult/server";
 import { inviteEmailEnabled } from "@/lib/invite-email";
+import { analyticsEnabled } from "@/lib/analytics";
 
 // Открытые настройки для мобильного приложения: адрес базы и публичный ключ (тот же, что видит браузер на сайте).
 export const dynamic = "force-dynamic";
@@ -24,6 +25,8 @@ export function GET() {
         // Кабинет психолога: ИИ-помощник встречи и отправка приглашений письмом.
         consultAi: consultAiEnabled(),
         inviteEmail: inviteEmailEnabled(),
+        // ИИ-выводы о клиенте для психолога (AI_ANALYTICS=on).
+        analytics: analyticsEnabled(),
       },
     },
     { headers: { "Cache-Control": "public, max-age=300" } },
