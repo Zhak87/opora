@@ -1,0 +1,36 @@
+# Тестовые диалоги собеседника (документ «ИИ-собеседник v3», раздел 10). Запускается вручную: Actions → Eval companion → Run.
+# Отчёт для экспертов скачивается из артефактов запуска.
+name: Eval companion
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Группа или ID сценария (пусто — все 60)"
+        required: false
+      model:
+        description: "Модели через запятую"
+        required: false
+        default: "gemini-flash-lite-latest,gemini-flash-latest"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/eval-companion.mjs ${ONLY:+--only "$ONLY"} --model "$MODEL"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ONLY: ${{ inputs.only }}
+          MODEL: ${{ inputs.model || 'gemini-flash-lite-latest,gemini-flash-latest' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: companion-report
+          path: eval/companion/report-*.md

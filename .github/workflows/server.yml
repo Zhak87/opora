@@ -83,7 +83,7 @@ jobs:
 
       - name: logs
         if: inputs.action == 'logs'
-        run: ssh prod 'cd /opt/opora && ./dc.sh logs --tail 150 app caddy cron auth rest storage backup'
+        run: ssh prod 'cd /opt/opora && ./dc.sh logs -t --tail 150 app caddy cron auth rest storage backup'
 
       - name: mail
         if: inputs.action == 'mail'

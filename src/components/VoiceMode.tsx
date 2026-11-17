@@ -62,6 +62,9 @@ export function VoiceMode({
   const orb = useRef<HTMLDivElement>(null);
   const glow = useRef<HTMLDivElement>(null);
   const ring = useRef<HTMLDivElement>(null);
+  // Лицо Опи: рот двигается в такт речи, глаза следят за звуком и «думают».
+  const mouth = useRef<SVGEllipseElement>(null);
+  const eyes = useRef<SVGGElement>(null);
 
   const go = (p: Phase) => {
     phaseRef.current = p;
@@ -187,6 +190,18 @@ export function VoiceMode({
         glow.current.style.opacity = String(0.45 + k * 0.5);
       }
       if (ring.current) ring.current.style.transform = `scale(${1 + k * 0.32})`;
+      if (mouth.current) {
+        // Говорит — рот открывается по громкости; слушает — чуть приоткрыт; иначе мягкая полоска.
+        const open = p === "speaking" ? 0.25 + k * 1.6 : p === "listening" ? 0.18 + k * 0.4 : 0.12;
+        mouth.current.setAttribute("ry", String(Math.min(7, 7 * open)));
+        mouth.current.setAttribute("rx", String(p === "speaking" ? 5 + k * 2 : 6));
+      }
+      if (eyes.current) {
+        // Думает — взгляд медленно гуляет вверх-в стороны; слушает — тянется к человеку.
+        const dx = p === "thinking" ? 3.5 * Math.sin(t / 700) : p === "listening" ? 0 : 1.2 * Math.sin(t / 1800);
+        const dy = p === "thinking" ? -3 + Math.sin(t / 500) : p === "listening" ? 1.5 * k : 0;
+        eyes.current.setAttribute("transform", `translate(${dx.toFixed(2)} ${dy.toFixed(2)})`);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -239,7 +254,10 @@ export function VoiceMode({
           />
           <div ref={ring} className="absolute inset-[34px] rounded-full border border-white/70" style={{ boxShadow: `0 0 40px ${c2}` }} aria-hidden />
           <div ref={orb} className="relative h-[190px] w-[190px] sm:h-[230px] sm:w-[230px]" aria-hidden>
-            <div className="absolute inset-0 overflow-hidden rounded-full shadow-[0_30px_60px_-25px_rgb(95_125_152/0.5)]">
+            <div
+              className="absolute inset-0 animate-morph overflow-hidden shadow-[0_30px_60px_-25px_rgb(95_125_152/0.5)]"
+              style={{ borderRadius: "58% 42% 46% 54% / 52% 44% 56% 48%" }}
+            >
               <div
                 className="absolute -inset-1/4 transition-[background] duration-1000"
                 style={{
@@ -248,9 +266,41 @@ export function VoiceMode({
                 }}
               />
               <div className="absolute -inset-1/4 opacity-80 mix-blend-soft-light" style={{ background: `radial-gradient(circle at 70% 70%, ${c3}, transparent 55%)`, animation: "orb-spin 9s linear infinite reverse" }} />
-              <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle at 34% 28%, rgba(255,253,249,0.95), rgba(255,253,249,0.25) 32%, transparent 60%)" }} />
-              <div className="absolute inset-0 rounded-full" style={{ boxShadow: "inset -14px -22px 50px rgb(127 113 168 / 0.22), inset 10px 14px 30px rgb(255 255 255 / 0.5)" }} />
+              <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 30% 24%, rgba(255,253,249,0.9), rgba(255,253,249,0.2) 26%, transparent 50%)" }} />
+              <div className="absolute inset-0" style={{ borderRadius: "inherit", boxShadow: "inset -14px -22px 50px rgb(127 113 168 / 0.22), inset 10px 14px 30px rgb(255 255 255 / 0.5)" }} />
             </div>
+            {/* Опи: глаза моргают, рот говорит, на ошибке — сочувствие, в паузе — дремлет */}
+            <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+              {phase === "paused" || phase === "starting" ? (
+                <g stroke="#1d1e2c" strokeWidth={2.6} strokeLinecap="round" fill="none">
+                  <path d="M36 50 Q40 54 44.5 50" />
+                  <path d="M55.5 50 Q60 54 64 50" />
+                </g>
+              ) : (
+                <g ref={eyes}>
+                  {phase === "error" && (
+                    <g stroke="#1d1e2c" strokeWidth={2.2} strokeLinecap="round">
+                      <path d="M34.5 42 L44 39" />
+                      <path d="M56 39 L65.5 42" />
+                    </g>
+                  )}
+                  <g className="[animation:blink_4s_infinite] [transform-box:fill-box] [transform-origin:center]">
+                    <ellipse cx="40" cy="49" rx="3.6" ry="4.4" fill="#1d1e2c" />
+                    <ellipse cx="60" cy="49" rx="3.6" ry="4.4" fill="#1d1e2c" />
+                  </g>
+                </g>
+              )}
+              {phase === "error" ? (
+                <path d="M43 65 Q50 61.5 57 65" stroke="#1d1e2c" strokeWidth={2.6} strokeLinecap="round" fill="none" />
+              ) : phase !== "speaking" && phase !== "thinking" ? (
+                <path d="M42 62 Q50 69 58 62" stroke="#1d1e2c" strokeWidth={2.6} strokeLinecap="round" fill="none" />
+              ) : (
+                <ellipse ref={mouth} cx="50" cy="64" rx="6" ry="1" fill="#1d1e2c" />
+              )}
+              {/* румянец */}
+              <ellipse cx="31" cy="58" rx="5" ry="3" fill="#ff9fb4" opacity={0.35} />
+              <ellipse cx="69" cy="58" rx="5" ry="3" fill="#ff9fb4" opacity={0.35} />
+            </svg>
           </div>
         </button>
 
