@@ -10,6 +10,8 @@ import { HOUR, tooMany } from "@/lib/rate-limit";
 import { track } from "@/lib/track";
 import { joinTags, readMeta, splitStep } from "@/lib/steps";
 import { insightNote, recentInsights } from "@/lib/insights";
+import { currentProgram, myScreenings } from "@/lib/program-data";
+import { programNote } from "@/lib/program";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -147,7 +149,12 @@ export async function POST(req: Request) {
     }
   }
 
-  const [runs, insights] = await Promise.all([recentRuns(supabase, 8), recentInsights(supabase, 5)]);
+  const [runs, insights, program, screenings] = await Promise.all([
+    recentRuns(supabase, 8),
+    recentInsights(supabase, 5),
+    currentProgram(supabase),
+    myScreenings(supabase, 12),
+  ]);
   let upstream: ReadableStream<string>;
   try {
     upstream = await streamReply({
@@ -162,6 +169,7 @@ export async function POST(req: Request) {
           intake: intakeNote(profile?.intake),
           practices: practiceNote(runs),
           insights: insightNote(insights),
+          program: programNote(program, screenings),
         }) +
         (body?.voice ? VOICE_NOTE : ""),
       messages,

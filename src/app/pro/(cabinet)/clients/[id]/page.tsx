@@ -6,6 +6,8 @@ import { listSessions } from "@/lib/sessions";
 import { clientAssessments, clientCheckins, clientGoals, periodRange, toPeriod } from "@/lib/wellbeing";
 import { wellbeingMessages } from "@/i18n/wellbeing";
 import { BalancePanel, GoalList, TrendPanel } from "@/components/wellbeing/Panels";
+import { ProgramPanel } from "@/components/program/ProPanel";
+import { clientProgram } from "@/lib/program-data";
 import { scheduleMessages } from "@/i18n/schedule";
 import { SessionList } from "@/components/schedule/SessionList";
 import { NewSessionForm } from "@/components/schedule/ProForms";
@@ -109,13 +111,14 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
   const range = periodRange(period, tz);
   const canWell = tab === "overview" && client.scopes.includes("wellbeing");
   const canGoals = tab === "overview" && client.scopes.includes("goals");
-  const [checkins, assessments, goals, reports, notes, log] = await Promise.all([
+  const [checkins, assessments, goals, reports, notes, log, programInfo] = await Promise.all([
     canWell ? clientCheckins(supabase, id, range.prevFrom) : null,
     canWell ? clientAssessments(supabase, id) : null,
     canGoals ? clientGoals(supabase, id) : null,
     tab === "overview" && client.scopes.includes("analytics") ? listReports(supabase, user!.id, id, 1) : [],
     tab === "notes" ? listNotes(supabase, user!.id, id) : [],
     tab === "data" ? auditFor(supabase, { client: id, psychologist: user!.id }, 20) : [],
+    canWell ? clientProgram(supabase, id) : null,
   ]);
   const report = reports[0];
   await Promise.all([
@@ -242,6 +245,11 @@ export default async function ClientCard({ params, searchParams }: { params: Pro
                 </>
               )}
             </Card>
+            {programInfo && (programInfo.program || programInfo.screenings.length > 0) && (
+              <Card className="p-6 sm:p-7">
+                <ProgramPanel program={programInfo.program} screenings={programInfo.screenings} locale={locale} />
+              </Card>
+            )}
             {assessments && assessments.length > 0 && (
               <Card className="p-6 sm:p-7">
                 <h2 className={`mb-4 ${h2}`}>{wm.pro.balance}</h2>

@@ -14,6 +14,8 @@ import { latestPlan } from "@/lib/plan-data";
 import { currentCourse } from "@/lib/course-data";
 import { courseState } from "@/lib/course";
 import { courseMessages } from "@/i18n/course";
+import { currentProgram } from "@/lib/program-data";
+import { programMessages } from "@/i18n/program";
 import { TipCheck } from "@/components/plan/TipCheck";
 import { TalkIcon, CompassIcon, ArrowIcon, HeartHandIcon, ShieldIcon, GridIcon, CheckIcon, JournalIcon } from "@/components/icons";
 import { panelMessages } from "@/i18n/admin";
@@ -44,7 +46,7 @@ export default async function HomePage() {
   const m = home[locale];
   const now = new Date();
   const today = dayKey(now, timeZone);
-  const [{ data: profile }, { data: recent }, stored, course, care, { data: checkin }, pending] = await Promise.all([
+  const [{ data: profile }, { data: recent }, stored, course, care, { data: checkin }, pending, program] = await Promise.all([
     supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
     supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
     latestPlan(supabase),
@@ -52,6 +54,7 @@ export default async function HomePage() {
     hasCare(supabase, user.id),
     supabase.from("checkins").select("mood").eq("user_id", user.id).eq("day", today).maybeSingle(),
     adminPending(supabase).catch(() => null),
+    currentProgram(supabase),
   ]);
   const wb = wellbeingMessages[locale].checkin;
   const suggest = scheduleMessages[locale].catalog;
@@ -165,6 +168,12 @@ export default async function HomePage() {
           </div>
         </section>
         <div className={styles.more}>
+          <ActionLink
+            href="/program"
+            title={programMessages[locale].homeTitle}
+            hint={program?.status === "active" ? `${programMessages[locale].homeContinue(program.step)} · ${programMessages[locale].steps[program.step - 1]?.title ?? ""}` : programMessages[locale].homeText}
+            Icon={CompassIcon}
+          />
           <CourseCard course={course} c={courseMessages[locale].home} />
           <DreamHomeLink title={dream.homeTitle} hint={dream.homeHint} />
 

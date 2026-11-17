@@ -8,6 +8,7 @@ import * as guide from "@/lib/guide-actions";
 import * as intake from "@/lib/intake-actions";
 import * as mail from "@/lib/notification-email-actions";
 import * as plan from "@/lib/plan-actions";
+import * as program from "@/lib/program-actions";
 import * as practice from "@/lib/practice-actions";
 import * as pro from "@/lib/pro-actions";
 import * as record from "@/lib/record-actions";
@@ -66,6 +67,16 @@ const ACTIONS: Record<string, [Kind, Fn]> = {
   skipIntake: ["args", intake.skipIntake],
   clearIntake: ["args", intake.clearIntake],
   setNotificationEmail: ["args", mail.setNotificationEmail],
+
+  startProgram: ["args", program.startProgram],
+  saveScreening: ["args", program.saveScreening],
+  confirmSafety: ["args", program.confirmSafety],
+  setStepTaskDone: ["args", program.setStepTaskDone],
+  advanceStep: ["args", program.advanceStep],
+  stopProgram: ["args", program.stopProgram],
+  setGuided: ["args", program.setGuided],
+  startStepTalk: ["args", program.startStepTalk],
+  makeHandoff: ["args", program.makeHandoff],
 
   createPlan: ["args", plan.createPlan],
   toggleTip: ["args", plan.toggleTip],
