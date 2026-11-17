@@ -2,11 +2,12 @@ import { requireUser } from "@/lib/supabase/server";
 import { synthesize, ttsConfigured } from "@/lib/ai";
 import { getVoice } from "@/lib/voices";
 import { HOUR, tooMany } from "@/lib/rate-limit";
+import { takeAI } from "@/lib/ai-limits";
 
 export const maxDuration = 20;
 
 export async function POST(req: Request) {
-  const { user } = await requireUser();
+  const { supabase, user } = await requireUser();
   if (!user) return new Response("unauthorized", { status: 401 });
   if (tooMany(`tts:${user.id}`, 300, HOUR)) return new Response("busy", { status: 429 });
   if (!ttsConfigured()) return new Response("not configured", { status: 503 });
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
   const { text, voice } = (await req.json().catch(() => ({}))) as { text?: string; voice?: string };
   const clean = String(text ?? "").trim().slice(0, 900);
   if (!clean) return new Response("empty", { status: 400 });
+  // Лимит на день исчерпан: приложение прочитает ответ голосом устройства.
+  if (!(await takeAI(supabase, "tts", !user.email))) return new Response("limit", { status: 429 });
 
   try {
     const audio = await synthesize(clean, getVoice(String(voice)).id, req.signal);

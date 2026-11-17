@@ -1,12 +1,13 @@
 import { requireUser } from "@/lib/supabase/server";
 import { aiConfigured, transcribe } from "@/lib/ai";
 import { HOUR, tooMany } from "@/lib/rate-limit";
+import { takeAI } from "@/lib/ai-limits";
 
 export const maxDuration = 60;
 
 // Принимает короткую запись голоса (WAV) и возвращает распознанный текст.
 export async function POST(req: Request) {
-  const { user } = await requireUser();
+  const { supabase, user } = await requireUser();
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   if (tooMany(`stt:${user.id}`, 300, HOUR)) return Response.json({ error: "busy" }, { status: 429 });
   if (!aiConfigured()) return Response.json({ error: "not configured" }, { status: 503 });
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
   const buf = new Uint8Array(await req.arrayBuffer());
   if (buf.length < 2000) return Response.json({ text: "" });
   if (buf.length > 4_000_000) return Response.json({ error: "too long" }, { status: 413 });
+  if (!(await takeAI(supabase, "stt", !user.email))) return Response.json({ error: "busy" }, { status: 429 });
 
   try {
     const text = await transcribe(buf, req.headers.get("content-type") || "audio/wav");
