@@ -21,6 +21,7 @@ type Job = {
   created_at: string;
   push_done: boolean;
   email_done: boolean;
+  expo_done: boolean;
 };
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -58,6 +59,35 @@ async function deliverPush(admin: Admin, job: Job, config: ReturnType<typeof pus
     }
   }));
   return { done: results.every(Boolean), delivered: [...delivered] };
+}
+
+// Пуш в мобильное приложение через сервис Expo. Ежедневные материалы телефон напоминает сам, их не шлём.
+const EXPO_SEND = "https://exp.host/--/api/v2/push/send";
+
+async function deliverExpo(admin: Admin, job: Job) {
+  if (job.expo_done || job.kind === "daily") return true;
+  const ttl = Math.floor((Date.parse(job.expires_at) - Date.now()) / 1000);
+  if (ttl <= 0) return true;
+  const { data: devices, error } = await admin.from("expo_push_tokens").select("token, platform, locale").eq("user_id", job.user_id);
+  if (error) throw error;
+  if (!devices.length) return true;
+  const messages = devices.map((device) => {
+    const m = pushMessages[isLocale(device.locale) ? device.locale : DEFAULT_LOCALE];
+    return { to: device.token, title: m.title, body: m[job.kind], data: { url: job.href, tag: job.id }, sound: "default", priority: "high", ttl, channelId: "default" };
+  });
+  const token = process.env.EXPO_ACCESS_TOKEN;
+  const res = await fetch(EXPO_SEND, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(messages),
+    signal: AbortSignal.timeout(8000),
+  }).catch(() => null);
+  if (!res?.ok) return false;
+  // Телефон удалил приложение или отозвал разрешение: адрес больше не нужен.
+  const body = (await res.json().catch(() => ({}))) as { data?: { status: string; details?: { error?: string } }[] };
+  const gone = (body.data ?? []).flatMap((ticket, i) => (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered" ? [devices[i].token] : []));
+  if (gone.length) await admin.from("expo_push_tokens").delete().in("token", gone);
+  return true;
 }
 
 async function deliverEmail(admin: Admin, job: Job) {
@@ -100,13 +130,15 @@ export async function GET(request: Request) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return new Response(null, { status: 401 });
   const config = pushConfig();
   const emailConfigured = notificationEmailConfigured();
-  if (!adminConfigured() || (!config && !emailConfigured)) return Response.json({ enabled: false });
+  // Пуш в приложение через Expo ключей не требует, поэтому очередь разбираем всегда.
+  if (!adminConfigured()) return Response.json({ enabled: false });
 
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("claim_push_jobs");
   if (error) return Response.json({ error: "Could not claim push jobs" }, { status: 503 });
   const jobs = data as Job[];
   const pushResults = Promise.allSettled(jobs.map((job) => deliverPush(admin, job, config)));
+  const expoResults = Promise.allSettled(jobs.map((job) => deliverExpo(admin, job)));
   const emailDone = new Set<string>();
   const emailDeadline = Date.now() + 40_000;
   for (const job of jobs) {
@@ -120,14 +152,16 @@ export async function GET(request: Request) {
       }
     }
   }
+  const expo = await expoResults;
   const results = await Promise.all((await pushResults).map(async (result, index) => {
     const job = jobs[index];
     const push = result.status === "fulfilled" ? result.value : { done: job.push_done, delivered: job.delivered_to };
-    const complete = push.done && emailDone.has(job.id);
+    const expoDone = expo[index].status === "fulfilled" ? (expo[index] as PromiseFulfilledResult<boolean>).value : job.expo_done;
+    const complete = push.done && emailDone.has(job.id) && expoDone;
     const table = admin.from("push_jobs");
     const update = complete
       ? await table.delete().eq("id", job.id)
-      : await table.update({ push_done: push.done, email_done: emailDone.has(job.id), delivered_to: push.delivered }).eq("id", job.id);
+      : await table.update({ push_done: push.done, email_done: emailDone.has(job.id), expo_done: expoDone, delivered_to: push.delivered }).eq("id", job.id);
     return complete && !update.error;
   }));
   const retrying = results.filter((complete) => !complete).length;
