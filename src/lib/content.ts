@@ -207,14 +207,15 @@ export const JOURNAL_KINDS = {
   gratitude: { label: "Благодарность", tone: "green" },
   goal: { label: "Цель", tone: "lavender" },
   feeling: { label: "Переживание", tone: "lavender" },
+  insight: { label: "Вывод", tone: "green" },
 } as const;
 
 export type JournalKind = keyof typeof JOURNAL_KINDS;
 export type JournalKinds = { [K in JournalKind]: { label: string; tone: (typeof JOURNAL_KINDS)[K]["tone"] } };
 
 const KIND_LABELS: Record<Exclude<Locale, "ru">, Record<JournalKind, string>> = {
-  kk: { thought: "Ой", event: "Оқиға", gratitude: "Алғыс", goal: "Мақсат", feeling: "Сезім" },
-  en: { thought: "Thought", event: "Event", gratitude: "Gratitude", goal: "Goal", feeling: "Feeling" },
+  kk: { thought: "Ой", event: "Оқиға", gratitude: "Алғыс", goal: "Мақсат", feeling: "Сезім", insight: "Түйін" },
+  en: { thought: "Thought", event: "Event", gratitude: "Gratitude", goal: "Goal", feeling: "Feeling", insight: "Insight" },
 };
 
 // Виды записей дневника с подписями на нужном языке (та же форма, что у JOURNAL_KINDS).

@@ -1,3 +1,4 @@
+import { readMeta, type ReplyMeta } from "@/lib/steps";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
 import { getTopic } from "@/lib/topics";
@@ -11,7 +12,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   const { supabase, user } = await requireUser();
   const [{ data: conversation }, { data: messages }, { data: profile }] = await Promise.all([
     supabase.from("conversations").select("id, title, mode, topic, rating").eq("id", id).maybeSingle(),
-    supabase.from("messages").select("id, role, content, step").eq("conversation_id", id).order("created_at"),
+    supabase.from("messages").select("id, role, content, step, meta").eq("conversation_id", id).order("created_at"),
     supabase.from("profiles").select("voice").eq("id", user!.id).maybeSingle(),
   ]);
   if (!conversation) notFound();
@@ -27,7 +28,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
       label={getTopic(conversation.topic, locale)?.title ?? t.modeLabel[conversation.mode] ?? t.defaultLabel}
       voice={normalizeVoice(profile?.voice)}
       rating={conversation.rating}
-      initialMessages={(messages ?? []) as { id: string; role: "user" | "assistant"; content: string; step: string | null }[]}
+      initialMessages={(messages ?? []).map((m) => ({ ...m, meta: readMeta(m.meta) })) as { id: string; role: "user" | "assistant"; content: string; step: string | null; meta: ReplyMeta | null }[]}
     />
   );
 }
