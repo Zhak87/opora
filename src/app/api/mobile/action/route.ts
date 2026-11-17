@@ -14,8 +14,12 @@ import * as record from "@/lib/record-actions";
 import * as session from "@/lib/session-actions";
 import * as share from "@/lib/share-actions";
 import * as wellbeing from "@/lib/wellbeing-actions";
+import * as cabinet from "@/lib/cabinet-actions";
+import * as draft from "@/lib/consult/draft-actions";
 import * as rooms from "@/lib/rooms/actions";
 import * as consult from "@/lib/consult/actions";
+import { consultPrep } from "@/lib/consult/mobile";
+import * as analytics from "@/lib/analytics-actions";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -75,13 +79,38 @@ const ACTIONS: Record<string, [Kind, Fn]> = {
   setConsent: ["form", pro.setConsent],
   endLink: ["form", pro.endLink],
   countInviteView: ["args", pro.countInviteView],
+  // Кабинет психолога: действия только над своими клиентами и встречами (права проверяют сами действия и RLS).
+  createPsychologist: ["args", pro.createPsychologist],
+  savePsychologist: ["state", pro.savePsychologist],
+  uploadPhoto: ["state", pro.uploadPhoto],
+  uploadDocument: ["state", pro.uploadDocument],
+  deleteDocument: ["form", pro.deleteDocument],
+  createInvite: ["state", pro.createInvite],
+  revokeInvite: ["form", pro.revokeInvite],
 
   setTaskDone: ["state", record.setTaskDone],
   replyTask: ["state", record.replyTask],
+  saveSessionNote: ["args", record.saveSessionNote],
+  finishSession: ["state", record.finishSession],
+  shareSummary: ["args", record.shareSummary],
+  assignTask: ["state", record.assignTask],
+  cancelTask: ["form", record.cancelTask],
 
   bookSession: ["state", session.bookSession],
   rescheduleSession: ["state", session.rescheduleSession],
   cancelSession: ["form", session.cancelSession],
+  createSessionForClient: ["state", session.createSessionForClient],
+  callClientNow: ["state", session.callClientNow],
+  acceptRequest: ["form", session.acceptRequest],
+  declineRequest: ["form", session.declineRequest],
+  saveAvailability: ["state", session.saveAvailability],
+  saveBookingSettings: ["state", session.saveBookingSettings],
+  addTimeOff: ["state", session.addTimeOff],
+  deleteTimeOff: ["form", session.deleteTimeOff],
+
+  setSessionPaid: ["form", cabinet.setSessionPaid],
+  setSessionNoShow: ["form", cabinet.setSessionNoShow],
+  setClientPaused: ["form", cabinet.setClientPaused],
 
   sendInviteEmail: ["state", share.sendInviteEmail],
 
@@ -111,15 +140,26 @@ const ACTIONS: Record<string, [Kind, Fn]> = {
 
   joinConsult: ["args", consult.joinConsult],
   consultState: ["args", consult.consultState],
+  consultPrep: ["args", consultPrep],
+  generateReport: ["state", analytics.generateReport],
   setSpeechConsent: ["args", consult.setSpeechConsent],
+  startConsultNow: ["args", consult.startConsultNow],
+  generateDraft: ["state", draft.generateDraft],
+  saveDraft: ["state", draft.saveDraft],
+  deleteConsultData: ["form", draft.deleteConsultData],
 };
+
+// Файл с телефона приходит как { file: base64, name, type } и становится обычным File, как из формы сайта.
+type FilePart = { file: string; name?: string; type?: string };
+const isFile = (v: unknown): v is FilePart => typeof v === "object" && v !== null && typeof (v as FilePart).file === "string";
 
 function toForm(fields: Record<string, unknown> = {}) {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) {
     for (const item of Array.isArray(value) ? value : [value]) {
       if (item === undefined || item === null || item === false) continue;
-      form.append(key, item === true ? "on" : String(item));
+      if (isFile(item)) form.append(key, new File([Buffer.from(item.file, "base64")], item.name || "file", { type: item.type || "application/octet-stream" }));
+      else form.append(key, item === true ? "on" : String(item));
     }
   }
   return form;
@@ -140,7 +180,8 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const raw = await req.text();
-  if (raw.length > 200_000) return NextResponse.json({ error: "too large" }, { status: 413 });
+  // Обычные действия маленькие; с файлом (фото, диплом до 4 МБ в base64) — до 6 МБ.
+  if (raw.length > 6_000_000) return NextResponse.json({ error: "too large" }, { status: 413 });
   let body: Body;
   try {
     body = JSON.parse(raw) as Body;
