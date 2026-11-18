@@ -155,6 +155,7 @@ const ACTIONS: Record<string, [Kind, Fn]> = {
   generateReport: ["state", analytics.generateReport],
   setSpeechConsent: ["args", consult.setSpeechConsent],
   startConsultNow: ["args", consult.startConsultNow],
+  extendConsult: ["args", consult.extendConsult],
   generateDraft: ["state", draft.generateDraft],
   saveDraft: ["state", draft.saveDraft],
   deleteConsultData: ["form", draft.deleteConsultData],
