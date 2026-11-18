@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Room } from "livekit-client";
-import { consultState, setSpeechConsent, startConsultNow, type ConsultState, type JoinResult } from "@/lib/consult/actions";
-import { OPEN_BEFORE_MIN, type ConsultRole } from "@/lib/consult/config";
+import { consultState, extendConsult, setSpeechConsent, startConsultNow, type ConsultState, type JoinResult } from "@/lib/consult/actions";
+import { OPEN_AFTER_MIN, OPEN_BEFORE_MIN, type ConsultRole } from "@/lib/consult/config";
 import { useMsg } from "@/i18n/client";
 import { consultMessages } from "@/i18n/consult";
 import { INTL, type Locale } from "@/i18n/config";
@@ -352,6 +352,7 @@ export function ConsultCall({
       if (roomRef.current && (st.state !== "open" || st.epoch !== epochRef.current)) {
         leavingRef.current = true;
         teardown();
+        if (st.state === "ended") setError(m.errors.ended);
         setPhase("closed");
       }
     };
@@ -360,7 +361,41 @@ export function ConsultCall({
       alive = false;
       clearInterval(t);
     };
-  }, [session, teardown]);
+  }, [session, teardown]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ---------- Время встречи и продление ---------- */
+
+  const endMs = Date.parse(endsAt);
+  const closesMs = endMs + OPEN_AFTER_MIN * 60_000;
+  const leftMin = Math.ceil((endMs - now) / 60_000);
+  const closeMin = Math.max(1, Math.ceil((closesMs - now) / 60_000));
+  const [extending, setExtending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const prevEnd = useRef(endMs);
+  useEffect(() => {
+    // Психолог продлил встречу: оба видят короткое сообщение с новым временем.
+    if (endMs > prevEnd.current + 30_000 && phase === "call") setNotice(m.call.extended(time(endMs)));
+    prevEnd.current = endMs;
+  }, [endMs]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 7_000);
+    return () => clearTimeout(t);
+  }, [notice]);
+  useEffect(() => {
+    if (phase !== "call") return;
+    const t = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(t);
+  }, [phase]);
+  const extend = async (mins: number) => {
+    setExtending(true);
+    const res = await extendConsult(session, mins).catch(() => null);
+    setExtending(false);
+    if (res?.ok) {
+      setState(res.state);
+      setNow(Date.now());
+    } else setNotice(res?.error === "overlap" ? m.call.extendOverlap : res?.error === "limit" ? m.call.extendLimit : m.call.extendFailed);
+  };
 
   const speechActive = state.speech.active && phase === "call";
   const speechVer = state.speech.ver;
@@ -556,6 +591,12 @@ export function ConsultCall({
           <div className="absolute left-3 right-28 top-3 flex flex-wrap items-start gap-2 sm:left-5 sm:right-52 sm:top-5">
             {remote && <span className="rounded-full bg-black/35 px-3 py-1.5 text-sm text-paper backdrop-blur">{peerName}</span>}
             {conn === "reconnecting" && <span className="rounded-full bg-[#fff4ec] px-3 py-1.5 text-sm text-ink">{m.call.reconnecting}</span>}
+            <span
+              className={`rounded-full px-3 py-1.5 text-sm backdrop-blur ${leftMin <= 0 ? "bg-[#ffeeec] text-[#a2392f]" : leftMin <= 5 ? "bg-[#fff4ec] text-ink" : "bg-black/35 text-paper/90"}`}
+              data-time-left={leftMin}
+            >
+              {leftMin <= 0 ? m.call.overTime : leftMin <= 60 ? m.call.left_min(leftMin) : m.call.until(time(endsAt))}
+            </span>
             {speechActive && (
               <span className="flex items-center gap-2 rounded-full bg-lilac-soft/90 px-3 py-1.5 text-sm text-ink" data-speech-badge>
                 <span className="h-2 w-2 animate-pulse rounded-full bg-lilac-deep" /> {m.ai.on}
@@ -574,6 +615,32 @@ export function ConsultCall({
             <video ref={localVideo} autoPlay playsInline muted className="aspect-video w-full -scale-x-100 object-cover" />
           </div>
           <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center gap-2 bg-gradient-to-t from-black/50 to-transparent px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-8">
+            {notice && (
+              <div className="w-full max-w-xl rounded-2xl bg-paper/95 px-4 py-2.5 text-center text-sm text-ink shadow-soft" data-call-notice>
+                {notice}
+              </div>
+            )}
+            {leftMin <= 5 && (
+              <div className="flex w-full max-w-xl flex-wrap items-center gap-2 rounded-2xl bg-paper/95 px-4 py-3 text-sm text-ink shadow-soft" data-ends-soon>
+                <span className="min-w-0 flex-1">
+                  {closesMs - now <= 5 * 60_000
+                    ? m.call.closingSoon(closeMin)
+                    : leftMin > 0
+                      ? role === "psychologist"
+                        ? m.call.endsSoon(time(endsAt))
+                        : m.call.endsSoonClient(time(endsAt))
+                      : role === "psychologist"
+                        ? m.call.overPro(time(closesMs))
+                        : m.call.overClient(time(closesMs))}
+                </span>
+                {role === "psychologist" &&
+                  [15, 30].map((n) => (
+                    <button key={n} onClick={() => extend(n)} disabled={extending} className="h-9 rounded-full bg-ink px-4 text-sm text-paper transition hover:opacity-90 disabled:opacity-50" data-extend={n}>
+                      {extending ? m.call.extending : m.call.extend(n)}
+                    </button>
+                  ))}
+              </div>
+            )}
             <div className="w-full max-w-xl">{consentBar}</div>
             <div className="flex items-center gap-2 sm:gap-3">
               <RoundButton onClick={toggleMic} active={micOn && !privateMode} label={micOn ? m.call.micOn : m.call.micOff}>

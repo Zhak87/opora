@@ -3,7 +3,7 @@ import { getSession, UUID_RE } from "@/lib/sessions";
 import { HOUR, tooMany } from "@/lib/rate-limit";
 import { getLocale } from "@/i18n/server";
 import { consultAiEnabled } from "@/lib/consult/server";
-import { answerQuestion, maybeHint, prepQuestions, recentMessages, transcriptCount } from "@/lib/consult/assistant";
+import { answerQuestion, isPreset, maybeHint, prepQuestions, recentMessages, transcriptCount } from "@/lib/consult/assistant";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -43,7 +43,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!ctx) return notFound();
   if (!consultAiEnabled()) return Response.json({ error: "off" }, { status: 503 });
   if (tooMany(`consult-ai:${ctx.user.id}`, 120, HOUR)) return Response.json({ error: "busy" }, { status: 429 });
-  const body = (await req.json().catch(() => ({}))) as { kind?: string; text?: string };
+  const body = (await req.json().catch(() => ({}))) as { kind?: string; text?: string; preset?: string };
   const locale = await getLocale();
   try {
     if (body.kind === "prep") {
@@ -56,7 +56,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     const text = String(body.text ?? "").trim().slice(0, 2000);
     if (!text) return Response.json({ error: "empty" }, { status: 400 });
-    return Response.json({ messages: await answerQuestion(ctx.supabase, ctx.s, text, locale) });
+    // Готовый вопрос с кнопки: текст — подпись кнопки на языке психолога, задание модели — по ключу.
+    const preset = isPreset(body.preset) ? body.preset : undefined;
+    return Response.json({ messages: await answerQuestion(ctx.supabase, ctx.s, text, locale, preset) });
   } catch (e) {
     console.error("consult assistant failed", (e as { status?: number }).status ?? "error");
     return Response.json({ error: "failed" }, { status: 502 });

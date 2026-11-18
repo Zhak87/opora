@@ -132,3 +132,25 @@ export async function startConsultNow(id: string): Promise<StartNowResult> {
   await closeConsultRooms(id);
   return { ok: true, state: await consultState(id) };
 }
+
+// Продление встречи психологом прямо во время звонка (+N минут). Звонок не переподключается:
+// меняется только время конца, второй участник увидит новое время при следующем опросе состояния.
+export type ExtendResult = { ok: true; state: ConsultState } | { ok: false; error: "forbidden" | "overlap" | "ended" | "limit" | "failed" };
+
+export async function extendConsult(id: string, minutes: number): Promise<ExtendResult> {
+  const who = await participant(id);
+  if (!who || who.role !== "psychologist") return { ok: false, error: "forbidden" };
+  const mins = [10, 15, 30].includes(Number(minutes)) ? Number(minutes) : 15;
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc("extend_session", { p_session: id, p_minutes: mins });
+  if (error) {
+    const msg = error.message;
+    if (/sessions_no_overlap|conflicting key/.test(msg)) return { ok: false, error: "overlap" };
+    if (/too long/.test(msg)) return { ok: false, error: "limit" };
+    if (/ended|not scheduled/.test(msg)) return { ok: false, error: "ended" };
+    if (/forbidden/.test(msg)) return { ok: false, error: "forbidden" };
+    console.error("consult: extend failed");
+    return { ok: false, error: "failed" };
+  }
+  return { ok: true, state: await consultState(id) };
+}
