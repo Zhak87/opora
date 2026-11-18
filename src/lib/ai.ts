@@ -79,7 +79,8 @@ async function streamGemini({ system, messages, signal }: StreamOptions) {
         parts: [{ text: m.content }],
       })),
       safetySettings: SAFETY,
-      generationConfig: { temperature: 0.8, maxOutputTokens: 1500, ...(thinking ? { thinkingConfig: thinking } : {}) },
+      // 0.6, а не 0.8: на высокой «температуре» лёгкая модель изредка ошибается в буквах («тержим» вместо «держим»).
+      generationConfig: { temperature: 0.6, maxOutputTokens: 1500, ...(thinking ? { thinkingConfig: thinking } : {}) },
     });
 
   // Если модель только что подвела, начинаем со здоровой, но позже проверяем исходный порядок снова.
@@ -321,7 +322,7 @@ async function streamOpenAI({ system, messages, signal }: StreamOptions) {
       body: JSON.stringify({
         model,
         stream: true,
-        temperature: 0.8,
+        temperature: 0.6,
         messages: [{ role: "system", content: system }, ...messages],
       }),
     });
