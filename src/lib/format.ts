@@ -12,9 +12,9 @@ const RELATIVE: Record<Locale, { now: string; minAgo: (n: number) => string; tod
   en: { now: "just now", minAgo: (n) => `${n} min ago`, today: "today", yesterday: "yesterday" },
 };
 
-export function greeting(date = new Date(), locale: Locale = "ru") {
+export function greeting(date = new Date(), locale: Locale = "ru", timeZone = "Europe/Moscow") {
   const g = GREETINGS[locale];
-  const h = Number(date.toLocaleString("en-GB", { hour: "numeric", hour12: false, timeZone: "Europe/Moscow" }));
+  const h = Number(date.toLocaleString("en-GB", { hour: "numeric", hourCycle: "h23", timeZone }));
   if (h >= 5 && h < 12) return g.morning;
   if (h >= 12 && h < 18) return g.day;
   if (h >= 18 && h < 23) return g.evening;

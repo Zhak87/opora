@@ -1,65 +1,78 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { addJournalEntry } from "@/lib/actions";
-import { SubmitButton } from "./SubmitButton";
+import Link from "next/link";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useMsg } from "@/i18n/client";
 import { hopeGratitude } from "@/i18n/hope";
+import { addJournalEntry } from "@/lib/actions";
+import { ArrowIcon, CheckIcon, JournalIcon } from "./icons";
+import styles from "./Gratitude.module.css";
 
-// Практика «Три хороших вещи»: сохраняется в дневник как благодарность.
-export function Gratitude() {
+export function Gratitude({ describedBy }: { describedBy: string }) {
   const m = useMsg(hopeGratitude);
-  const [state, action] = useActionState(addJournalEntry, undefined);
+  const [result, action, pending] = useActionState(addJournalEntry, undefined);
+  const [dismissed, setDismissed] = useState<typeof result>();
   const [items, setItems] = useState(["", "", ""]);
-  const [done, setDone] = useState(false);
+  const confirmation = useRef<HTMLDivElement>(null);
+  const firstField = useRef<HTMLInputElement>(null);
+  const saved = !!result && "ok" in result && result !== dismissed;
 
   useEffect(() => {
-    if (state && "ok" in state) {
-      setDone(true);
-      setItems(["", "", ""]);
-    }
-  }, [state]);
+    if (saved) confirmation.current?.focus();
+    else if (dismissed) firstField.current?.focus();
+  }, [saved, dismissed]);
 
-  const content = items
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t, i) => `${i + 1}. ${t}`)
-    .join("\n");
-
-  if (done) {
+  if (saved) {
     return (
-      <div className="animate-rise py-6 text-center">
-        <p className="font-serif text-[22px] text-ink">{m.thanks}</p>
-        <p className="mt-2 text-sm text-ink-soft">{m.savedInJournal}</p>
-        <button onClick={() => setDone(false)} className="mt-5 text-sm text-sage-deep hover:text-ink">
-          {m.again}
-        </button>
+      <div ref={confirmation} tabIndex={-1} className={styles.confirmation}>
+        <div role="status" className={styles.saved}>
+          <span aria-hidden="true"><CheckIcon /></span>
+          <div>
+            <p>{m.savedInJournal}</p>
+            <p>{m.thanks}</p>
+          </div>
+        </div>
+        <div className={styles.actions}>
+          <Link href="/journal" className={styles.openJournal}>{m.openJournal} <ArrowIcon /></Link>
+          <button type="button" className={styles.again} onClick={() => {
+            setItems(["", "", ""]);
+            setDismissed(result);
+          }}>
+            {m.again}
+          </button>
+        </div>
       </div>
     );
   }
 
+  const content = items
+    .map((text) => text.trim())
+    .filter(Boolean)
+    .map((text, index) => `${index + 1}. ${text}`)
+    .join("\n");
+
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} aria-describedby={describedBy} className={styles.form}>
       <input type="hidden" name="kind" value="gratitude" />
       <input type="hidden" name="content" value={content ? `${m.header}\n${content}` : ""} />
-      {items.map((v, i) => (
-        <label key={i} className="flex items-center gap-3">
-          <span className="w-5 text-center font-serif text-lg text-sage-deep">{i + 1}</span>
+      {items.map((value, index) => (
+        <label key={index} className={styles.field}>
+          <span className={styles.number} aria-hidden="true">{index + 1}</span>
           <input
-            value={v}
-            onChange={(e) => setItems((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))}
-            placeholder={m.placeholders[i]}
+            ref={index === 0 ? firstField : undefined}
+            aria-label={m.placeholders[index]}
+            value={value}
+            onChange={(event) => setItems((previous) => previous.map((item, i) => i === index ? event.target.value : item))}
+            placeholder={m.placeholders[index]}
             maxLength={300}
-            className="h-12 flex-1 rounded-2xl bg-paper shadow-soft px-4 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-sage focus:ring-4 focus:ring-sage-soft"
+            readOnly={pending}
           />
         </label>
       ))}
-      <div className="flex justify-end pt-2">
-        <SubmitButton pendingText={m.saving} className="h-11" >
-          {m.save}
-        </SubmitButton>
-      </div>
-      {state && "error" in state && <p className="text-right text-sm text-[#b23b33]">{state.error}</p>}
+      <button type="submit" disabled={pending || !content} className={styles.submit}>
+        <JournalIcon /> {pending ? m.saving : m.save}
+      </button>
+      {result && "error" in result && <p className={styles.error} role="alert">{result.error}</p>}
     </form>
   );
 }

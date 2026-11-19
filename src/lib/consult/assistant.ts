@@ -4,6 +4,7 @@ import { generateJSON } from "@/lib/ai";
 import { listNotes } from "@/lib/analytics";
 import type { Session } from "@/lib/sessions";
 import { keepDays } from "./server";
+import { ASK_PRESETS, dropRepeats, encodeHints, normalizeHints, parseHints, type AskPreset } from "./hints";
 
 // ИИ-помощник психолога: подготовка, подсказки во время встречи, ответы на вопросы, черновик итогов.
 // Всё читается с правами самого психолога (RLS), поэтому чужие встречи и расшифровки сюда не попадут.
@@ -113,13 +114,34 @@ async function save(supabase: SupabaseClient, s: Session, kind: AssistantMessage
 
 /* ---------- Вопрос психолога ---------- */
 
-export async function answerQuestion(supabase: SupabaseClient, s: Session, question: string, locale: Locale) {
+// Готовые вопросы одной кнопкой: что именно попросить у модели.
+const PRESET_TASK: Record<AskPreset, string> = {
+  next: "Предложи 3 варианта следующего вопроса клиенту — в разных направлениях (углубить чувство, прояснить факт, связать с целью или ресурсом). Каждый — одной фразой, которую психолог может сказать вслух, и в скобках одно короткое «зачем».",
+  missing: "Что психолог мог упустить в разговоре: 2–4 пункта. Опирайся на конкретные слова клиента (короткая цитата в кавычках), повторяющиеся темы, противоречия, недоговорённости, прошлые задания, о которых не спросили.",
+  offer: "Предложи 1–2 техники или упражнения, уместные прямо сейчас в этом разговоре. Для каждой: название, одна фраза — почему сейчас, и 1–2 фразы, как предложить её клиенту своими словами.",
+  recap: "Коротко перескажи последние 10 минут разговора: 3–5 пунктов (о чём говорили, что важное прозвучало, к чему пришли). Без интерпретаций.",
+};
+
+export const isPreset = (v: unknown): v is AskPreset => ASK_PRESETS.includes(v as AskPreset);
+
+export async function answerQuestion(supabase: SupabaseClient, s: Session, question: string, locale: Locale, preset?: AskPreset) {
   const q = await save(supabase, s, "question", question);
-  const ctx = await context(supabase, s, { transcriptChars: 12_000 });
+  const ctx = await context(supabase, s, { transcriptChars: preset === "recap" ? 6_000 : 12_000 });
+  const task = preset
+    ? PRESET_TASK[preset]
+    : "Психолог задаёт тебе вопрос во время встречи. Ответь по существу: 1–5 предложений или короткий список. Если вопрос про клиента — опирайся на расшифровку и заметки, а не на общие слова.";
   const raw = (await generateJSON({
-    system: `${BASE}\n\nПсихолог задаёт тебе вопрос во время встречи. Ответь кратко: 1–5 предложений или короткий список. Верни строго JSON: {"answer": "..."}\n\n${languageNote(locale)}`,
-    messages: [{ role: "user", content: `${ctx.text}\n\nВопрос психолога: ${question}` }],
-    temperature: 0.4,
+    system: `${BASE}
+
+${task}
+Пиши так, чтобы это можно было прочитать за 10 секунд во время разговора: коротко, конкретно, без вступлений и общих советов. Если расшифровки нет — честно скажи об этом одной фразой и опирайся на заметки и прошлые встречи.
+Верни строго JSON: {"answer": "..."} (списки — строками, начинающимися с «• »).
+
+${languageNote(locale)}`,
+    messages: [{ role: "user", content: `${ctx.text}
+
+${preset ? "Запрос психолога" : "Вопрос психолога"}: ${question}` }],
+    temperature: 0.5,
     maxTokens: 1200,
   })) as { answer?: unknown };
   const answer = clip(raw?.answer, 3000);
@@ -151,41 +173,77 @@ export async function prepQuestions(supabase: SupabaseClient, s: Session, locale
 /* ---------- Подсказки во время встречи ---------- */
 
 const hintLocks = new Set<string>();
-const HINT_EVERY_MS = 60_000;
-const HINT_MIN_NEW = 3;
+const hintTried = new Map<string, number>();
+// Не чаще раза в 75 секунд и только когда в разговоре появилось новое, в том числе слова клиента.
+const HINT_EVERY_MS = 75_000;
+const HINT_MIN_NEW = 4;
 
-// Короткие наблюдения и вопросы раз в минуту, если с прошлой подсказки прибавилось реплик.
+const HINT_TASK = `Ты тихо слушаешь встречу и иногда подсказываешь психологу. Подсказка должна быть такой, чтобы психолог подумал «точно, хорошая мысль», а не «это я и так знаю».
+Дай 0–3 карточки. Типы:
+- "question" — вопрос клиенту, который психолог может сказать вслух прямо сейчас (открытый, в живой разговорной форме, про то, что клиент только что сказал);
+- "notice" — что стоит заметить: повторяющаяся тема, противоречие, сильное слово, смена тона, то, о чём клиент упомянул вскользь;
+- "offer" — техника или упражнение, уместные сейчас, с тем, как их предложить;
+- "care" — важный сигнал: риск для безопасности, насилие, мысли о смерти; или невыполненная договорённость с прошлой встречи, о которой не спросили.
+Правила:
+- Опирайся на НОВЫЕ реплики. Каждая карточка — про конкретные слова клиента; если можешь, дай короткую цитату клиента в поле quote (дословно из расшифровки).
+- text — одна фраза до 140 символов. why — до 100 символов: почему это важно сейчас.
+- Не повторяй ничего из списка «Уже предложено» — ни по смыслу, ни другими словами. Лучше вернуть пустой список, чем повтор или общее место.
+- Запрещены общие советы вроде «уточните чувства клиента», «проявите эмпатию», «спросите, что он чувствует» без привязки к сказанному.
+Верни строго JSON: {"items":[{"type":"question","text":"...","quote":"...","why":"..."}]}`;
+
+// Подсказка во время встречи: карточки по новым репликам, без повторов уже показанного.
 export async function maybeHint(supabase: SupabaseClient, s: Session, locale: Locale) {
   if (hintLocks.has(s.id)) return null;
+  // Проверка без новой подсказки тоже считается: не зовём модель на каждый опрос панели.
+  if (Date.now() - (hintTried.get(s.id) ?? 0) < HINT_EVERY_MS) return null;
   hintLocks.add(s.id);
   try {
-    const { data: last } = await supabase
+    const { data: prev } = await supabase
       .from("consult_ai_messages")
-      .select("created_at")
+      .select("body, created_at")
       .eq("session_id", s.id)
       .eq("kind", "hint")
       .order("id", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(12);
+    const last = prev?.[0];
     const since = last?.created_at ? Date.parse(last.created_at) : 0;
     if (Date.now() - since < HINT_EVERY_MS) return null;
-    const { count } = await supabase
-      .from("consult_transcript")
-      .select("id", { count: "exact", head: true })
-      .eq("session_id", s.id)
-      .gt("created_at", new Date(since).toISOString());
-    if ((count ?? 0) < HINT_MIN_NEW) return null;
     const transcript = await transcriptOf(supabase, s.id);
-    const raw = (await generateJSON({
-      system: `${BASE}\n\nПо последним репликам предложи психологу 1–2 коротких наблюдения и 1–2 вопроса, которые можно задать клиенту. Каждое — одно предложение. Верни строго JSON: {"observations": ["..."], "questions": ["..."]}\n\n${languageNote(locale)}`,
-      messages: [{ role: "user", content: transcriptText(transcript, 6_000) }],
-      temperature: 0.4,
-      maxTokens: 600,
-    })) as { observations?: unknown; questions?: unknown };
-    const obs = lines(raw?.observations, 2, 240);
-    const qs = lines(raw?.questions, 2, 240);
-    if (!obs.length && !qs.length) return null;
-    return save(supabase, s, "hint", [...obs.map((o) => `• ${o}`), ...qs.map((q) => `? ${q}`)].join("\n"));
+    const fresh = transcript.filter((l) => Date.parse(l.said_at) > since - 5_000);
+    if (fresh.length < HINT_MIN_NEW || !fresh.some((l) => l.speaker === "client")) return null;
+    const older = transcript.slice(0, transcript.length - fresh.length);
+    const seen = (prev ?? []).flatMap((h) => parseHints(h.body).map((i) => i.text));
+    const [agreements, notes] = await Promise.all([pastAgreements(supabase, s, 2), listNotes(supabase, s.psychologist_id, s.client_id)]);
+    const background = [
+      agreements.length ? "Прошлые встречи:\n" + agreements.map((a) => `— ${a.summary ?? ""} ${a.tasks ? `Задания: ${a.tasks}` : ""}`).join("\n").slice(0, 1200) : "",
+      notes.length ? "Заметки психолога:\n" + notes.slice(0, 5).map((n) => `— ${n.body.slice(0, 300)}`).join("\n") : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    hintTried.set(s.id, Date.now());
+    if (hintTried.size > 500) hintTried.delete(hintTried.keys().next().value!);
+    const raw = await generateJSON({
+      system: `${BASE}\n\n${HINT_TASK}\n\n${languageNote(locale)}`,
+      messages: [
+        {
+          role: "user",
+          content: [
+            background,
+            older.length ? `Ранее в разговоре:\n${transcriptText(older, 3_000)}` : "",
+            `Новые реплики:\n${transcriptText(fresh, 5_000)}`,
+            seen.length ? `Уже предложено (не повторяй):\n${seen.map((t) => `— ${t}`).join("\n")}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        },
+      ],
+      temperature: 0.5,
+      maxTokens: 900,
+    });
+    const items = dropRepeats(normalizeHints(raw), seen);
+    // Ничего нового — молчим: следующая попытка не раньше чем через 75 секунд.
+    if (!items.length) return null;
+    return save(supabase, s, "hint", encodeHints(items));
   } finally {
     hintLocks.delete(s.id);
   }

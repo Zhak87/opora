@@ -1,26 +1,33 @@
 import Link from "next/link";
 import { getTimeZone } from "@/lib/tz";
 import { toLocalInput } from "@/lib/time";
-import { getLocale } from "@/i18n/server";
+import { getMsg } from "@/i18n/server";
 import { roomsMessages } from "@/i18n/rooms";
-import { common } from "@/i18n/common";
-import { PageHeader } from "@/components/ui";
-import { BackIcon } from "@/components/icons";
+import { BackIcon, ShieldIcon } from "@/components/icons";
 import { CreateRoomForm } from "@/components/rooms/CreateRoomForm";
+import s from "@/components/rooms/Rooms.module.css";
 
 export default async function NewRoomPage() {
-  const locale = await getLocale();
-  const m = roomsMessages[locale];
+  const m = await getMsg(roomsMessages);
   const tz = await getTimeZone();
-  // По умолчанию предлагаем ближайший ровный час.
   const next = new Date(Math.ceil((Date.now() + 30 * 60_000) / 3_600_000) * 3_600_000);
   return (
-    <>
-      <Link href="/rooms" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
-        <BackIcon className="h-4 w-4" /> {common[locale].back}
+    <div className={`${s.scope} ${s.formPage}`}>
+      <Link href="/rooms" className={s.back}>
+        <BackIcon /> {m.back}
       </Link>
-      <PageHeader title={m.newTitle}>{m.newLead}</PageHeader>
-      <CreateRoomForm tz={tz} defaultStart={toLocalInput(next, tz)} minStart={toLocalInput(new Date(), tz)} />
-    </>
+      <header className={s.pageHeader}>
+        <h1>{m.newTitle}</h1>
+        <p>{m.newLead}</p>
+      </header>
+      <div className={s.twoColumns}>
+        <CreateRoomForm tz={tz} defaultStart={toLocalInput(next, tz)} minStart={toLocalInput(new Date(), tz)} />
+        <aside className={s.guide}>
+          <ShieldIcon className={s.guideIcon} />
+          <h2>{m.moderator}</h2>
+          <p>{m.fModerator}</p>
+        </aside>
+      </div>
+    </div>
   );
 }

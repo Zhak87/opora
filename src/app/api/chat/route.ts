@@ -7,14 +7,19 @@ import { practiceNote, recentRuns } from "@/lib/practice-memory";
 import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { HOUR, tooMany } from "@/lib/rate-limit";
+import { takeAI } from "@/lib/ai-limits";
 import { track } from "@/lib/track";
-import { splitStep } from "@/lib/steps";
+import { joinTags, readMeta, splitStep } from "@/lib/steps";
+import { insightNote, recentInsights } from "@/lib/insights";
+import { currentProgram, myScreenings } from "@/lib/program-data";
+import { programNote } from "@/lib/program";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_INPUT = 4000;
-const HISTORY_LIMIT = 40;
+// Меньше истории — меньше токенов в каждом запросе: последних 24 реплик хватает, остальное помнят выводы и анкета.
+const HISTORY_LIMIT = 24;
 // Больше, чем успевает живой человек даже голосом, но не даёт выжечь ключ ИИ скриптом.
 const PER_HOUR = 150;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,7 +51,7 @@ export async function POST(req: Request) {
   // Назначаем id заранее, чтобы читать историю параллельно с записью новой реплики.
   // Политика RLS разрешает вставку только в собственный разговор.
   const userMessageId = message ? crypto.randomUUID() : null;
-  const historyQuery = supabase.from("messages").select("id, role, content, step").eq("conversation_id", conversationId);
+  const historyQuery = supabase.from("messages").select("id, role, content, step, meta").eq("conversation_id", conversationId);
   if (userMessageId) historyQuery.neq("id", userMessageId);
   const [conversationResult, { data: profile }, historyResult, savedUser] = await Promise.all([
     supabase.from("conversations").select("mode, topic").eq("id", conversationId).maybeSingle(),
@@ -114,7 +119,7 @@ export async function POST(req: Request) {
   }
   const turns: ChatMessage[] = (history ?? []).reverse().map((m) => ({
     role: m.role as ChatMessage["role"],
-    content: m.step ? `${m.content}\n[[step:${m.step}]]` : m.content,
+    content: m.role === "assistant" ? joinTags(m.content, m.step, readMeta(m.meta)) : m.content,
   }));
   if (persistedId) turns.push({ role: "user", content: message });
   const messages = normalize(turns);
@@ -124,14 +129,14 @@ export async function POST(req: Request) {
   // (его могут читать вслух, видеть в истории и, с согласия человека, его психолог).
   let cancelled = false;
   const save = async (raw: string) => {
-    const { text: content, step } = splitStep(raw);
+    const { text: content, step, meta } = splitStep(raw);
     if (!content || req.signal.aborted || cancelled) return;
     const { data: still, error: lookupError } = await supabase.from("messages").select("id").eq("id", replyTo).maybeSingle();
     if (lookupError) throw lookupError;
     if (!still || req.signal.aborted || cancelled) return;
     const { error } = await supabase
       .from("messages")
-      .insert({ conversation_id: conversationId, role: "assistant", content, step });
+      .insert({ conversation_id: conversationId, role: "assistant", content, step, meta });
     if (error) throw error;
     savedStep = step;
   };
@@ -146,6 +151,16 @@ export async function POST(req: Request) {
     }
   }
 
+  const [runs, insights, program, screenings] = await Promise.all([
+    recentRuns(supabase, 8),
+    recentInsights(supabase, 5),
+    currentProgram(supabase),
+    myScreenings(supabase, 12),
+  ]);
+  // Дневной лимит ответов: защищает бюджет на ИИ. Слова человека уже сохранены.
+  if (!(await takeAI(supabase, "chat", !user.email))) {
+    return textResponse(t.dailyLimit, 429, persistedId);
+  }
   let upstream: ReadableStream<string>;
   try {
     upstream = await streamReply({
@@ -158,7 +173,9 @@ export async function POST(req: Request) {
           calmTools: !body?.voice,
           steps: !body?.voice,
           intake: intakeNote(profile?.intake),
-          practices: practiceNote(await recentRuns(supabase, 8)),
+          practices: practiceNote(runs),
+          insights: insightNote(insights),
+          program: programNote(program, screenings),
         }) +
         (body?.voice ? VOICE_NOTE : ""),
       messages,

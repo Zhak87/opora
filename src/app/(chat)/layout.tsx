@@ -7,9 +7,10 @@ export const metadata = { robots: { index: false } };
 
 export default async function ChatLayout({ children }: { children: React.ReactNode }) {
   const { data } = await (await createClient()).auth.getClaims();
+  const guest = isGuest(data?.claims);
   return (
-    <div className="md:pl-[100px] lg:pl-[244px]">
-      {isGuest(data?.claims) && <TrialBadge until={trialUntil(data?.claims)} />}
+    <div className="md:pl-[100px] lg:pl-[244px]" data-chat-guest={guest || undefined}>
+      {guest && <TrialBadge until={trialUntil(data?.claims)} />}
       <Nav />
       {children}
     </div>

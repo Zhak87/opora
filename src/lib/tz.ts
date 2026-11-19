@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 // Часовой пояс человека: браузер сохраняет его в cookie (TimezoneCookie), по умолчанию — Алматы.
 export const TZ_COOKIE = "opora-tz";
@@ -16,7 +16,8 @@ export function isTimeZone(tz: unknown): tz is string {
 
 // Сохранённый браузером пояс или null.
 export async function savedTimeZone() {
-  let tz = (await cookies()).get(TZ_COOKIE)?.value ?? "";
+  // Мобильное приложение присылает пояс телефона заголовком.
+  let tz = (await cookies()).get(TZ_COOKIE)?.value || (await headers()).get("x-opora-tz") || "";
   try {
     tz = decodeURIComponent(tz);
   } catch {}

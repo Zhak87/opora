@@ -35,11 +35,11 @@ function Scale({ name, label, low, high, value, onChange }: { name: Metric; labe
   );
 }
 
-export function CheckinForm({ today }: { today: Checkin | null }) {
+export function CheckinForm({ today, initialMood }: { today: Checkin | null; initialMood: number | null }) {
   const [state, action] = useActionState(saveCheckin, undefined);
   const m = useMsg(wellbeingMessages);
   const [vals, setVals] = useState<Record<Metric, number | null>>({
-    mood: today?.mood ?? null,
+    mood: initialMood ?? today?.mood ?? null,
     energy: today?.energy ?? null,
     calm: today?.calm ?? null,
     sleep: today?.sleep ?? null,

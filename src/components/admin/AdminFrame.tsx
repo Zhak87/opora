@@ -8,6 +8,7 @@ import { PublicShell } from "@/components/pro/PublicShell";
 const TABS = [
   ["overview", "/admin"],
   ["funnel", "/admin/funnel"],
+  ["companion", "/admin/companion"],
   ["users", "/admin/users"],
   ["psychologists", "/admin/psychologists"],
 ] as const;

@@ -1,72 +1,108 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/supabase/server";
-import { relativeDate } from "@/lib/format";
 import { getTopic } from "@/lib/topics";
 import { getLocale } from "@/i18n/server";
 import { topicsTalk } from "@/i18n/topics";
+import { chatMessages } from "@/i18n/chat";
+import { INTL } from "@/i18n/config";
+import { getTimeZone } from "@/lib/tz";
+import { addDays, dayKey } from "@/lib/time";
 import { deleteConversation } from "@/lib/actions";
 import { StartForm } from "@/components/StartForm";
-import { PageHeader, buttonStyles } from "@/components/ui";
-import { PlusIcon, TrashIcon, CompassIcon } from "@/components/icons";
+import { ConfirmForm } from "@/components/ConfirmForm";
+import { Orb } from "@/components/Orb";
+import { ArrowIcon, CompassIcon, PlusIcon, TalkIcon, TrashIcon } from "@/components/icons";
+import styles from "./Talk.module.css";
 
 export default async function TalkPage() {
   const { supabase } = await requireUser();
-  const locale = await getLocale();
+  const [locale, timeZone, { data: conversations }] = await Promise.all([
+    getLocale(),
+    getTimeZone(),
+    supabase
+      .from("conversations")
+      .select("id, title, mode, topic, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(100),
+  ]);
   const m = topicsTalk[locale];
-  const { data: conversations } = await supabase
-    .from("conversations")
-    .select("id, title, mode, topic, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(100);
+  const now = new Date();
+  const today = dayKey(now, timeZone);
+  const yesterday = addDays(today, -1);
+  const date = new Intl.DateTimeFormat(INTL[locale], { day: "numeric", month: "long", year: "numeric", timeZone });
+  const time = new Intl.DateTimeFormat(INTL[locale], { hour: "numeric", minute: "2-digit", timeZone });
+  const groups = new Map<string, NonNullable<typeof conversations>>();
+  for (const conversation of conversations ?? []) {
+    const day = dayKey(conversation.updated_at, timeZone);
+    const group = groups.get(day);
+    if (group) group.push(conversation);
+    else groups.set(day, [conversation]);
+  }
 
   return (
-    <>
-      <PageHeader title={m.title}>{m.intro}</PageHeader>
+    <div className={styles.index}>
+      <section className={styles.hero} aria-labelledby="talk-title">
+        <div className="relative z-10">
+          <h1 id="talk-title">{m.title}</h1>
+          <p>{m.intro}</p>
+          <div className={styles.actions}>
+            <StartForm className={styles.primary}>
+              <PlusIcon className="size-5 shrink-0" /> {m.newConversation}
+            </StartForm>
+            <Link href="/explore" className={styles.secondary}>
+              <CompassIcon className="size-5 shrink-0" /> {m.chooseTopic}
+            </Link>
+          </div>
+        </div>
+        <div className={styles.opi} aria-hidden="true">
+          <Orb size={68} face className="sm:hidden" />
+          <Orb size={146} face className="hidden sm:block" />
+        </div>
+      </section>
 
-      <div className="mb-10 flex flex-col gap-3 sm:flex-row">
-        <StartForm className={`${buttonStyles.primary} h-14 px-7 text-base`}>
-          <PlusIcon className="h-5 w-5" /> {m.newConversation}
-        </StartForm>
-        <Link href="/explore" className={`${buttonStyles.soft} h-14 px-7 text-base`}>
-          <CompassIcon className="h-5 w-5" /> {m.chooseTopic}
-        </Link>
-      </div>
-
-      {conversations && conversations.length > 0 ? (
-        <section>
-          <h2 className="mb-3 px-1 text-[15px] text-ink-soft">{m.yourConversations}</h2>
-          <ul className="stagger space-y-2">
-            {conversations.map((c) => {
-              const label = getTopic(c.topic, locale)?.title ?? m.modes[c.mode] ?? m.conversation;
-              return (
-                <li key={c.id} className="group flex items-center rounded-[22px] bg-paper shadow-soft transition hover:shadow-soft">
-                  <Link href={`/talk/${c.id}`} className="min-w-0 flex-1 px-5 py-4">
-                    <span className="block truncate text-[15px] text-ink">{c.title}</span>
-                    <span className="mt-0.5 block text-xs text-ink-faint">
-                      {label} · {relativeDate(c.updated_at, locale)}
-                    </span>
-                  </Link>
-                  <form action={deleteConversation} className="pr-2">
-                    <input type="hidden" name="id" value={c.id} />
-                    <button
-                      type="submit"
-                      aria-label={m.delete}
-                      title={m.delete}
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint opacity-100 transition hover:bg-[#ffeeec] hover:text-[#c2453d] sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-                    >
-                      <TrashIcon className="h-[18px] w-[18px]" />
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : (
-        <p className="rounded-[24px] border border-dashed border-line px-6 py-10 text-center text-[15px] text-ink-soft">
-          {m.empty}
-        </p>
-      )}
-    </>
+      <section aria-labelledby="talk-history" className={styles.history}>
+        <h2 id="talk-history">{m.yourConversations}</h2>
+        {groups.size > 0 ? (
+          <div className="grid gap-5">
+            {[...groups].map(([day, group]) => (
+              <div key={day}>
+                <h3 className={styles.day}>
+                  {day === today ? m.today : day === yesterday ? m.yesterday : date.format(new Date(group[0].updated_at))}
+                </h3>
+                <ul className={styles.list}>
+                  {group.map((c) => {
+                    const topic = getTopic(c.topic, locale)?.title;
+                    const label = topic ?? (c.mode === "talk" ? null : m.modes[c.mode]);
+                    return (
+                      <li key={c.id} className={styles.row}>
+                        <Link href={`/talk/${c.id}`} className={styles.thread}>
+                          <span className={styles.icon} aria-hidden="true"><TalkIcon className="size-5" /></span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold">{c.title}</span>
+                            {label && label !== c.title && <span className="block truncate text-xs text-ink-soft">{label}</span>}
+                          </span>
+                          <time dateTime={c.updated_at} className={styles.time}>{time.format(new Date(c.updated_at))}</time>
+                          <span aria-hidden="true"><ArrowIcon className="size-4 text-ink-soft" /></span>
+                        </Link>
+                        <ConfirmForm action={deleteConversation} hidden={{ id: c.id }} question={chatMessages[locale].confirmDelete} className="pr-1">
+                          <button type="submit" aria-label={m.delete} title={m.delete} className={styles.remove}>
+                            <TrashIcon className="size-[18px]" />
+                          </button>
+                        </ConfirmForm>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.empty}>
+            <span className={styles.icon} aria-hidden="true"><TalkIcon className="size-5" /></span>
+            <p>{m.empty}</p>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

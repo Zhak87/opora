@@ -65,7 +65,9 @@ async function handle(request: NextRequest) {
     },
   );
 
-  const { data } = await supabase.auth.getClaims();
+  // Запросы мобильного приложения к /api приходят с токеном в заголовке, а не с куки.
+  const bearer = pathname.startsWith("/api") ? /^Bearer\s+([A-Za-z0-9._-]+)$/.exec(request.headers.get("authorization")?.trim() ?? "")?.[1] : undefined;
+  const { data } = bearer ? await supabase.auth.getClaims(bearer) : await supabase.auth.getClaims();
   const user = data?.claims ?? null;
 
   const path = request.nextUrl.pathname;
@@ -84,6 +86,8 @@ async function handle(request: NextRequest) {
     const over = trialOver(user);
     const closed = closedForGuest(path);
     if (path.startsWith("/api")) {
+      // Срок пробного доступа приложение получает здесь, до этого гость считается просроченным.
+      if (path === "/api/mobile/trial") return response;
       if (over || closed) return withCookies(NextResponse.json({ error: over ? "trial over" : "account required" }, { status: 403 }), response);
     } else if ((over && !GUEST_ALWAYS.some((p) => path === p || path.startsWith(p + "/"))) || closed || path === "/signup") {
       const url = request.nextUrl.clone();

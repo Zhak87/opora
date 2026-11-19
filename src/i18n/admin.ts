@@ -5,7 +5,7 @@ export const panelMessages = defineMessages({
   ru: {
     title: "Панель администратора",
     forbidden: "Раздел доступен только сотрудникам Опоры.",
-    tabs: { overview: "Обзор", funnel: "Воронка", users: "Пользователи", psychologists: "Психологи" },
+    tabs: { overview: "Обзор", funnel: "Воронка", companion: "Собеседник", users: "Пользователи", psychologists: "Психологи" },
     youAre: "Ваша роль",
     roles: { user: "Пользователь", viewer: "Наблюдатель", admin: "Администратор", developer: "Разработчик" } as Record<string, string>,
     roleHints: {
@@ -77,7 +77,7 @@ export const panelMessages = defineMessages({
   kk: {
     title: "Әкімші панелі",
     forbidden: "Бұл бөлім тек Опора қызметкерлеріне қолжетімді.",
-    tabs: { overview: "Шолу", funnel: "Воронка", users: "Пайдаланушылар", psychologists: "Психологтар" },
+    tabs: { overview: "Шолу", funnel: "Воронка", companion: "Әңгімелесуші", users: "Пайдаланушылар", psychologists: "Психологтар" },
     youAre: "Сіздің рөліңіз",
     roles: { user: "Пайдаланушы", viewer: "Бақылаушы", admin: "Әкімші", developer: "Әзірлеуші" },
     roleHints: {
@@ -149,7 +149,7 @@ export const panelMessages = defineMessages({
   en: {
     title: "Admin panel",
     forbidden: "This section is for Opora staff only.",
-    tabs: { overview: "Overview", funnel: "Funnel", users: "Users", psychologists: "Psychologists" },
+    tabs: { overview: "Overview", funnel: "Funnel", companion: "Companion", users: "Users", psychologists: "Psychologists" },
     youAre: "Your role",
     roles: { user: "User", viewer: "Viewer", admin: "Administrator", developer: "Developer" },
     roleHints: {

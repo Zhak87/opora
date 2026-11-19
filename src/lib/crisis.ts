@@ -35,3 +35,14 @@ const RISK_PATTERNS = [
 export function looksLikeCrisis(text: string) {
   return RISK_PATTERNS.some((r) => r.test(text));
 }
+
+// Признаки тревоги: тогда под чатом предлагаем сначала успокаивающее упражнение, а потом разговор.
+const ANXIETY_PATTERNS = [
+  /тревож|тревог|паник|беспоко|волну[юе]|нервнича|не могу успокоиться|страшно|боюсь|накрыло|задыха|сердце (колотится|бь[её]тся|стучит)|трясёт|трясет|не нахожу себе места/i,
+  /anxi|panic|worr(y|ied)|nervous|scared|freaking out|can'?t calm|heart (is )?(racing|pounding)|can'?t breathe/i,
+  /алаңда|мазасыз|үрей|қорқ|уайымда|дүрбелең|жүрегім соғ|тыныштал/i,
+];
+
+export function looksAnxious(text: string) {
+  return ANXIETY_PATTERNS.some((r) => r.test(text));
+}

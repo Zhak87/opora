@@ -15,10 +15,11 @@ const TABS = ["checkin", "balance", "goals"] as const;
 type Tab = (typeof TABS)[number];
 
 // Моё состояние: отметка дня и динамика, колесо баланса, цели.
-export default async function WellbeingPage({ searchParams }: { searchParams: Promise<{ tab?: string; p?: string }> }) {
+export default async function WellbeingPage({ searchParams }: { searchParams: Promise<{ tab?: string; p?: string; mood?: string }> }) {
   const sp = await searchParams;
   const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? "") ? (sp.tab as Tab) : "checkin";
   const period = toPeriod(sp.p);
+  const initialMood = typeof sp.mood === "string" && /^[1-5]$/.test(sp.mood) ? Number(sp.mood) : null;
   const { supabase, user } = await requireUser();
   const locale = await getLocale();
   const m = wellbeingMessages[locale];
@@ -43,7 +44,7 @@ export default async function WellbeingPage({ searchParams }: { searchParams: Pr
       </nav>
       <div className="stagger space-y-5">
         {tab === "checkin" && (
-          <CheckinTab supabase={supabase} userId={user!.id} range={range} period={period} locale={locale} href={(p) => href("checkin", p)} />
+          <CheckinTab supabase={supabase} userId={user!.id} range={range} period={period} locale={locale} initialMood={initialMood} href={(p) => href("checkin", p)} />
         )}
         {tab === "balance" && <BalanceTab supabase={supabase} userId={user!.id} locale={locale} />}
         {tab === "goals" && <GoalsTab supabase={supabase} userId={user!.id} locale={locale} />}
@@ -59,6 +60,7 @@ async function CheckinTab({
   range: r,
   period: p,
   locale: l,
+  initialMood,
   href: h,
 }: {
   supabase: Supa;
@@ -66,6 +68,7 @@ async function CheckinTab({
   range: ReturnType<typeof periodRange>;
   period: Period;
   locale: Locale;
+  initialMood: number | null;
   href: (p: Period) => string;
 }) {
   const m = wellbeingMessages[l];
@@ -75,7 +78,7 @@ async function CheckinTab({
     <>
       <Card className="p-6 sm:p-7">
         <h2 className="mb-5 font-serif text-[24px] text-ink">{m.checkin.today}</h2>
-        <CheckinForm today={today} />
+        <CheckinForm key={initialMood ?? "saved"} today={today} initialMood={initialMood} />
       </Card>
       <Card className="p-6 sm:p-7">
         <TrendPanel rows={rows} period={p} from={r.from} days={r.days} locale={l} href={h} />
