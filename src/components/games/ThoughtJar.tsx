@@ -256,7 +256,7 @@ export function ThoughtJar() {
           <div>
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="font-serif text-[22px] sm:text-[24px]">{m.sortTitle}</h2>
-              <span className="text-[13px] text-paper/60">{m.progress(thoughts.length - unsorted.length, thoughts.length)}</span>
+              <span className="shrink-0 whitespace-nowrap text-[13px] text-paper/60">{m.progress(thoughts.length - unsorted.length, thoughts.length)}</span>
             </div>
             <p className="mt-1 text-[13.5px] text-paper/60">{m.sortHint}</p>
             {current ? (
@@ -288,7 +288,7 @@ export function ThoughtJar() {
                   </button>
                   <div className="mt-2 flex min-h-[64px] flex-col gap-1.5 rounded-[18px] bg-paper/5 p-1.5">
                     {by(z).map((t) => (
-                      <button key={t.id} type="button" onClick={() => unplace(t.id)} className="animate-rise truncate rounded-[14px] px-2.5 py-1.5 text-left text-[12.5px] text-ink" style={{ background: ZONE_COLOR[z] }} title={t.text}>
+                      <button key={t.id} type="button" onClick={() => unplace(t.id)} className="animate-rise line-clamp-3 break-words rounded-[14px] px-2.5 py-1.5 text-left text-[12.5px] leading-snug text-ink" style={{ background: ZONE_COLOR[z] }} title={t.text}>
                         {t.text}
                       </button>
                     ))}
