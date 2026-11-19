@@ -6,6 +6,7 @@ import { useLocale } from "@/i18n/client";
 import { needsMessages } from "@/i18n/needs";
 import { gamesMessages } from "@/i18n/games";
 import { NEEDS, NEED_ITEMS, type Need } from "@/lib/needs";
+import { gameHref } from "@/lib/games";
 import { StartForm } from "./StartForm";
 import { ArrowIcon } from "./icons";
 import { sendEvent } from "./Track";
@@ -54,7 +55,7 @@ export function Needs({ initial }: { initial: Need }) {
         {NEED_ITEMS[need].map((item) => {
           if (item.kind === "game")
             return (
-              <Link key={item.slug} href={`/play/${item.slug}`} className={ROW}>
+              <Link key={item.slug} href={gameHref(item.slug)} className={ROW}>
                 {body(games[item.slug].title, games[item.slug].hint)}
               </Link>
             );

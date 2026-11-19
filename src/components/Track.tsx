@@ -7,7 +7,7 @@ type Once = "always" | "session" | "day";
 // Отправить событие аналитики со страницы. Тексты и личные данные не передаются: только название.
 export function sendEvent(
   name: string,
-  props: { game?: string; step?: string; need?: string; aud?: string; before?: number; after?: number; useful?: number; sec?: number } = {},
+  props: { game?: string; step?: string; need?: string; aud?: string; before?: number; after?: number; useful?: number; sec?: number; done?: 0 | 1 } = {},
 ) {
   try {
     fetch("/api/t", {
@@ -35,23 +35,5 @@ export function Track({ name, once = "session", game, aud }: { name: string; onc
   useEffect(() => {
     if (firstTime(`opora-ev-${name}-${game ?? ""}${aud ?? ""}`, once)) sendEvent(name, { game, aud });
   }, [name, once, game, aud]);
-  return null;
-}
-
-// Практика: «начал» сразу, «прошёл» — когда человек провёл в ней не меньше 45 секунд с открытой вкладкой.
-export function PracticeTrack({ game }: { game: string }) {
-  useEffect(() => {
-    sendEvent("practice_start", { game });
-    let seen = 0;
-    const timer = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      seen += 1;
-      if (seen >= 45) {
-        clearInterval(timer);
-        sendEvent("practice_complete", { game });
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [game]);
   return null;
 }

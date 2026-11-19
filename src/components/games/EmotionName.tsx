@@ -8,10 +8,12 @@ import { gamesMessages, type GameSlug } from "@/i18n/games";
 import { askPractice, type PracticeAI } from "@/lib/practice-actions";
 import { looksLikeCrisis } from "@/lib/crisis";
 import { chime } from "@/lib/chime";
+import { gameHref } from "@/lib/games";
 import { drop } from "@/lib/sounds";
 import { CrisisHelp } from "../course/CrisisHelp";
 import { ArrowIcon } from "../icons";
 import { buttonStyles } from "../ui";
+import { StartForm } from "../StartForm";
 import { ResultActions } from "./ResultActions";
 import { usePractice } from "./PracticeFlow";
 
@@ -27,7 +29,10 @@ const HUES = [
 // Чего не хватает → какая практика может помочь (порядок как в needs).
 const NEED_GAME: GameSlug[] = ["breath", "talk-out", "talk-out", "thought-jar", "grounding", "garden", "empty-bowl"];
 
-type Step = 1 | 2 | 3 | 4 | 5;
+// 1 чувство → 2 сила → 6 быстрый итог (подходящее действие). Подробный разбор (3 → 4 → 5) — по желанию.
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
+// Быстрое действие для каждой семьи чувств (порядок как в families).
+const FAMILY_GO = ["/play/breath", "/talk", "/play/garden", "/play/empty-bowl", "/talk", "/tools/day"];
 
 export function EmotionName() {
   const locale = useLocale();
@@ -63,9 +68,11 @@ export function EmotionName() {
       return;
     }
     start(async () => {
-      const r = await askPractice("emotion", `Чувство: ${word}. Сила: ${level}/10. Перед этим: ${before || "—"}. Не хватает: ${needList || "—"}.`);
-      if ("crisis" in r) setCrisis(true);
-      else if ("ok" in r) setAi(r.data);
+      try {
+        const r = await askPractice("emotion", `Чувство: ${word}. Сила: ${level}/10. Перед этим: ${before || "—"}. Не хватает: ${needList || "—"}.`);
+        if ("crisis" in r) setCrisis(true);
+        else if ("ok" in r) setAi(r.data);
+      } catch {}
     });
   };
 
@@ -161,8 +168,45 @@ export function EmotionName() {
             aria-label={m.step2(word)}
           />
           <p className="mt-2 text-[14px] text-ink-soft">{levelText}</p>
-          <button type="button" onClick={() => setStep(3)} className={`${buttonStyles.primary} mt-6`}>
+          <button
+            type="button"
+            onClick={() => {
+              setStep(6);
+              chime(79, 0.05);
+              if (word) report(m.journal(word, level, "", ""));
+            }}
+            className={`${buttonStyles.primary} mt-6`}
+          >
             {m.next}
+          </button>
+        </div>
+      )}
+
+      {step === 6 && word && family !== null && (
+        <div className="animate-rise">
+          <div className="flex items-center gap-4">
+            <span className="h-14 w-14 shrink-0 animate-morph" style={{ background: `radial-gradient(circle at 35% 30%, #fff 0%, ${hue[1]} 30%, ${hue[0]} 100%)`, boxShadow: `0 0 26px 5px ${hue[0]}55` }} />
+            <p className="font-serif text-[24px] leading-tight text-ink">{m.result(word, level)}</p>
+          </div>
+          <p className="mt-5 text-xs uppercase tracking-[0.14em] text-ink-faint">{m.quickTitle}</p>
+          <p className="mt-2 text-[15.5px] leading-relaxed text-ink">{m.quick[family]}</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {FAMILY_GO[family] === "/talk" ? (
+              <StartForm prompt={m.prompt(word, level, "", "")} className={buttonStyles.primary}>
+                {m.go}
+              </StartForm>
+            ) : (
+              <Link href={FAMILY_GO[family]} className={buttonStyles.primary}>
+                {m.go}
+              </Link>
+            )}
+            <button type="button" onClick={() => setStep(3)} className={buttonStyles.soft}>
+              {m.deeper}
+            </button>
+          </div>
+          <p className="mt-2 text-[13px] text-ink-faint">{m.deeperHint}</p>
+          <button type="button" onClick={restart} className="mt-5 text-sm text-ink-faint hover:text-ink">
+            {m.restart}
           </button>
         </div>
       )}
@@ -268,7 +312,7 @@ export function EmotionName() {
               <p className="text-xs uppercase tracking-[0.14em] text-ink-faint">{m.try}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {suggested.map((s) => (
-                  <Link key={s} href={`/play/${s}`} className="group inline-flex items-center gap-2 rounded-full bg-paper px-4 py-2.5 text-[14px] text-ink shadow-soft transition hover:-translate-y-0.5">
+                  <Link key={s} href={gameHref(s)} className="group inline-flex items-center gap-2 rounded-full bg-paper px-4 py-2.5 text-[14px] text-ink shadow-soft transition hover:-translate-y-0.5">
                     {catalog[s].title}
                     <ArrowIcon className="h-3.5 w-3.5 text-ink-faint" />
                   </Link>

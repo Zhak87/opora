@@ -106,6 +106,8 @@ export async function deleteAllHistory() {
   await supabase.from("personal_plans").delete().eq("user_id", user.id);
   await supabase.from("courses").delete().eq("user_id", user.id);
   await supabase.from("practice_runs").delete().eq("user_id", user.id);
+  // Сад, активный шаг и черновики практик (миграция 0029). До её применения таблицы нет, ошибку пропускаем.
+  await supabase.from("practice_state").delete().eq("user_id", user.id);
   revalidatePath("/", "layout");
   redirect("/profile?cleared=1");
 }

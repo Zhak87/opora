@@ -12,12 +12,11 @@ import { CrisisHelp } from "../course/CrisisHelp";
 import { buttonStyles } from "../ui";
 import { ResultActions } from "./ResultActions";
 import { usePractice } from "./PracticeFlow";
+import { useActiveStep } from "./useActiveStep";
 
 type Phase = "goal" | "why" | "steps" | "pick" | "chosen";
 
-// Текущий шаг хранится в этом браузере: карточка «Ваш шаг» на странице практик спросит, получилось ли.
-export const STEP_KEY = "opora-one-step";
-export type SavedStep = { text: string; at: number };
+// Текущий шаг хранится в аккаунте (practice_state, общий с приложением): карточка «Ваш шаг» спросит, получилось ли.
 
 function icsDate(d: Date) {
   return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -68,6 +67,7 @@ export function OneStep() {
   const [reminded, setReminded] = useState(false);
   const [loading, start] = useTransition();
   const { report } = usePractice();
+  const active = useActiveStep();
 
   useEffect(() => {
     if (looksLikeCrisis(goal) || looksLikeCrisis(why)) setCrisis(true);
@@ -77,12 +77,16 @@ export function OneStep() {
     setPhase("steps");
     setAiFailed(false);
     start(async () => {
-      const r = await askPractice("one-step", `Хочу изменить: ${goal}\nПочему важно: ${why}`);
-      if ("crisis" in r) setCrisis(true);
-      else if ("ok" in r && r.data.steps?.length) {
-        setSteps(r.data.steps);
-        setReflection(r.data.reflection);
-      } else setAiFailed(true);
+      try {
+        const r = await askPractice("one-step", `Хочу изменить: ${goal}\nПочему важно: ${why}`);
+        if ("crisis" in r) setCrisis(true);
+        else if ("ok" in r && r.data.steps?.length) {
+          setSteps(r.data.steps);
+          setReflection(r.data.reflection);
+        } else setAiFailed(true);
+      } catch {
+        setAiFailed(true);
+      }
     });
   };
 
@@ -99,9 +103,7 @@ export function OneStep() {
     setPhase("chosen");
     report(m.journal(goal, why, s));
     bowlStrike(0.07, 262);
-    try {
-      localStorage.setItem(STEP_KEY, JSON.stringify({ text: s, at: Date.now() } satisfies SavedStep));
-    } catch {}
+    active.set(s, "one-step", "today");
   };
 
   const remind = (kind: "evening" | "morning") => {
@@ -253,31 +255,24 @@ function Stairs({ filled }: { filled: number }) {
   );
 }
 
-// Карточка «Ваш шаг» на странице практик: спросить, получилось ли.
+// Карточка «Ваш шаг» (главная, практики, планирование): спросить, получилось ли. Шаг общий для всех практик и устройств.
 export function StepCard() {
   const locale = useLocale();
   const m = oneStepMessages[locale].card;
-  const [step, setStep] = useState<SavedStep | null>(null);
+  const { step, clear } = useActiveStep();
   const [answer, setAnswer] = useState<"done" | "not" | null>(null);
+  const [shown, setShown] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STEP_KEY);
-      if (raw) setStep(JSON.parse(raw) as SavedStep);
-    } catch {}
-  }, []);
+    if (step && !answer) setShown(step.text);
+  }, [step, answer]);
 
-  if (!step) return null;
-  const clear = () => {
-    try {
-      localStorage.removeItem(STEP_KEY);
-    } catch {}
-  };
+  if (!shown) return null;
 
   return (
     <section className="animate-rise rounded-[28px] bg-mist p-5 sm:p-6">
       <p className="text-xs uppercase tracking-[0.16em] text-sky-deep">{m.eyebrow}</p>
-      <p className="mt-1.5 font-serif text-[20px] leading-snug text-ink">{step.text}</p>
+      <p className="mt-1.5 font-serif text-[20px] leading-snug text-ink">{shown}</p>
       {answer === null ? (
         <div className="mt-4 flex flex-wrap gap-2">
           <button
@@ -302,14 +297,14 @@ export function StepCard() {
         <div className="mt-3 animate-rise">
           <p className="text-[15px] text-ink-soft">{m.notYetText}</p>
           <div className="mt-3 flex gap-3">
-            <Link href="/play/one-step" onClick={clear} className="rounded-full bg-ink px-5 py-2.5 text-[14px] text-paper">
+            <Link href="/tools/step" onClick={clear} className="rounded-full bg-ink px-5 py-2.5 text-[14px] text-paper">
               {m.smaller}
             </Link>
             <button
               type="button"
               onClick={() => {
                 clear();
-                setStep(null);
+                setShown(null);
               }}
               className="text-[14px] text-ink-faint hover:text-ink"
             >

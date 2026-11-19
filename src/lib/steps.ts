@@ -1,3 +1,4 @@
+import { gameHref } from "./games";
 // «Следующий шаг» от собеседника (раздел 4.1 стратегии): в конце ответа ИИ может поставить метку
 // [[step:код]]. Человек её не видит: приложение убирает метку из текста и показывает под ответом кнопку,
 // которая ведёт к практике, в комнаты, к психологам или в дневник.
@@ -118,5 +119,5 @@ export function stepHref(step: StepCode) {
   if (step === "specialists") return "/specialists";
   if (step === "journal") return "/journal";
   if (step === "dreams") return "/dreams/new";
-  return `/play/${step}`;
+  return gameHref(step);
 }

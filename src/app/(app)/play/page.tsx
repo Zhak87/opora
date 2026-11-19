@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CATEGORIES, getGames, type Game } from "@/lib/games";
+import { getCatalog } from "@/lib/games";
 import { FeelingPicker } from "@/components/games/FeelingPicker";
 import { StepCard } from "@/components/games/OneStep";
 import { Sky } from "@/components/games/Sky";
@@ -13,6 +13,10 @@ import { gameKind } from "@/lib/plan";
 import { CreatePlanButton } from "@/components/plan/CreatePlanButton";
 import { getLocale } from "@/i18n/server";
 import { gamesMessages } from "@/i18n/games";
+import { playMessages } from "@/i18n/play";
+import { readState, cleanJarDraft, cleanBoundaries } from "@/lib/practice-state";
+import { cleanGarden } from "@/lib/garden";
+import { ENDINGS, SCENARIO_IDS } from "@/lib/boundaries";
 import { common } from "@/i18n/common";
 import type { Locale } from "@/i18n/config";
 
@@ -23,66 +27,119 @@ export default async function PlayPage() {
   const stored = await latestPlan(supabase);
   const locale = await getLocale();
   const m = gamesMessages[locale].page;
-  const games = getGames(locale);
-  const flagship = games.find((g) => g.flagship)!;
-  const runs = await recentRuns(supabase);
+  const p = playMessages[locale].page;
+  const games = getCatalog(locale);
+  const [runs, garden, jar, bounds] = await Promise.all([
+    recentRuns(supabase),
+    readState(supabase, "garden"),
+    readState(supabase, "thought-jar"),
+    readState(supabase, "boundaries"),
+  ]);
   const played = new Set(runs.map((r) => r.game));
+  const gardenDays = cleanGarden(garden?.data)?.care ?? 0;
+  const draft = cleanJarDraft(jar?.data);
+  const seen = Object.values(cleanBoundaries(bounds?.data).seen).reduce((n, l) => n + l.length, 0);
+  const main = (["boundaries", "garden", "thought-jar"] as const).map((slug) => games.find((g) => g.slug === slug)!);
+  const quick = games.filter((g) => !main.includes(g));
+  const status: Record<string, string | null> = {
+    boundaries: p.endings(seen, SCENARIO_IDS.length * ENDINGS.length),
+    garden: p.gardenDays(gardenDays),
+    "thought-jar": draft ? p.draft : null,
+  };
   return (
     <>
       <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
         <BackIcon className="h-4 w-4" /> {common[locale].nav.home}
       </Link>
-      <PageHeader title={m.title}>{m.intro}</PageHeader>
+      <PageHeader title={p.title}>{p.intro}</PageHeader>
       <div className="space-y-12">
+        <StepCard />
+
+        <section>
+          <h2 className="font-serif text-[22px] text-ink">{p.mainTitle}</h2>
+          <p className="mb-5 mt-1 text-[15px] text-ink-soft">{p.mainHint}</p>
+          <div className="stagger grid gap-4 lg:grid-cols-3">
+            {main.map((g, i) => (
+              <Link
+                key={g.slug}
+                href={`/play/${g.slug}`}
+                className={`group relative flex min-h-[230px] flex-col justify-end overflow-hidden rounded-[32px] p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift ${i === 0 ? "lg:col-span-3 lg:min-h-[280px] lg:p-9" : ""}`}
+                style={{ background: COVERS[g.slug] }}
+              >
+                <span className="pointer-events-none absolute inset-0 flex items-start justify-end p-6" aria-hidden>
+                  <span className="scale-[1.6] transition-transform duration-500 group-hover:scale-[1.8] lg:scale-[2]">
+                    <GameGlyph slug={g.slug} />
+                  </span>
+                </span>
+                <span className={`relative max-w-xl ${g.slug === "garden" ? "text-ink" : "text-paper"}`}>
+                  {status[g.slug] && <span className={`text-[12px] uppercase tracking-[0.14em] ${g.slug === "garden" ? "text-ink-soft" : "text-paper/70"}`}>{status[g.slug]}</span>}
+                  <span className="mt-1 block font-serif text-[28px] leading-tight sm:text-[32px]">{g.title}</span>
+                  <span className={`mt-2 block text-[14.5px] leading-relaxed ${g.slug === "garden" ? "text-ink-soft" : "text-paper/80"}`}>{p.lines[g.slug as keyof typeof p.lines]}</span>
+                  <span className={`mt-4 inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-medium ${g.slug === "garden" ? "bg-ink text-paper" : "bg-paper text-ink"}`}>
+                    {g.slug === "thought-jar" && draft ? playMessages[locale].flow.resume : p.open} · {g.minutes} {m.min}
+                    <ArrowIcon className="h-4 w-4" />
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-serif text-[22px] text-ink">{p.quickTitle}</h2>
+          <p className="mb-5 mt-1 text-[15px] text-ink-soft">{p.quickHint}</p>
+          <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+            {quick.map((x) => (
+              <Link
+                key={x.slug}
+                href={`/play/${x.slug}`}
+                className="group flex flex-col overflow-hidden rounded-[26px] bg-paper shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
+              >
+                <span className="relative flex h-[96px] items-center justify-center overflow-hidden" style={{ background: COVERS[x.slug] }}>
+                  <span className="scale-[1.3] transition-transform duration-500 group-hover:scale-[1.45]">
+                    <GameGlyph slug={x.slug} />
+                  </span>
+                  {played.has(x.slug) && (
+                    <svg viewBox="0 0 24 24" className="absolute right-3 top-3 h-4 w-4 drop-shadow-[0_0_6px_rgba(255,240,200,0.9)]" fill="#fff6dc" aria-label={m.played}>
+                      <path d="M12 2l1.9 6.3L20 10l-6.1 1.7L12 18l-1.9-6.3L4 10l6.1-1.7z" />
+                    </svg>
+                  )}
+                </span>
+                <span className="flex flex-1 flex-col p-4">
+                  <span className="text-[15px] font-medium leading-snug text-ink">{x.title}</span>
+                  <span className="mt-1 flex-1 text-[12.5px] leading-snug text-ink-soft">{x.hint}</span>
+                  <span className="mt-2.5 flex items-center justify-between text-[12px] text-ink-faint">
+                    {x.minutes} {m.min}
+                    <ArrowIcon className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:text-ink" />
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         <div className="space-y-4">
           <Sky runs={runs} locale={locale} />
-          <StepCard />
           <FeelingPicker />
         </div>
-        <Flagship game={flagship} locale={locale} />
+
         <ForYou stored={stored} locale={locale} />
-        {CATEGORIES.map((id) => {
-          const list = games.filter((x) => x.group === id && !x.flagship);
-          if (list.length === 0) return null;
-          return (
-            <section key={id}>
-              <h2 className="font-serif text-[22px] text-ink">{m.groups[id].title}</h2>
-              <p className="mb-5 mt-1 text-[15px] text-ink-soft">{m.groups[id].hint}</p>
-              <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-                {list.map((x) => (
-                  <Link
-                    key={x.slug}
-                    href={`/play/${x.slug}`}
-                    className="group flex flex-col overflow-hidden rounded-[26px] bg-paper shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
-                  >
-                    <span className="relative flex h-[104px] items-center justify-center overflow-hidden sm:h-[124px]" style={{ background: COVERS[x.slug] }}>
-                      <span className="absolute -right-6 -top-8 h-24 w-24 animate-breathe rounded-full bg-paper/25" aria-hidden />
-                      <span className="scale-[1.35] transition-transform duration-500 group-hover:scale-[1.5]">
-                        <GameGlyph slug={x.slug} />
-                      </span>
-                      {x.isNew && (
-                        <span className="absolute left-3 top-3 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-lilac-deep">{m.isNew}</span>
-                      )}
-                      {played.has(x.slug) && (
-                        <svg viewBox="0 0 24 24" className="absolute right-3 top-3 h-4 w-4 drop-shadow-[0_0_6px_rgba(255,240,200,0.9)]" fill="#fff6dc" aria-label={m.played}>
-                          <path d="M12 2l1.9 6.3L20 10l-6.1 1.7L12 18l-1.9-6.3L4 10l6.1-1.7z" />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="flex flex-1 flex-col p-4">
-                      <span className="text-[15px] font-medium leading-snug text-ink sm:text-[16px]">{x.title}</span>
-                      <span className="mt-1 flex-1 text-[12.5px] leading-snug text-ink-soft sm:text-[13px]">{x.hint}</span>
-                      <span className="mt-2.5 flex items-center justify-between text-[12px] text-ink-faint">
-                        {x.minutes} {m.min}
-                        <ArrowIcon className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:text-ink" />
-                      </span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          );
-        })}
+
+        <section>
+          <h2 className="font-serif text-[22px] text-ink">{p.movedTitle}</h2>
+          <p className="mb-5 mt-1 text-[15px] text-ink-soft">{p.movedHint}</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(p.moved).map(([k, v]) => (
+              <Link key={k} href={v.href} className="group flex items-center gap-3 rounded-[22px] bg-paper/70 p-4 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-soft">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-medium text-ink">{v.title}</span>
+                  <span className="block text-[13px] leading-snug text-ink-soft">{v.hint}</span>
+                </span>
+                <ArrowIcon className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:translate-x-0.5" />
+              </Link>
+            ))}
+          </div>
+        </section>
       </div>
     </>
   );
@@ -96,7 +153,7 @@ const COVERS: Record<GameSlug, string> = {
   grounding: "linear-gradient(150deg,#d6f2e6,#9fdcc0)",
   bubbles: "linear-gradient(160deg,#dcebfb,#a9c9f2)",
   light: "linear-gradient(150deg,#1d1e2c,#4a43b8 80%,#aaa4ff)",
-  garden: "linear-gradient(150deg,#f3ecdc,#dccdab)",
+  garden: "radial-gradient(120% 120% at 20% 0%,#fbf6ea,#efe3c9 55%,#d9c6a0)",
   emotion: "linear-gradient(140deg,#e6e4ff,#fbe4f0 55%,#ffe4d8)",
   "what-if": "linear-gradient(150deg,#ffe4d8,#ffc9b0)",
   letter: "linear-gradient(150deg,#dcebfb,#e6e4ff)",
@@ -105,60 +162,12 @@ const COVERS: Record<GameSlug, string> = {
   wheel: "linear-gradient(150deg,#e9f7f0,#cfe3ff)",
   values: "radial-gradient(120% 100% at 50% 110%,#4f5aa6,#2a2762 50%,#12133a)",
   mirror: "radial-gradient(120% 100% at 50% 110%,#56508f,#2a2762 50%,#12133a)",
-  boundaries: "radial-gradient(120% 100% at 50% 110%,#3f7f7a,#2a2762 50%,#12133a)",
+  boundaries: "radial-gradient(120% 110% at 70% 120%,#3f7f7a,#2a2762 50%,#12133a)",
   unsaid: "radial-gradient(120% 100% at 50% 110%,#8a4f7a,#2a2762 50%,#12133a)",
   wins: "radial-gradient(120% 100% at 50% 110%,#8a5a86,#2a2762 50%,#12133a)",
   "one-step": "linear-gradient(170deg,#dcebfb,#9fc0ef)",
   "talk-out": "linear-gradient(150deg,#e6e4ff,#c9c4ff)",
 };
-
-// Большая карточка главной практики: чаша и огоньки мыслей, которые проплывают мимо.
-function Flagship({ game, locale }: { game: Game; locale: Locale }) {
-  const m = gamesMessages[locale].page;
-  const lights = [
-    { top: "22%", t: "11s", d: "0s", c: "#aaa4ff", s: 10 },
-    { top: "34%", t: "14s", d: "-5s", c: "#8db4ea", s: 7 },
-    { top: "28%", t: "9s", d: "-3s", c: "#ffb79c", s: 8 },
-    { top: "40%", t: "16s", d: "-9s", c: "#7ccfaa", s: 6 },
-    { top: "18%", t: "13s", d: "-11s", c: "#f2a7cb", s: 6 },
-  ];
-  return (
-    <Link
-      href={`/play/${game.slug}`}
-      className="group relative block min-h-[340px] overflow-hidden rounded-[36px] p-6 shadow-lift transition hover:-translate-y-0.5 sm:min-h-[300px] sm:p-9"
-      style={{ background: "linear-gradient(165deg, #12133a 0%, #252260 36%, #4b3a8c 64%, #9a6aa6 86%, #f0b49c 100%)" }}
-    >
-      {lights.map((l, i) => (
-        <span
-          key={i}
-          aria-hidden
-          className="bowl-drift absolute left-0 rounded-full"
-          style={{ top: l.top, width: l.s, height: l.s, background: "#fff", boxShadow: `0 0 ${l.s * 2}px ${l.s}px ${l.c}`, ["--t" as string]: l.t, ["--d" as string]: l.d, ["--w" as string]: "900px" } as React.CSSProperties}
-        />
-      ))}
-      <div className="relative max-w-md">
-        <p className="text-xs uppercase tracking-[0.16em] text-[#cfc9ff]">{m.flagship}</p>
-        <h2 className="mt-2 font-serif text-[32px] leading-tight text-paper sm:text-[40px]">{game.title}</h2>
-        <p className="mt-3 text-[15.5px] leading-relaxed text-paper/75">{m.flagshipLine}</p>
-        <span className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-paper px-6 text-[15px] font-medium text-ink shadow-[0_0_30px_4px_rgba(255,255,255,0.25)] transition group-hover:-translate-y-0.5">
-          {m.begin} · {game.minutes} {m.min}
-          <ArrowIcon className="h-4 w-4" />
-        </span>
-      </div>
-      <svg viewBox="0 0 280 170" className="pointer-events-none absolute -bottom-4 right-[-20px] w-[200px] sm:bottom-2 sm:right-8 sm:w-[260px]" aria-hidden>
-        <defs>
-          <linearGradient id="fl-body" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#ffffff" />
-            <stop offset="1" stopColor="#cfc8ec" />
-          </linearGradient>
-        </defs>
-        <ellipse cx="140" cy="40" rx="150" ry="70" fill="#ffe9d6" opacity="0.22" />
-        <path d="M22 48 C 30 128, 82 152, 140 152 C 198 152, 250 128, 258 48 Z" fill="url(#fl-body)" />
-        <ellipse cx="140" cy="48" rx="118" ry="24" fill="#ebe4f8" stroke="#fff" strokeWidth="3" />
-      </svg>
-    </Link>
-  );
-}
 
 function ForYou({ stored, locale }: { stored: Awaited<ReturnType<typeof latestPlan>>; locale: Locale }) {
   const m = gamesMessages[locale].page.forYou;

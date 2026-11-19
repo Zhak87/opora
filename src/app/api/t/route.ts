@@ -14,7 +14,7 @@ const GAME = /^[a-z0-9-]{1,24}$/;
 // и короткую пометку: какая практика, какой шаг, какая потребность или аудитория. Больше ничего страница передать не может.
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as
-    | { name?: string; game?: string; step?: string; need?: string; aud?: string; before?: unknown; after?: unknown; useful?: unknown; sec?: unknown }
+    | { name?: string; game?: string; step?: string; need?: string; aud?: string; before?: unknown; after?: unknown; useful?: unknown; sec?: unknown; done?: unknown }
     | null;
   const name = body?.name as EventName | undefined;
   if (!name || !CLIENT_EVENTS.includes(name)) return NextResponse.json({ ok: false }, { status: 400 });
@@ -26,6 +26,12 @@ export async function POST(req: Request) {
   if (isNeed(body?.need)) props.need = body.need;
   if (isAudience(body?.aud)) props.aud = body.aud;
   // «Как вы сейчас» до и после практики (1–5), полезность (1–3) и сколько секунд длилась.
+  // Выход и конец свободной сессии: активные секунды и дошёл ли человек до результата (0/1).
+  if (name === "practice_exit" || name === "practice_session_end") {
+    const sec = Number.isInteger(body?.sec) && (body?.sec as number) >= 0 ? Math.min(7200, body?.sec as number) : null;
+    if (sec !== null) props.sec = sec;
+    if (body?.done === 1 || body?.done === 0) props.done = body.done;
+  }
   if (name === "practice_feel") {
     const num = (v: unknown, max: number) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= max ? (v as number) : null);
     const before = num(body?.before, 5), after = num(body?.after, 5), useful = num(body?.useful, 3), sec = num(body?.sec, 7200);

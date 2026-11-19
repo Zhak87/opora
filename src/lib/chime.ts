@@ -1,8 +1,11 @@
+import { soundOn } from "./practice-settings-client";
 // Короткий мягкий звук для игр: создаётся на лету, без файлов.
 let ctx: AudioContext | null = null;
 
 // Общий звуковой контекст для всех коротких звуков практик.
 export function audioCtx() {
+  // Звук выключен в настройках практик: все звуки молча пропускаются (их вызовы обёрнуты в try).
+  if (!soundOn()) throw new Error("muted");
   ctx ??= new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   if (ctx.state === "suspended") ctx.resume();
   return ctx;

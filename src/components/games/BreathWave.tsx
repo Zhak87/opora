@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { chime } from "@/lib/chime";
-import { surf } from "@/lib/sounds";
+import { bowlStrike, surf } from "@/lib/sounds";
+import { vibrate } from "@/lib/practice-settings-client";
+import { usePractice } from "./PracticeFlow";
 import { useMsg } from "@/i18n/client";
 import { breathMessages } from "@/i18n/game-breath";
 
-const GOAL = 6;
+const GOALS = [3, 6, 10];
 // Ритмы: вдох, пауза, выдох (секунды).
 const RHYTHMS: [number, number, number][] = [
   [4, 0, 6],
@@ -28,6 +30,10 @@ export function BreathWave() {
   const [secLeft, setSecLeft] = useState(0);
   const [breaths, setBreaths] = useState(0);
   const [holding, setHolding] = useState(false);
+  // Короткий запуск и понятное завершение: человек выбирает, сколько вдохов, и сессия заканчивается сама.
+  const [goal, setGoal] = useState(6);
+  const [complete, setComplete] = useState(false);
+  const { report } = usePractice();
 
   const level = useRef(0);
   const holdingRef = useRef(false);
@@ -35,6 +41,8 @@ export function BreathWave() {
   const surfRef = useRef<ReturnType<typeof surf> | null>(null);
   const soundRef = useRef(sound);
   soundRef.current = sound;
+  const goalRef = useRef(goal);
+  goalRef.current = goal;
 
   // Один цикл анимации на всё: уровень воды, форма волн, звук.
   useEffect(() => {
@@ -89,7 +97,7 @@ export function BreathWave() {
           if (peaked && l < 0.08) {
             peaked = false;
             setBreaths((b) => {
-              chime(b + 1 >= GOAL ? 79 : 72, 0.05);
+              chime(b + 1 >= goalRef.current ? 79 : 72, 0.05);
               return b + 1;
             });
           }
@@ -115,7 +123,25 @@ export function BreathWave() {
   const startFollow = () => {
     ensureSound();
     setBreaths(0);
+    setComplete(false);
     setRunning(true);
+  };
+
+  useEffect(() => {
+    if (complete || breaths < goal) return;
+    setComplete(true);
+    setRunning(false);
+    holdingRef.current = false;
+    setHolding(false);
+    bowlStrike(0.06, 262);
+    vibrate(20);
+    report(m.summary(breaths, mode === "follow" ? m.rhythms[rhythm] : m.lead));
+  }, [breaths, goal, complete, report, m, mode, rhythm]);
+
+  const more = () => {
+    setGoal((g) => g + 3);
+    setComplete(false);
+    if (mode === "follow") setRunning(true);
   };
 
   const press = (v: boolean) => {
@@ -125,7 +151,7 @@ export function BreathWave() {
     setHolding(v);
   };
 
-  const done = breaths >= GOAL;
+  const done = complete;
   const label =
     mode === "follow"
       ? running
@@ -156,6 +182,7 @@ export function BreathWave() {
               setMode(k);
               setRunning(false);
               setBreaths(0);
+              setComplete(false);
             }}
             className={`rounded-full px-5 py-2 text-sm transition ${mode === k ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}
           >
@@ -203,7 +230,14 @@ export function BreathWave() {
           <path data-foam="1" fill="none" stroke="#ffffff" strokeOpacity="0.85" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
         <div className="absolute inset-x-0 top-[9%] flex flex-col items-center">
-          {mode === "follow" && !running ? (
+          {complete ? (
+            <div className="flex animate-rise flex-col items-center gap-3">
+              <span className="font-serif text-[26px] text-ink drop-shadow-[0_1px_8px_rgba(255,255,255,0.9)]">{m.completeTitle(breaths)}</span>
+              <button type="button" onClick={more} className="rounded-full bg-paper/90 px-5 py-2 text-[14px] text-ink shadow-soft">
+                {m.more}
+              </button>
+            </div>
+          ) : mode === "follow" && !running ? (
             <button
               type="button"
               onClick={startFollow}
@@ -221,13 +255,22 @@ export function BreathWave() {
       </div>
 
       <div className="mt-5 flex items-center gap-2" aria-label={m.count(breaths)}>
-        {Array.from({ length: GOAL }).map((_, i) => (
+        {Array.from({ length: goal }).map((_, i) => (
           <span key={i} className={`h-2.5 w-2.5 rounded-full transition-all duration-500 ${i < breaths ? "scale-110 bg-sky-deep" : "bg-sand-deep"}`} />
         ))}
       </div>
       <p className="mt-3 max-w-md text-center text-[15px] text-ink-soft">{done ? m.done : mode === "follow" ? m.followTip : m.tip}</p>
 
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+      <div className="mt-4 flex items-center gap-1 rounded-full bg-paper/70 p-1 text-[13.5px]" role="radiogroup" aria-label={m.goalLabel}>
+        <span className="px-3 text-ink-faint">{m.goalLabel}</span>
+        {GOALS.map((g) => (
+          <button key={g} type="button" role="radio" aria-checked={goal === g} onClick={() => { setGoal(g); setComplete(false); setBreaths(0); }} className={`rounded-full px-3.5 py-1.5 transition ${goal === g ? "bg-ink text-paper" : "text-ink-soft hover:bg-sand"}`}>
+            {g}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
         {mode === "follow" &&
           m.rhythms.map((r, i) => (
             <button

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { vibrate } from "@/lib/practice-settings-client";
+import { usePractice } from "./PracticeFlow";
 import { chime, PENTATONIC } from "@/lib/chime";
 import { buttonStyles } from "../ui";
 import { useMsg } from "@/i18n/client";
@@ -15,11 +18,18 @@ const SENSES = [
 ];
 
 // Заземление «5-4-3-2-1»: возвращает внимание в «здесь и сейчас» через пять чувств.
+// Быстрый инструмент: без подготовки, со спокойными подсказками, любое чувство можно пропустить,
+// завершение необязательное и без анкеты.
 export function Grounding() {
   const [step, setStep] = useState(0);
   const [count, setCount] = useState(0);
   const m = useMsg(groundingMessages);
+  const { report } = usePractice();
   const done = step >= SENSES.length;
+
+  useEffect(() => {
+    if (done) report(m.summary);
+  }, [done, report, m.summary]);
 
   if (done)
     return (
@@ -29,15 +39,20 @@ export function Grounding() {
         <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink-soft">
           {m.doneBody}
         </p>
-        <button
-          onClick={() => {
-            setStep(0);
-            setCount(0);
-          }}
-          className={`${buttonStyles.soft} mt-8`}
-        >
-          {m.again}
-        </button>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link href="/" className={buttonStyles.primary}>
+            {m.back}
+          </Link>
+          <button
+            onClick={() => {
+              setStep(0);
+              setCount(0);
+            }}
+            className={buttonStyles.soft}
+          >
+            {m.again}
+          </button>
+        </div>
       </div>
     );
 
@@ -45,6 +60,7 @@ export function Grounding() {
   const text = m.senses[step];
   const tap = () => {
     chime(PENTATONIC[(count + step) % PENTATONIC.length], 0.05);
+    vibrate(8);
     if (count + 1 >= s.n) {
       setTimeout(() => {
         setStep(step + 1);
@@ -74,7 +90,17 @@ export function Grounding() {
       >
         {m.noticed}
       </button>
-      <p className="mt-5 text-sm text-ink-faint">{m.tip}</p>
+      <p className="mt-5 min-h-5 text-[14px] text-ink-soft" aria-live="polite">{count > 0 && count < s.n ? m.guide[(count + step) % m.guide.length] : m.tip}</p>
+      <button
+        type="button"
+        onClick={() => {
+          setStep(step + 1);
+          setCount(0);
+        }}
+        className="mt-3 text-[13.5px] text-ink-faint underline-offset-4 hover:text-ink hover:underline"
+      >
+        {m.skip}
+      </button>
     </div>
   );
 }

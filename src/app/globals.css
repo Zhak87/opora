@@ -149,6 +149,13 @@ body {
   }
 }
 
+/* Настройка практик «Спокойные анимации»: то же, что системное уменьшение движения, но по выбору человека. */
+html[data-calm] *, html[data-calm] *::before, html[data-calm] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
 @keyframes music-bar {
   from { transform: scaleY(0.45); }
   to { transform: scaleY(1); }

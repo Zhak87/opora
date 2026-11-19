@@ -17,6 +17,8 @@ import { courseMessages } from "@/i18n/course";
 import { currentProgram } from "@/lib/program-data";
 import { programMessages } from "@/i18n/program";
 import { TipCheck } from "@/components/plan/TipCheck";
+import { playMessages } from "@/i18n/play";
+import { StepCard } from "@/components/games/OneStep";
 import { TalkIcon, CompassIcon, ArrowIcon, HeartHandIcon, ShieldIcon, GridIcon, CheckIcon, JournalIcon } from "@/components/icons";
 import { panelMessages } from "@/i18n/admin";
 import { adminPending, hasCare } from "@/lib/pro";
@@ -151,6 +153,8 @@ export default async function HomePage() {
         )}
       </div>
 
+      <StepCard />
+
       <details className={styles.extras}>
         <summary>{m.moreSupport}</summary>
         <Needs initial={needForMood(checkin?.mood)} />
@@ -168,6 +172,8 @@ export default async function HomePage() {
           </div>
         </section>
         <div className={styles.more}>
+          <ActionLink href="/tools/day" title={playMessages[locale].home.day} hint={playMessages[locale].home.dayHint} Icon={CheckIcon} />
+          <ActionLink href="/planning" title={playMessages[locale].home.planning} hint={playMessages[locale].home.planningHint} Icon={CompassIcon} />
           <ActionLink
             href="/program"
             title={programMessages[locale].homeTitle}
