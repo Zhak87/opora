@@ -79,8 +79,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       off = localStorage.getItem(KEY) === "off";
       seen = localStorage.getItem(KEY + "-gate") === "1" || sessionStorage.getItem(KEY + "-gate") === "1";
     } catch {}
-    // На лендинге для психологов экран входа не показываем: человек пришёл по делу и должен сразу видеть страницу.
-    if (off || seen || window.location.pathname.startsWith("/pro/join")) return;
+    // На лендинге для психологов и в статьях экран входа не показываем: человек пришёл по делу
+    // (часто из поиска) и должен сразу видеть страницу.
+    const path = window.location.pathname;
+    if (off || seen || path.startsWith("/pro/join") || path.startsWith("/help")) return;
     const t = setTimeout(() => {
       if (!engine.current?.audible) setGate(true);
     }, 400);
