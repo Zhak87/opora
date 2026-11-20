@@ -94,6 +94,9 @@ jobs:
           ssh prod 'set -e; cd /opt/opora; chmod +x dc.sh migrate.sh supabase/gen-keys.sh
             test -f server.env || (umask 077 && echo "CRON_SECRET=$(openssl rand -hex 32)" > server.env)
             bash supabase/gen-keys.sh server.env'
+          # Ключ замка разговоров с ИИ создаётся на сервере один раз и его не покидает (в базе и её копиях его нет).
+          ssh prod 'set -e; cd /opt/opora
+            grep -q "^CHAT_ENCRYPTION_KEY=" server.env || printf "\nCHAT_ENCRYPTION_KEY=%s\n" "$(openssl rand -base64 32)" >> server.env'
           # Постоянная пара VAPID хранится только на сервере, чтобы подписки переживали выкладки.
           ssh prod 'set -e; cd /opt/opora
             if ! grep -q "^WEB_PUSH_PUBLIC_KEY=" server.env && ! grep -q "^WEB_PUSH_PRIVATE_KEY=" server.env; then

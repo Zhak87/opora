@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { seal } from "@/lib/vault";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, generateJSON } from "@/lib/ai";
@@ -154,7 +155,7 @@ export async function setGuided(guided: boolean): Promise<Result> {
 
 // Разговор с собеседником по текущему шагу: начинается с вопроса шага.
 export async function startStepTalk(): Promise<{ id?: string; error?: string }> {
-  const { supabase } = await authed();
+  const { supabase, user } = await authed();
   const t = await texts();
   const program = await currentProgram(supabase);
   if (!program) return { error: t.saveFailed };
@@ -162,7 +163,7 @@ export async function startStepTalk(): Promise<{ id?: string; error?: string }> 
   const title = step ? `${t.brand}: ${step.title}` : `${t.brand}: ${t.followUp.title}`;
   const { data, error } = await supabase.from("conversations").insert({ mode: "program", title }).select("id").single();
   if (error || !data) return { error: t.saveFailed };
-  await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: step?.opener ?? t.followUp.opener });
+  await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: seal(user.id, step?.opener ?? t.followUp.opener) });
   await track("chat_start");
   return { id: data.id as string };
 }

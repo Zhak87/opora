@@ -13,6 +13,7 @@ import { joinTags, readMeta, splitStep } from "@/lib/steps";
 import { insightNote, recentInsights } from "@/lib/insights";
 import { currentProgram, myScreenings } from "@/lib/program-data";
 import { programNote } from "@/lib/program";
+import { seal, sealMeta, unsealRows } from "@/lib/vault";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -58,11 +59,12 @@ export async function POST(req: Request) {
     supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
     historyQuery.order("created_at", { ascending: false }).limit(userMessageId ? HISTORY_LIMIT - 1 : HISTORY_LIMIT),
     userMessageId
-      ? supabase.from("messages").insert({ id: userMessageId, conversation_id: conversationId, role: "user", content: message })
+      ? supabase.from("messages").insert({ id: userMessageId, conversation_id: conversationId, role: "user", content: seal(user.id, message) })
       : null,
   ]);
   const { data: conversation, error: conversationError } = conversationResult;
-  const { data: history, error: historyError } = historyResult;
+  const { error: historyError } = historyResult;
+  const history = historyResult.data ? unsealRows(user.id, historyResult.data) : null;
   const persistedId = savedUser && !savedUser.error ? userMessageId : null;
   if (conversationError) {
     console.error(conversationError);
@@ -89,7 +91,7 @@ export async function POST(req: Request) {
           .eq("conversation_id", conversationId)
           .eq("role", "user")
           .limit(2);
-        if (users?.length === 1 && users[0].id === persistedId) update.title = makeTitle(message);
+        if (users?.length === 1 && users[0].id === persistedId) update.title = seal(user.id, makeTitle(message));
       }
       await supabase.from("conversations").update(update).eq("id", conversationId);
     })().catch(console.error);
@@ -136,7 +138,7 @@ export async function POST(req: Request) {
     if (!still || req.signal.aborted || cancelled) return;
     const { error } = await supabase
       .from("messages")
-      .insert({ conversation_id: conversationId, role: "assistant", content, step, meta });
+      .insert({ conversation_id: conversationId, role: "assistant", content: seal(user.id, content), step, meta: sealMeta(user.id, meta) });
     if (error) throw error;
     savedStep = step;
   };

@@ -21,6 +21,7 @@ import * as rooms from "@/lib/rooms/actions";
 import * as consult from "@/lib/consult/actions";
 import { consultPrep } from "@/lib/consult/mobile";
 import * as analytics from "@/lib/analytics-actions";
+import * as history from "@/lib/history-actions";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -32,6 +33,9 @@ type Fn = (...args: never[]) => Promise<unknown>;
 type Kind = "args" | "form" | "state";
 
 const ACTIONS: Record<string, [Kind, Fn]> = {
+  // История разговоров с ИИ: текст в базе зашифрован, телефон получает его только отсюда.
+  listConversations: ["args", history.listConversations],
+  loadConversation: ["args", history.loadConversation],
   startConversation: ["form", core.startConversation],
   deleteConversation: ["form", core.deleteConversation],
   undoLastMessage: ["args", core.undoLastMessage],
