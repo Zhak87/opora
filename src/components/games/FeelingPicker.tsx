@@ -6,7 +6,7 @@ import { useLocale } from "@/i18n/client";
 import { gamesMessages, type Feeling } from "@/i18n/games";
 import { ArrowIcon } from "../icons";
 import { toneBg } from "../ui";
-import { getGames } from "@/lib/games";
+import { gameHref, getGames } from "@/lib/games";
 import { chime } from "@/lib/chime";
 
 const FEELINGS: Feeling[] = ["anxious", "sad", "lonely", "calm", "lost", "grow"];
@@ -52,7 +52,7 @@ export function FeelingPicker() {
             return (
               <Link
                 key={slug}
-                href={`/play/${slug}`}
+                href={gameHref(slug)}
                 className={`group flex flex-col justify-between gap-3 rounded-[24px] ${toneBg[g.tone]} p-4 transition hover:-translate-y-0.5 hover:shadow-lift sm:min-h-[150px]`}
               >
                 <span>

@@ -9,7 +9,7 @@ import { chime, PENTATONIC } from "@/lib/chime";
 import { bowlStrike, drop } from "@/lib/sounds";
 import { ResultActions } from "./ResultActions";
 import { usePractice } from "./PracticeFlow";
-import { Night, nightGhost, nightPrimary } from "./Night";
+import { Night, nightInput, nightGhost, nightPrimary } from "./Night";
 
 type Step = "ten" | "five" | "one" | "fit" | "result";
 const HUES = ["#ffd59c", "#aaa4ff", "#9fe6c8", "#f2a7cb", "#8fd3f4"];
@@ -29,6 +29,8 @@ export function Compass() {
   const [five, setFive] = useState<number[]>([]);
   const [one, setOne] = useState<number | null>(null);
   const [fit, setFit] = useState(5);
+  // Компас полезнее при конкретном решении (аудит 19.11.2026): решение можно назвать в начале.
+  const [decision, setDecision] = useState("");
   const [ai, setAi] = useState<PracticeAI | null>(null);
   const [loading, start] = useTransition();
 
@@ -55,11 +57,11 @@ export function Compass() {
     if (one === null) return;
     setStep("result");
     chime(79, 0.05);
-    const text = m.journal(m.values[one], names(five), fit);
+    const text = m.journal(m.values[one], names(five), fit) + (decision.trim() ? m.decisionNote(decision.trim()) : "");
     report(text);
     start(async () => {
-      const r = await askPractice("compass", `Важные ценности: ${ten.map((i) => m.values[i]).join(", ")}\nПять главных: ${five.map((i) => m.values[i]).join(", ")}\nСамая важная: ${m.values[one]}\nСоответствие жизни сейчас: ${fit}/10`);
-      if ("ok" in r) setAi(r.data);
+      const r = await askPractice("compass", `Важные ценности: ${ten.map((i) => m.values[i]).join(", ")}\nПять главных: ${five.map((i) => m.values[i]).join(", ")}\nСамая важная: ${m.values[one]}\nСоответствие жизни сейчас: ${fit}/10${decision.trim() ? `\nРешение, которое человек принимает: ${decision.trim()}` : ""}`).catch(() => null);
+      if (r && "ok" in r) setAi(r.data);
     });
   };
   const restart = () => {
@@ -123,6 +125,12 @@ export function Compass() {
             <div key={step} className="animate-rise">
               <h2 className="font-serif text-[22px] sm:text-[24px]">{step === "ten" ? m.tenTitle : step === "five" ? m.fiveTitle : m.oneTitle}</h2>
               <p className="mt-1 text-[14px] leading-snug text-paper/65">{step === "ten" ? m.tenHint : step === "five" ? m.fiveHint : m.oneHint}</p>
+              {step === "ten" && (
+                <label className="mt-4 block">
+                  <span className="text-[12px] uppercase tracking-[0.12em] text-paper/55">{m.decisionLabel}</span>
+                  <input value={decision} onChange={(e) => setDecision(e.target.value)} maxLength={160} placeholder={m.decisionPlaceholder} className={`${nightInput} mt-1.5 h-11 rounded-full`} />
+                </label>
+              )}
               <div className="mt-4 flex flex-wrap gap-2">
                 {pool.map((i) => {
                   const on = step !== "one" && picked.includes(i);
@@ -209,7 +217,7 @@ export function Compass() {
                   </ul>
                 </div>
               ) : null}
-              <Link href="/play/one-step" className={`${nightGhost} mt-4 inline-block`}>
+              <Link href="/tools/step" className={`${nightGhost} mt-4 inline-block`}>
                 {m.toStep}
               </Link>
             </div>

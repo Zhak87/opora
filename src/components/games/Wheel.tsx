@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { cleanWheel, type WheelHistory } from "@/lib/practice-state";
+import { useSynced } from "@/lib/use-synced";
+import { useLocale } from "@/i18n/client";
+import { INTL } from "@/i18n/config";
 import { askPractice, type PracticeAI } from "@/lib/practice-actions";
 import { chime } from "@/lib/chime";
 import { usePractice } from "./PracticeFlow";
@@ -32,6 +36,17 @@ export function Wheel() {
   const [ai, setAi] = useState<PracticeAI | null>(null);
   const [loading, start] = useTransition();
   const { report } = usePractice();
+  const locale = useLocale();
+  // История оценок в аккаунте: колесо открывается с прошлыми значениями, прошлый обзор виден пунктиром.
+  const history = useSynced<WheelHistory>("wheel", (v) => cleanWheel(v));
+  const list = history.value?.list ?? [];
+  const prev = list.length ? list[list.length - 1] : null;
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || !prev) return;
+    seeded.current = true;
+    if (prev.scores.length === AREAS.length) setValues(prev.scores.map((v) => Math.max(1, v)));
+  }, [prev]);
 
   const sorted = AREAS.map((a, i) => ({ ...a, name: m.areas[i], v: values[i] })).sort((a, b) => a.v - b.v);
   const low = sorted[0];
@@ -44,8 +59,10 @@ export function Wheel() {
     report(`${m.journal(summary)} ${m.choose} ${m.areas[i]}.`);
     chime(74 + (i % 5), 0.04);
     start(async () => {
-      const r = await askPractice("wheel", `Оценки: ${summary}. Хочу улучшить: ${m.areas[i]}.`);
-      if ("ok" in r) setAi(r.data);
+      try {
+        const r = await askPractice("wheel", `Оценки: ${summary}. Хочу улучшить: ${m.areas[i]}.`);
+        if ("ok" in r) setAi(r.data);
+      } catch {}
     });
   };
 
@@ -56,6 +73,8 @@ export function Wheel() {
           {[2, 4, 6, 8, 10].map((r) => (
             <circle key={r} cx={C} cy={C} r={(R * r) / 10} fill="none" stroke="#e6e8f0" strokeWidth={1} />
           ))}
+          {prev && prev.scores.length === AREAS.length &&
+            AREAS.map((a, i) => <path key={`p${i}`} d={wedge(i, prev.scores[i])} fill="none" stroke="#62657A" strokeOpacity={0.55} strokeWidth={1.4} strokeDasharray="3 4" />)}
           {AREAS.map((a, i) => (
             <path
               key={i}
@@ -69,6 +88,7 @@ export function Wheel() {
           ))}
           <circle cx={C} cy={C} r={4} fill="#ffffff" />
         </svg>
+        {prev && <p className="mt-2 text-center text-[12.5px] text-ink-faint">{m.last(new Date(prev.at).toLocaleDateString(INTL[locale], { day: "numeric", month: "long" }))} · {m.history(list.length)}</p>}
       </div>
 
       <div>
@@ -82,7 +102,15 @@ export function Wheel() {
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: a.color }} />
                       {m.areas[i]}
                     </span>
-                    <span className="font-serif text-ink-soft">{values[i]}</span>
+                    <span className="font-serif text-ink-soft">
+                      {values[i]}
+                      {prev && prev.scores[i] !== undefined && prev.scores[i] !== values[i] && (
+                        <span className={`ml-1.5 text-[12px] ${values[i] > prev.scores[i] ? "text-sage-deep" : "text-ink-faint"}`}>
+                          {values[i] > prev.scores[i] ? "+" : ""}
+                          {values[i] - prev.scores[i]}
+                        </span>
+                      )}
+                    </span>
                   </span>
                   <input
                     type="range"
@@ -99,6 +127,10 @@ export function Wheel() {
             <button onClick={() => {
               setDone(true);
               report(m.journal(summary));
+              // Новый обзор в историю (не чаще одного за час, чтобы правки не плодили записи).
+              const fresh = { at: Date.now(), scores: values };
+              const base = prev && Date.now() - prev.at < 3600_000 ? list.slice(0, -1) : list;
+              history.save({ list: [...base, fresh].slice(-24) }, true);
             }} className="mt-6 h-12 rounded-full bg-ink px-7 text-[15px] text-paper shadow-soft transition hover:bg-ink/90">
               {m.see}
             </button>
@@ -159,7 +191,7 @@ export function Wheel() {
                     ) : null}
                   </>
                 )}
-                <Link href="/play/one-step" className="mt-4 inline-block text-sm text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+                <Link href="/tools/step" className="mt-4 inline-block text-sm text-ink-soft underline-offset-4 hover:text-ink hover:underline">
                   {m.toOneStep}
                 </Link>
               </div>

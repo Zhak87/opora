@@ -19,6 +19,8 @@ export const wheelMessages = defineMessages({
       `Я заполнил(а) «Колесо жизни». Мои оценки: ${summary}. Меньше всего — «${low}». Помоги мне подумать, какой небольшой шаг я могу сделать.`,
     journal: (summary: string) => `Колесо жизни. ${summary}.`,
     edit: "Изменить оценки",
+    last: (date: string) => `Пунктир — прошлый обзор, ${date}`,
+    history: (n: number) => `Обзоров в истории: ${n}`,
   },
   kk: {
     choose: "Қай саланы жақсартқыңыз келеді?",
@@ -37,6 +39,8 @@ export const wheelMessages = defineMessages({
       `Мен «Өмір дөңгелегін» толтырдым. Менің бағаларым: ${summary}. Ең төменгісі — «${low}». Қандай шағын қадам жасай алатынымды ойлап көруге көмектесші.`,
     journal: (summary: string) => `Өмір дөңгелегі. ${summary}.`,
     edit: "Бағаларды өзгерту",
+    last: (date: string) => `Үзік сызық — өткен шолу, ${date}`,
+    history: (n: number) => `Тарихтағы шолулар: ${n}`,
   },
   en: {
     choose: "Which area would you like to improve?",
@@ -55,5 +59,7 @@ export const wheelMessages = defineMessages({
       `I filled in the "Wheel of life". My ratings: ${summary}. The lowest is "${low}". Help me think about a small step I could take.`,
     journal: (summary: string) => `Wheel of life. ${summary}.`,
     edit: "Change ratings",
+    last: (date: string) => `Dotted line: your last review, ${date}`,
+    history: (n: number) => `Reviews in history: ${n}`,
   },
 });

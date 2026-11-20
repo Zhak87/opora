@@ -32,6 +32,18 @@ export const emotionMessages = defineMessages({
     questionTitle: "Вопрос для себя",
     try: "Может помочь",
     restart: "Назвать другое чувство",
+    quickTitle: "Что может подойти прямо сейчас",
+    quick: [
+      "Тревоге помогает длинный выдох. Три спокойных вдоха с волной займут минуту.",
+      "Грусти важно, чтобы её услышали. Можно просто рассказать Опи, что случилось.",
+      "Злости нужен выход в движении. Проведите граблями несколько медленных линий в саду.",
+      "Усталость просит паузы. Пара минут без задач, просто смотреть, как проплывают мысли.",
+      "Стыд и вина становятся тише, когда их произносят вслух. Расскажите Опи, без оценки.",
+      "Тёплое чувство стоит сохранить. Отметьте его в «Моём дне».",
+    ],
+    go: "Попробовать",
+    deeper: "Разобрать подробнее",
+    deeperHint: "Что было перед этим и чего не хватает. Займёт ещё пару минут.",
     prompt: (w: string, n: number, before: string, needs: string) =>
       `Я сейчас чувствую: ${w}, примерно на ${n} из 10.${before ? ` Перед этим было: ${before}.` : ""}${needs ? ` Мне не хватает: ${needs}.` : ""} Помоги мне с этим разобраться.`,
     journal: (w: string, n: number, before: string, needs: string) =>
@@ -66,6 +78,18 @@ export const emotionMessages = defineMessages({
     questionTitle: "Өзіңізге сұрақ",
     try: "Көмектесуі мүмкін",
     restart: "Басқа сезімді атау",
+    quickTitle: "Дәл қазір не көмектесуі мүмкін",
+    quick: [
+      "Мазасыздыққа ұзақ дем шығару көмектеседі. Толқынмен үш сабырлы дем бір минут алады.",
+      "Мұңға оны біреу естігені маңызды. Не болғанын Опиге жай айтып беруге болады.",
+      "Ашуға қозғалыс арқылы шығу керек. Бақта тырнауышпен бірнеше баяу сызық салыңыз.",
+      "Шаршау үзіліс сұрайды. Тапсырмасыз бірер минут, ойлардың өтіп бара жатқанына қараңыз.",
+      "Ұят пен кінә дауыстап айтқанда басылады. Опиге бағаламай айтып беріңіз.",
+      "Жылы сезімді сақтаған жөн. Оны «Менің күнімде» белгілеңіз.",
+    ],
+    go: "Байқап көру",
+    deeper: "Толығырақ талдау",
+    deeperHint: "Бұған дейін не болды және не жетіспейді. Тағы бірер минут.",
     prompt: (w: string, n: number, before: string, needs: string) =>
       `Мен қазір мынаны сезінемін: ${w}, шамамен 10-нан ${n}.${before ? ` Оның алдында: ${before}.` : ""}${needs ? ` Маған жетіспейтіні: ${needs}.` : ""} Осыны түсінуге көмектесші.`,
     journal: (w: string, n: number, before: string, needs: string) =>
@@ -100,6 +124,18 @@ export const emotionMessages = defineMessages({
     questionTitle: "A question for yourself",
     try: "Might help",
     restart: "Name another feeling",
+    quickTitle: "What might help right now",
+    quick: [
+      "Anxiety eases with a long out-breath. Three calm breaths with the wave take a minute.",
+      "Sadness needs to be heard. You can simply tell Opi what happened.",
+      "Anger needs a way out through movement. Draw a few slow rake lines in the garden.",
+      "Tiredness asks for a pause. A couple of minutes with no tasks, just watching thoughts drift by.",
+      "Shame and guilt get quieter when said out loud. Tell Opi, without judging yourself.",
+      "A warm feeling is worth keeping. Note it in “My day”.",
+    ],
+    go: "Try it",
+    deeper: "Look closer",
+    deeperHint: "What happened before and what you're missing. A couple more minutes.",
     prompt: (w: string, n: number, before: string, needs: string) =>
       `Right now I feel: ${w}, about ${n} out of 10.${before ? ` Before that: ${before}.` : ""}${needs ? ` I'm missing: ${needs}.` : ""} Help me make sense of it.`,
     journal: (w: string, n: number, before: string, needs: string) =>

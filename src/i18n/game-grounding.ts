@@ -18,6 +18,10 @@ export const groundingMessages = defineMessages({
     again: "Ещё раз",
     noticed: "Заметил(а)",
     tip: "Найдите взглядом или ощущением и нажмите, не торопясь.",
+    guide: ["Не торопитесь.", "Хорошо. Дальше.", "Можно медленнее.", "Вы молодец.", "Ещё немного."],
+    skip: "Дальше",
+    back: "Вернуться к делам",
+    summary: "Здесь и сейчас: прошёл(а) все пять чувств.",
   },
   kk: {
     senses: [
@@ -33,6 +37,10 @@ export const groundingMessages = defineMessages({
     again: "Тағы бір рет",
     noticed: "Байқадым",
     tip: "Көзбен не сезім арқылы тауып, асықпай басыңыз.",
+    guide: ["Асықпаңыз.", "Жақсы. Әрі қарай.", "Баяуырақ болса да болады.", "Жарайсыз.", "Тағы аздап."],
+    skip: "Әрі қарай",
+    back: "Істерге оралу",
+    summary: "Осы жерде және қазір: бес сезімнің бәрін өттім.",
   },
   en: {
     senses: [
@@ -48,5 +56,9 @@ export const groundingMessages = defineMessages({
     again: "Once more",
     noticed: "Noticed",
     tip: "Find it with your eyes or senses, then tap. Take your time.",
+    guide: ["No rush.", "Good. Next one.", "You can go slower.", "Well done.", "Just a little more."],
+    skip: "Next",
+    back: "Back to my day",
+    summary: "Here and now: went through all five senses.",
   },
 });

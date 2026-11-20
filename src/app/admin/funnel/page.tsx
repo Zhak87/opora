@@ -24,6 +24,7 @@ type Report = {
 
 type PracticeRow = {
   game: string; started: number; completed: number; people: number; repeaters: number;
+  opened?: number; sessions?: number; exits?: number; restarts?: number; returned_7d?: number; active_sec?: number | null;
   before: number | null; after: number | null; useful_yes: number; useful_some: number; useful_no: number; seconds: number | null;
 };
 
@@ -190,12 +191,16 @@ export default async function FunnelPage({ searchParams }: { searchParams: Promi
                   head={m.practiceColsFull}
                   rows={practiceRows.map((p) => [
                     getGame(p.game, locale)?.title ?? p.game,
+                    p.opened ?? "—",
                     p.started,
                     p.completed,
-                    `${p.repeaters}/${p.people}`,
+                    p.sessions ?? "—",
+                    p.exits ?? "—",
+                    p.restarts ?? "—",
+                    p.returned_7d !== undefined ? `${p.returned_7d}/${p.people}` : `${p.repeaters}/${p.people}`,
+                    p.active_sec ? `${Math.max(1, Math.round(p.active_sec / 60))} ${m.min}` : p.seconds !== null ? `${Math.round(p.seconds / 60)} ${m.min}` : "—",
                     p.before !== null && p.after !== null ? `${p.before} → ${p.after}` : "—",
                     p.useful_yes + p.useful_some + p.useful_no > 0 ? `${p.useful_yes}/${p.useful_some}/${p.useful_no}` : "—",
-                    p.seconds !== null ? `${Math.round(p.seconds / 60)} ${m.min}` : "—",
                   ])}
                 />
               ) : (

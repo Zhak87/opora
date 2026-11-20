@@ -13,11 +13,18 @@ import { Night, nightChip, nightGhost, nightInput, nightPrimary } from "./Night"
 const WARM = ["#ffd59c", "#ffb79c", "#f2a7cb"];
 // Итог хранится в памяти практик одной строкой; из неё же собирается календарь.
 const PREFIX = "Победы дня: ";
+// «Банка хорошего» объединена с победами в «Мой день»: хорошее пишется в ту же строку дня.
+const GOOD = " Хорошее: ";
 const SEP = " • ";
 
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-const parse = (summary: string) =>
-  summary.startsWith(PREFIX) ? summary.slice(PREFIX.length).split(" Заметил(а):")[0].split(SEP).map((x) => x.trim()).filter(Boolean) : [];
+const split = (v: string) => v.split(SEP).map((x) => x.trim()).filter(Boolean);
+const parse = (summary: string) => {
+  const body = summary.startsWith(PREFIX) ? summary.slice(PREFIX.length).split(" Заметил(а):")[0] : "";
+  const [w, g = ""] = body.split(GOOD.trim());
+  return { w: split(w.replace(/\s+$/, "")), g: split(g) };
+};
+type Day = { w: string[]; g: string[] };
 
 export function Wins() {
   const locale = useLocale();
@@ -27,19 +34,24 @@ export function Wins() {
   // Победы прошлых троек этого же захода: «зажечь ещё три» не должно стирать уже записанное.
   const [bank, setBank] = useState<string[]>([]);
   const [text, setText] = useState("");
-  const [past, setPast] = useState<Record<string, string[]>>({});
+  const [past, setPast] = useState<Record<string, Day>>({});
+  const [goods, setGoods] = useState<string[]>([]);
+  const [goodText, setGoodText] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const todayKey = dayKey(new Date());
 
   useEffect(() => {
-    practiceHistory("wins").then((rows) => {
-      const map: Record<string, string[]> = {};
-      for (const r of rows) {
-        const k = dayKey(new Date(r.at));
-        map[k] = [...(map[k] ?? []), ...parse(r.summary)];
-      }
-      setPast(map);
-    });
+    practiceHistory("wins")
+      .then((rows) => {
+        const map: Record<string, Day> = {};
+        for (const r of rows) {
+          const k = dayKey(new Date(r.at));
+          const d = parse(r.summary);
+          map[k] = { w: [...(map[k]?.w ?? []), ...d.w], g: [...(map[k]?.g ?? []), ...d.g] };
+        }
+        setPast(map);
+      })
+      .catch(() => {});
   }, []);
 
   const add = (value = text) => {
@@ -48,15 +60,31 @@ export function Wins() {
     const next = [...wins, v];
     setWins(next);
     setText("");
-    report(PREFIX + [...bank, ...next].join(SEP));
+    send([...bank, ...next], goods);
     if (next.length === 3) {
       bowlStrike(0.07, 262);
       setTimeout(() => chime(84, 0.04), 500);
     } else chime(PENTATONIC[next.length + 2], 0.05);
   };
 
-  // Сегодняшние победы: сохранённые раньше плюс те, что зажгли сейчас.
-  const days = useMemo(() => ({ ...past, [todayKey]: [...(past[todayKey] ?? []), ...bank, ...wins] }), [past, bank, wins, todayKey]);
+  const send = (w: string[], g: string[]) => report(PREFIX + w.join(SEP) + (g.length ? GOOD + g.join(SEP) : ""));
+  const addGood = (value = goodText) => {
+    const v = value.trim().slice(0, 120);
+    if (!v || goods.length >= 10) return;
+    const next = [...goods, v];
+    setGoods(next);
+    setGoodText("");
+    send([...bank, ...wins], next);
+    chime(PENTATONIC[(next.length % 4) + 3], 0.045);
+  };
+
+  // Сегодняшний день: сохранённое раньше плюс то, что отмечено сейчас.
+  const days = useMemo<Record<string, string[]>>(() => {
+    const out: Record<string, string[]> = {};
+    for (const [k, d] of Object.entries(past)) out[k] = [...d.w, ...d.g.map((x) => `♡ ${x}`)];
+    out[todayKey] = [...(past[todayKey]?.w ?? []), ...bank, ...wins, ...[...(past[todayKey]?.g ?? []), ...goods].map((x) => `♡ ${x}`)];
+    return out;
+  }, [past, bank, wins, goods, todayKey]);
   const withWins = Object.values(days).filter((d) => d.length > 0).length;
   const done = wins.length === 3;
   const list = [...bank, ...wins].map((w, i) => `${i + 1}. ${w}`).join("\n");
@@ -121,6 +149,44 @@ export function Wins() {
         )}
       </Night>
 
+      <section className="rounded-[30px] bg-[linear-gradient(160deg,#fff6e6,#ffeede)] p-5 shadow-soft sm:p-7">
+        <h2 className="font-serif text-[20px] text-ink">{m.goodTitle}</h2>
+        <p className="mt-1 text-[13.5px] text-ink-soft">{m.goodHint}</p>
+        <form
+          className="mt-3 flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addGood();
+          }}
+        >
+          <input value={goodText} onChange={(e) => setGoodText(e.target.value)} maxLength={120} placeholder={m.goodPlaceholder} className="h-12 w-full rounded-full border border-line bg-paper px-4 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-lilac" />
+          <button type="submit" disabled={!goodText.trim()} className="h-12 shrink-0 rounded-full bg-ink px-5 text-[14.5px] text-paper disabled:opacity-40">
+            {m.goodAdd}
+          </button>
+        </form>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {m.goodExamples
+            .filter((x) => !goods.includes(x))
+            .map((x) => (
+              <button key={x} type="button" onClick={() => addGood(x)} className="rounded-full bg-paper/80 px-3.5 py-1.5 text-[13.5px] text-ink-soft transition hover:bg-paper">
+                + {x}
+              </button>
+            ))}
+        </div>
+        {[...(past[todayKey]?.g ?? []), ...goods].length > 0 ? (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {[...(past[todayKey]?.g ?? []), ...goods].map((g, i) => (
+              <li key={i} className="animate-rise rounded-[16px] bg-paper px-3.5 py-2 text-[14px] text-ink shadow-soft">
+                <span className="mr-1.5 text-[#e6a34a]">♡</span>
+                {g}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-[13.5px] text-ink-faint">{m.goodEmpty}</p>
+        )}
+      </section>
+
       <section className="rounded-[30px] bg-paper p-5 shadow-soft sm:p-7">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-serif text-[20px] text-ink">{m.calendar}</h2>
@@ -160,8 +226,8 @@ export function Wins() {
               <ul className="mt-2 space-y-1 text-[14.5px] text-ink">
                 {days[open].map((w, i) => (
                   <li key={i} className="flex gap-2">
-                    <span className="text-[#e6a34a]">✦</span>
-                    {w}
+                    <span className="text-[#e6a34a]">{w.startsWith("♡ ") ? "♡" : "✦"}</span>
+                    {w.replace(/^♡ /, "")}
                   </li>
                 ))}
               </ul>

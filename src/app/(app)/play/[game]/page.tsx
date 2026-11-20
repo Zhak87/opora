@@ -1,61 +1,40 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getGame } from "@/lib/games";
+import { notFound, redirect } from "next/navigation";
+import { getGame, movedHref } from "@/lib/games";
 import { PracticeFlow } from "@/components/games/PracticeFlow";
 import { BackIcon } from "@/components/icons";
-import { Bubbles } from "@/components/games/Bubbles";
 import { BreathWave } from "@/components/games/BreathWave";
 import { LightDraw } from "@/components/games/LightDraw";
-import { Compass } from "@/components/games/Compass";
 import { Boundaries } from "@/components/games/Boundaries";
-import { Mirror } from "@/components/games/Mirror";
-import { Wins } from "@/components/games/Wins";
-import { Unsaid } from "@/components/games/Unsaid";
-import { WhatIf } from "@/components/games/WhatIf";
-import { Wheel } from "@/components/games/Wheel";
 import { Grounding } from "@/components/games/Grounding";
-import { GratitudeJar } from "@/components/games/GratitudeJar";
 import { ZenGarden } from "@/components/games/ZenGarden";
-import { Strengths } from "@/components/games/Strengths";
-import { Letter } from "@/components/games/Letter";
 import { EmptyBowl } from "@/components/games/EmptyBowl";
 import { ThoughtJar } from "@/components/games/ThoughtJar";
 import { EmotionName } from "@/components/games/EmotionName";
-import { OneStep } from "@/components/games/OneStep";
-import { TalkOut } from "@/components/games/TalkOut";
 import { requireUser } from "@/lib/supabase/server";
 import { normalizeVoice } from "@/lib/voices";
 import { getLocale, getMsg } from "@/i18n/server";
 import { gamesMessages } from "@/i18n/games";
 
 const COMPONENTS: Record<string, React.ComponentType> = {
-  "empty-bowl": EmptyBowl,
-  "thought-jar": ThoughtJar,
-  emotion: EmotionName,
-  "one-step": OneStep,
-  "talk-out": TalkOut,
-  bubbles: Bubbles,
-  breath: BreathWave,
-  light: LightDraw,
-  values: Compass,
   boundaries: Boundaries,
-  mirror: Mirror,
-  wins: Wins,
-  unsaid: Unsaid,
-  "what-if": WhatIf,
-  wheel: Wheel,
-  grounding: Grounding,
-  jar: GratitudeJar,
   garden: ZenGarden,
-  strengths: Strengths,
-  letter: Letter,
+  "thought-jar": ThoughtJar,
+  breath: BreathWave,
+  grounding: Grounding,
+  light: LightDraw,
+  "empty-bowl": EmptyBowl,
+  emotion: EmotionName,
 };
 
 // Практики, которые сами решают, когда закончиться (кнопку «Завершить» внизу не показываем).
-const OWN_FINISH = new Set(["empty-bowl", "talk-out"]);
+const OWN_FINISH = new Set(["empty-bowl"]);
 
 export default async function GamePage({ params }: { params: Promise<{ game: string }> }) {
   const { game } = await params;
+  // Практики, переехавшие из каталога по аудиту 19.11.2026: старые ссылки ведут в новое место.
+  const moved = movedHref(game);
+  if (moved) redirect(moved);
   const meta = getGame(game, await getLocale());
   const Component = COMPONENTS[game];
   if (!meta || !Component) notFound();

@@ -5,8 +5,13 @@ import { useMsg } from "@/i18n/client";
 import { lightMessages } from "@/i18n/game-light";
 
 const COLORS = ["#8db4ea", "#aaa4ff", "#7ccfaa", "#d8b98f", "#6c63ff"];
+type Brush = "line" | "mist" | "stars";
+type Fade = "fast" | "slow" | "never";
+const FADE: Record<Fade, number> = { fast: 0.03, slow: 0.012, never: 0 };
 
 // Рисование светом: линии светятся и медленно растворяются. Режим «мандала» повторяет штрих по кругу.
+// После аудита: три кисти, управление исчезновением и сохранение понравившейся работы (PNG).
+// Рисовать можно и без всякой цели: сохранять необязательно.
 export function LightDraw() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [mandala, setMandala] = useState(true);
@@ -14,6 +19,13 @@ export function LightDraw() {
   const last = useRef<{ x: number; y: number } | null>(null);
   const hue = useRef(0);
   const m = useMsg(lightMessages);
+  const [brush, setBrush] = useState<Brush>("line");
+  const [fadeMode, setFadeMode] = useState<Fade>("slow");
+  const [savedPic, setSavedPic] = useState(false);
+  const brushRef = useRef<Brush>("line");
+  const fadeRef = useRef<Fade>("slow");
+  brushRef.current = brush;
+  fadeRef.current = fadeMode;
 
   useEffect(() => {
     mandalaRef.current = mandala;
@@ -46,9 +58,12 @@ export function LightDraw() {
     window.addEventListener("resize", resize);
     let raf = 0;
     const fade = () => {
-      const r = c.getBoundingClientRect();
-      ctx.fillStyle = "rgba(251, 248, 243, 0.014)";
-      ctx.fillRect(0, 0, r.width, r.height);
+      const a = FADE[fadeRef.current];
+      if (a > 0) {
+        const r = c.getBoundingClientRect();
+        ctx.fillStyle = `rgba(243, 244, 248, ${a})`;
+        ctx.fillRect(0, 0, r.width, r.height);
+      }
       raf = requestAnimationFrame(fade);
     };
     raf = requestAnimationFrame(fade);
@@ -77,14 +92,30 @@ export function LightDraw() {
         ctx.translate(-cx, -cy);
       }
       ctx.shadowColor = color;
-      ctx.shadowBlur = 14;
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.75;
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
-      ctx.stroke();
+      const b = brushRef.current;
+      if (b === "stars") {
+        // Россыпь светящихся точек вдоль движения.
+        ctx.fillStyle = color;
+        ctx.shadowBlur = 10;
+        ctx.globalAlpha = 0.85;
+        for (let k = 0; k < 2; k++) {
+          const t = Math.random();
+          const x = from.x + (to.x - from.x) * t + (Math.random() - 0.5) * 18;
+          const y = from.y + (to.y - from.y) * t + (Math.random() - 0.5) * 18;
+          ctx.beginPath();
+          ctx.arc(x, y, 1 + Math.random() * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        ctx.shadowBlur = b === "mist" ? 28 : 14;
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = b === "mist" ? 0.18 : 0.75;
+        ctx.lineWidth = b === "mist" ? 26 : 3.5;
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+      }
       ctx.restore();
     }
   };
@@ -101,6 +132,22 @@ export function LightDraw() {
     ctx.fillStyle = "#f3f4f8";
     ctx.fillRect(0, 0, r.width, r.height);
   };
+
+  const savePicture = () => {
+    try {
+      const url = canvas.current!.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `opora-light-${new Date().toISOString().slice(0, 10)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setSavedPic(true);
+      setTimeout(() => setSavedPic(false), 2500);
+    } catch {}
+  };
+
+  const seg = (on: boolean) => `rounded-full px-3.5 py-1.5 transition ${on ? "bg-paper text-ink shadow-soft" : "text-ink-soft"}`;
 
   return (
     <div>
@@ -139,9 +186,31 @@ export function LightDraw() {
             </button>
           ))}
         </div>
-        <button onClick={clear} className="rounded-full px-4 py-2 text-sm text-ink-soft transition hover:bg-sand hover:text-ink">
-          {m.clear}
-        </button>
+        <div className="flex rounded-full bg-sand/70 p-1 text-sm">
+          {(["line", "mist", "stars"] as Brush[]).map((b) => (
+            <button key={b} type="button" onClick={() => setBrush(b)} aria-pressed={brush === b} className={seg(brush === b)}>
+              {m.brushes[b]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center rounded-full bg-sand/70 p-1 text-sm" role="radiogroup" aria-label={m.fadeLabel}>
+          <span className="px-3 text-ink-faint">{m.fadeLabel}</span>
+          {(["fast", "slow", "never"] as Fade[]).map((f) => (
+            <button key={f} type="button" role="radio" aria-checked={fadeMode === f} onClick={() => setFadeMode(f)} className={seg(fadeMode === f)}>
+              {m.fades[f]}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          <button type="button" onClick={savePicture} className="rounded-full px-4 py-2 text-sm text-ink transition hover:bg-sand">
+            {savedPic ? `✓ ${m.saved}` : m.save}
+          </button>
+          <button onClick={clear} className="rounded-full px-4 py-2 text-sm text-ink-soft transition hover:bg-sand hover:text-ink">
+            {m.clear}
+          </button>
+        </div>
       </div>
       <p className="mt-3 px-2 text-sm text-ink-faint">{m.note}</p>
     </div>

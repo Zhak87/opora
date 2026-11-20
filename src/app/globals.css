@@ -149,6 +149,13 @@ body {
   }
 }
 
+/* Настройка практик «Спокойные анимации»: то же, что системное уменьшение движения, но по выбору человека. */
+html[data-calm] *, html[data-calm] *::before, html[data-calm] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
 @keyframes music-bar {
   from { transform: scaleY(0.45); }
   to { transform: scaleY(1); }
@@ -293,6 +300,7 @@ body {
 /* Режим погружения: пока идёт практика, нижнее меню на телефоне уезжает, чтобы не мешать игре */
 [data-mobile-nav] { transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.4s; }
 body[data-practice] [data-mobile-nav] { transform: translateY(140%); opacity: 0; pointer-events: none; }
+body[data-practice] [data-top-tools] { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
 /* Звёзды «Моего неба» и ночных сцен */
 .twinkle { animation: twinkle var(--t, 4s) ease-in-out var(--d, 0s) infinite; }
 @keyframes twinkle {

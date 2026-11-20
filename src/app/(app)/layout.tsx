@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Track name="app_open" once="day" />
       {guest && <TrialBadge until={trialUntil(session?.claims)} />}
       <Nav unread={unread} care={care} pro={pro} careUnread={careUnread} adminPending={admin} />
-      <div className="fixed right-4 top-4 z-30 flex items-center gap-2 pt-[env(safe-area-inset-top)] md:hidden">
+      <div data-top-tools className="fixed right-4 top-4 z-30 flex items-center gap-2 pt-[env(safe-area-inset-top)] md:hidden">
         <Bell unread={unread} />
         <MusicToggle />
       </div>

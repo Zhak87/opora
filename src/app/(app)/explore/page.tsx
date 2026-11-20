@@ -4,11 +4,13 @@ import { getLocale } from "@/i18n/server";
 import { topicsPage } from "@/i18n/topics";
 import { StartForm } from "@/components/StartForm";
 import { PageHeader, toneBg, toneText } from "@/components/ui";
-import { BackIcon } from "@/components/icons";
+import { ArrowIcon, BackIcon } from "@/components/icons";
+import { playMessages } from "@/i18n/play";
 
 export default async function ExplorePage() {
   const locale = await getLocale();
   const m = topicsPage[locale];
+  const p = playMessages[locale].explore;
   return (
     <>
       <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
@@ -32,6 +34,18 @@ export default async function ExplorePage() {
           </StartForm>
         ))}
       </div>
+      <Link
+        href="/tools/mirror"
+        className="group mt-6 flex items-center gap-4 rounded-[28px] p-5 text-paper shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift sm:p-6"
+        style={{ background: "radial-gradient(120% 100% at 50% 110%,#56508f,#2a2762 50%,#12133a)" }}
+      >
+        <span className="relative h-11 w-9 shrink-0 overflow-hidden rounded-[50%] border-2 border-[#e6d3a8] bg-gradient-to-b from-[#6f6bb8] to-[#2c2a66]" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[16px] font-medium">{p.mirrorTitle}</span>
+          <span className="mt-0.5 block text-[13.5px] leading-snug text-paper/70">{p.mirrorHint}</span>
+        </span>
+        <ArrowIcon className="h-4 w-4 shrink-0 text-paper/70 transition group-hover:translate-x-0.5" />
+      </Link>
       <div className="mt-10 text-center text-sm text-ink-faint">
         {m.notFound}{" "}
         <StartForm className="text-sky-deep underline-offset-4 hover:underline">{m.justStart}</StartForm>

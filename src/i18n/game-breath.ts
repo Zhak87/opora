@@ -20,6 +20,10 @@ export const breathMessages = defineMessages({
     count: (n: number) => `Вдохов: ${n}`,
     done: "Хорошо. Заметьте, как вы чувствуете себя сейчас.",
     tip: "Вдох около 4 секунд, выдох чуть дольше. Без спешки.",
+    goalLabel: "Вдохов",
+    completeTitle: (n: number) => `${n} спокойных вдохов`,
+    more: "Ещё три",
+    summary: (n: number, rhythm: string) => `Волна дыхания: ${n} вдохов, ритм ${rhythm}.`,
   },
   kk: {
     begin: "Бастау",
@@ -39,6 +43,10 @@ export const breathMessages = defineMessages({
     count: (n: number) => `Дем алу саны: ${n}`,
     done: "Жақсы. Қазір өзіңізді қалай сезініп тұрғаныңызды байқаңыз.",
     tip: "Шамамен 4 секунд дем алып, сәл ұзағырақ шығарыңыз. Асықпаңыз.",
+    goalLabel: "Дем алу",
+    completeTitle: (n: number) => `${n} сабырлы дем`,
+    more: "Тағы үшеу",
+    summary: (n: number, rhythm: string) => `Тыныс толқыны: ${n} дем, ырғақ ${rhythm}.`,
   },
   en: {
     begin: "Begin",
@@ -58,5 +66,9 @@ export const breathMessages = defineMessages({
     count: (n: number) => `Breaths: ${n}`,
     done: "Good. Notice how you feel right now.",
     tip: "Breathe in for about 4 seconds, out a little longer. No rush.",
+    goalLabel: "Breaths",
+    completeTitle: (n: number) => `${n} calm breaths`,
+    more: "Three more",
+    summary: (n: number, rhythm: string) => `Breathing wave: ${n} breaths, rhythm ${rhythm}.`,
   },
 });

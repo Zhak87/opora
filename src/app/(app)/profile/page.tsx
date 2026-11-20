@@ -16,6 +16,7 @@ import { profileMessages } from "@/i18n/profile";
 import { legalMessages } from "@/i18n/legal";
 import { aboutMessages } from "@/i18n/about";
 import { guideMessages } from "@/i18n/guide";
+import { playMessages } from "@/i18n/play";
 import { PhoneIcon, WhatsAppIcon } from "@/components/icons";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
 
@@ -37,6 +38,10 @@ export default async function ProfilePage({
     supabase.from("psychologists").select("user_id", { count: "exact", head: true }).eq("user_id", user!.id),
   ]);
   const admin = await isAdmin(supabase);
+  // Сильные стороны переехали сюда из каталога игр: показываем последний итог.
+  const play = playMessages[locale].profile;
+  const { data: lastStrengths } = await supabase.from("practice_runs").select("summary").eq("game", "strengths").not("summary", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const strengths = (lastStrengths?.summary as string | undefined)?.split(" Заметил(а):")[0].slice(0, 240) || null;
   const q = intakeMessages[locale];
   const filled = isFilled(profile?.intake);
   const since = new Date(profile?.created_at ?? Date.now()).toLocaleDateString(INTL[locale], {
@@ -69,6 +74,15 @@ export default async function ProfilePage({
           <div className="mt-8">
             <NameForm name={profile?.name ?? ""} />
           </div>
+        </Card>
+
+        <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">
+          <div className="flex-1">
+            <h2 className="text-[15px] font-medium text-ink">{play.strengthsTitle}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{play.strengthsHint}</p>
+            <p className="mt-2 text-[14px] text-ink">{strengths ?? <span className="text-ink-faint">{play.strengthsEmpty}</span>}</p>
+          </div>
+          <Link href="/tools/strengths" className={`${buttonStyles.soft} shrink-0`}>{playMessages[locale].page.open}</Link>
         </Card>
 
         <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:p-8">

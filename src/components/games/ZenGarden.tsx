@@ -1,162 +1,307 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { chime } from "@/lib/chime";
 import { useMsg } from "@/i18n/client";
 import { gardenMessages } from "@/i18n/game-garden";
+import { chime } from "@/lib/chime";
+import { vibrate } from "@/lib/practice-settings-client";
+import { MAX_ITEMS, MAX_STROKES, cleanGarden, emptyGarden, growth, nextUnlock, offsetLine, simplify, smoothPath, tend, unlocked, UNLOCKS, type GardenItem, type GardenScene, type ItemType } from "@/lib/garden";
+import { HIT, SCENE_H, SCENE_W, art, fromScene, toScene, type Shape } from "@/lib/garden-art";
+import { useSynced } from "@/lib/use-synced";
 
-const SAND = "#efe6d6";
+type Tool = "rake" | "place";
 
-// Сад камней: граблями рисуются бороздки на песке, касанием кладутся камни.
+// «Сад»: постоянное пространство. Сцена сохраняется в аккаунте и восстанавливается после выхода,
+// предметы можно ставить и перетаскивать, а с каждым днём ухода открываются новые и подрастает росток.
 export function ZenGarden() {
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const [tool, setTool] = useState<"rake" | "stone">("rake");
-  const last = useRef<{ x: number; y: number } | null>(null);
   const m = useMsg(gardenMessages);
+  const { value, save, status } = useSynced<GardenScene>("garden", cleanGarden);
+  const [scene, setScene] = useState<GardenScene | null>(null);
+  const [tool, setTool] = useState<Tool>("rake");
+  const [selected, setSelected] = useState<number | null>(null);
+  const [opened, setOpened] = useState<ItemType[]>([]);
+  const [drawing, setDrawing] = useState<number[] | null>(null);
+  const svg = useRef<SVGSVGElement>(null);
+  const drag = useRef<{ id: number; dx: number; dy: number } | null>(null);
+  const tended = useRef(false);
 
-  const paintSand = () => {
-    const c = canvas.current!;
-    const ctx = c.getContext("2d")!;
-    const r = c.getBoundingClientRect();
-    ctx.fillStyle = SAND;
-    ctx.fillRect(0, 0, r.width, r.height);
-    // Лёгкая зернистость песка.
-    for (let i = 0; i < (r.width * r.height) / 60; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255,0.35)" : "rgba(150,125,90,0.08)";
-      ctx.fillRect(Math.random() * r.width, Math.random() * r.height, 1.2, 1.2);
-    }
-  };
-
+  // Сад открывается с сохранённой сценой; первый заход за день отмечается как день ухода.
   useEffect(() => {
-    const c = canvas.current!;
-    const ctx = c.getContext("2d")!;
-    // На телефоне размер окна меняется при прокрутке (панель браузера), поэтому рисунок сохраняем.
-    const resize = () => {
-      const r = c.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      if (c.width === Math.round(r.width * dpr) && c.height === Math.round(r.height * dpr)) return;
-      const had = c.width > 0 && c.dataset.ready === "1";
-      const copy = had ? document.createElement("canvas") : null;
-      if (copy) {
-        copy.width = c.width;
-        copy.height = c.height;
-        copy.getContext("2d")!.drawImage(c, 0, 0);
-      }
-      c.width = Math.round(r.width * dpr);
-      c.height = Math.round(r.height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintSand();
-      if (copy) ctx.drawImage(copy, 0, 0, copy.width / dpr, copy.height / dpr);
-      c.dataset.ready = "1";
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
+    // Ждём сверки с аккаунтом, чтобы старая копия этого устройства не перезаписала сад, выращенный в приложении.
+    if (status === "loading") return;
+    if (tended.current) return;
+    tended.current = true;
+    const base = value ?? emptyGarden();
+    const r = tend(base);
+    setScene(r.scene);
+    if (r.opened.length) {
+      setOpened(r.opened);
+      chime(84, 0.05);
+    }
+    if (r.scene !== base || !value) save(r.scene, true);
+  }, [value, status, save]);
 
-  const rake = (a: { x: number; y: number }, b: { x: number; y: number }) => {
-    const ctx = canvas.current!.getContext("2d")!;
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len;
-    const ny = dx / len;
-    ctx.lineCap = "round";
-    for (let k = -2; k <= 2; k++) {
-      const o = k * 7;
-      // Тень бороздки и светлый край создают объём.
-      ctx.strokeStyle = "rgba(140,115,80,0.22)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(a.x + nx * o, a.y + ny * o);
-      ctx.lineTo(b.x + nx * o, b.y + ny * o);
-      ctx.stroke();
-      ctx.strokeStyle = "rgba(255,255,255,0.55)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(a.x + nx * (o + 2), a.y + ny * (o + 2));
-      ctx.lineTo(b.x + nx * (o + 2), b.y + ny * (o + 2));
-      ctx.stroke();
+  const update = (next: GardenScene, now = false) => {
+    setScene(next);
+    save(next, now);
+  };
+
+  const point = (e: { clientX: number; clientY: number }) => {
+    const box = svg.current!.getBoundingClientRect();
+    return { x: ((e.clientX - box.left) / box.width) * SCENE_W, y: ((e.clientY - box.top) / box.height) * SCENE_H };
+  };
+
+  if (!scene) return <div className="aspect-[10/7] w-full animate-pulse rounded-[30px] bg-[#efe6d6]" aria-label={m.canvas} />;
+
+  const open = unlocked(scene.care);
+  const next = nextUnlock(scene.care);
+  const grow = growth(scene.care);
+  const sel = scene.items.find((i) => i.id === selected) ?? null;
+
+  const addItem = (t: ItemType) => {
+    if (scene.items.length >= MAX_ITEMS) return;
+    const id = Math.max(0, ...scene.items.map((i) => i.id)) + 1;
+    const n = scene.items.length;
+    const item: GardenItem = { id, t, x: 380 + ((n * 137) % 260), y: 420 + ((n * 89) % 300), r: 0 };
+    update({ ...scene, items: [...scene.items, item] });
+    setSelected(id);
+    chime(76, 0.04);
+    vibrate(10);
+  };
+  const move = (id: number, x: number, y: number) => setScene((s) => (s ? { ...s, items: s.items.map((i) => (i.id === id ? { ...i, x: Math.round(x), y: Math.round(y) } : i)) } : s));
+  const commit = () => scene && save(scene);
+  const rotate = (id: number) => update({ ...scene, items: scene.items.map((i) => (i.id === id ? { ...i, r: (((i.r ?? 0) + 30 + 180) % 360) - 180 } : i)) });
+  const remove = (id: number) => {
+    update({ ...scene, items: scene.items.filter((i) => i.id !== id) });
+    setSelected(null);
+  };
+
+  const onDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (tool !== "rake") {
+      setSelected(null);
+      return;
+    }
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    const p = point(e);
+    setDrawing([p.x, p.y]);
+  };
+  const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const p = point(e);
+    if (drag.current) {
+      const s = fromScene(p.x - drag.current.dx, p.y - drag.current.dy);
+      move(drag.current.id, s.x, s.y);
+      return;
+    }
+    if (drawing) {
+      const n = drawing.length;
+      if (Math.hypot(p.x - drawing[n - 2], p.y - drawing[n - 1]) < 6) return;
+      setDrawing([...drawing, p.x, p.y]);
     }
   };
-
-  const stone = (p: { x: number; y: number }) => {
-    const ctx = canvas.current!.getContext("2d")!;
-    const r = 14 + Math.random() * 16;
-    // Круги на песке вокруг камня.
-    ctx.lineWidth = 2;
-    for (let k = 1; k <= 3; k++) {
-      ctx.strokeStyle = "rgba(140,115,80,0.18)";
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y, r + k * 9, (r + k * 9) * 0.82, 0, 0, Math.PI * 2);
-      ctx.stroke();
+  const onUp = () => {
+    if (drag.current) {
+      drag.current = null;
+      commit();
+      return;
     }
-    const g = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.4, r * 0.1, p.x, p.y, r);
-    const tones = [["#a7a39c", "#6f6b66"], ["#b5ab9c", "#7a7066"], ["#9aa4a6", "#646d70"]][Math.floor(Math.random() * 3)];
-    g.addColorStop(0, tones[0]);
-    g.addColorStop(1, tones[1]);
-    ctx.save();
-    ctx.shadowColor = "rgba(60,50,35,0.35)";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 4;
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y, r, r * 0.8, Math.random(), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    chime(57 + Math.floor(Math.random() * 3) * 5, 0.06);
+    if (drawing && drawing.length >= 6) {
+      // В сохранении y 0–1000, на сцене 0–SCENE_H.
+      const stored = simplify(drawing).map((v, i) => (i % 2 ? Math.round((v / SCENE_H) * 1000) : Math.round(v)));
+      update({ ...scene, rake: [...scene.rake, stored].slice(-MAX_STROKES) });
+      chime(60 + Math.floor(Math.random() * 6), 0.025);
+    }
+    setDrawing(null);
   };
 
-  const point = (e: React.PointerEvent) => {
-    const r = canvas.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  const onItemDown = (e: React.PointerEvent, item: GardenItem) => {
+    if (tool !== "place") return;
+    e.stopPropagation();
+    (svg.current as Element).setPointerCapture?.(e.pointerId);
+    const p = point(e);
+    const at = toScene(item.x, item.y);
+    drag.current = { id: item.id, dx: p.x - at.x, dy: p.y - at.y };
+    setSelected(item.id);
+    vibrate(8);
   };
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (!sel) return;
+    const step = e.shiftKey ? 40 : 12;
+    const k = e.key;
+    if (k === "ArrowLeft" || k === "ArrowRight" || k === "ArrowUp" || k === "ArrowDown") {
+      e.preventDefault();
+      const dx = k === "ArrowLeft" ? -step : k === "ArrowRight" ? step : 0;
+      const dy = k === "ArrowUp" ? -step : k === "ArrowDown" ? step : 0;
+      update({ ...scene, items: scene.items.map((i) => (i.id === sel.id ? { ...i, x: Math.max(20, Math.min(980, i.x + dx)), y: Math.max(60, Math.min(990, i.y + dy)) } : i)) });
+    } else if (k === "r" || k === "R" || k === "к" || k === "К") rotate(sel.id);
+    else if (k === "Delete" || k === "Backspace") remove(sel.id);
+  };
+
+  // Рисуем снизу вверх: дальние предметы раньше ближних.
+  const items = [...scene.items].sort((a, b) => a.y - b.y);
+  const strokes = scene.rake.map((s) => s.map((v, i) => (i % 2 ? (v / 1000) * SCENE_H : v)));
+  if (drawing) strokes.push(drawing);
 
   return (
-    <div>
-      <canvas
-        ref={canvas}
-        className="h-[440px] w-full touch-none rounded-[32px] border border-line/70 shadow-soft sm:h-[520px]"
-        onPointerDown={(e) => {
-          (e.target as Element).setPointerCapture(e.pointerId);
-          const p = point(e);
-          if (tool === "stone") return stone(p);
-          last.current = p;
-        }}
-        onPointerMove={(e) => {
-          if (!last.current) return;
-          const p = point(e);
-          if (Math.hypot(p.x - last.current.x, p.y - last.current.y) < 3) return;
-          rake(last.current, p);
-          last.current = p;
-        }}
-        onPointerUp={() => (last.current = null)}
-        onPointerCancel={() => (last.current = null)}
-        aria-label={m.canvas}
-      />
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex rounded-full bg-sand/70 p-1 text-sm">
-          {(
-            [
-              ["rake", m.rake],
-              ["stone", m.stone],
-            ] as const
-          ).map(([v, l]) => (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex rounded-full bg-sand/80 p-1" role="tablist">
+          {(["rake", "place"] as Tool[]).map((t) => (
             <button
-              key={v}
-              onClick={() => setTool(v)}
-              aria-pressed={tool === v}
-              className={`rounded-full px-4 py-2 transition ${tool === v ? "bg-paper text-ink shadow-soft" : "text-ink-soft"}`}
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tool === t}
+              onClick={() => {
+                setTool(t);
+                setSelected(null);
+              }}
+              className={`rounded-full px-5 py-2 text-sm transition ${tool === t ? "bg-paper text-ink shadow-soft" : "text-ink-soft"}`}
             >
-              {l}
+              {t === "rake" ? m.rake : m.place}
             </button>
           ))}
         </div>
-        <button onClick={paintSand} className="rounded-full px-4 py-2 text-sm text-ink-soft transition hover:bg-sand hover:text-ink">
-          {m.smooth}
-        </button>
+        <p className="text-[13px] text-ink-soft">
+          {m.day(scene.care)} · <span className="text-ink-faint">{status === "saving" ? m.saving : status === "local" ? m.savedLocal : m.saved}</span>
+        </p>
       </div>
-      <p className="mt-3 px-2 text-sm text-ink-faint">{m.note}</p>
+
+      {opened.length > 0 && (
+        <p className="animate-rise rounded-[20px] bg-sage-soft px-4 py-3 text-[14.5px] text-ink" role="status">
+          {m.opened(opened.map((t) => m.items[t].toLowerCase()).join(", "))}
+        </p>
+      )}
+
+      <div className="relative overflow-hidden rounded-[30px] shadow-soft">
+        <svg
+          ref={svg}
+          viewBox={`0 0 ${SCENE_W} ${SCENE_H}`}
+          className={`block w-full touch-none select-none ${tool === "rake" ? "cursor-crosshair" : "cursor-default"}`}
+          role="application"
+          aria-label={m.canvas}
+          tabIndex={0}
+          onKeyDown={onKey}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          onPointerLeave={() => drawing && onUp()}
+        >
+          <defs>
+            <linearGradient id="gd-sand" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#f4ecdd" />
+              <stop offset="1" stopColor="#e7dbc4" />
+            </linearGradient>
+            <filter id="gd-grain">
+              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" />
+              <feColorMatrix values="0 0 0 0 0.55  0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0.10 0" />
+              <feComposite in2="SourceGraphic" operator="in" />
+            </filter>
+          </defs>
+          <rect width={SCENE_W} height={SCENE_H} fill="url(#gd-sand)" />
+          <rect width={SCENE_W} height={SCENE_H} fill="#fff" filter="url(#gd-grain)" />
+          {strokes.map((p, i) => (
+            <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
+              {[-21, -7, 7, 21].map((o) => (
+                <g key={o}>
+                  <path d={smoothPath(offsetLine(p, o))} stroke="#a58d68" strokeOpacity={0.28} strokeWidth={4} />
+                  <path d={smoothPath(offsetLine(p, o + 2.5))} stroke="#fffaf0" strokeOpacity={0.7} strokeWidth={1.8} />
+                </g>
+              ))}
+            </g>
+          ))}
+          {items.map((item) => {
+            const at = toScene(item.x, item.y);
+            const on = item.id === selected;
+            return (
+              <g
+                key={item.id}
+                transform={`translate(${at.x} ${at.y}) rotate(${item.r ?? 0})`}
+                onPointerDown={(e) => onItemDown(e, item)}
+                style={{ cursor: tool === "place" ? "grab" : undefined, pointerEvents: tool === "place" ? "auto" : "none" }}
+                aria-label={m.items[item.t]}
+              >
+                {on && <ellipse cx={0} cy={-HIT[item.t].up / 2} rx={HIT[item.t].r + 8} ry={HIT[item.t].r * 0.6 + 8} fill="none" stroke="#6C63FF" strokeWidth={3} strokeDasharray="8 7" opacity={0.8} />}
+                <circle cx={0} cy={-HIT[item.t].up} r={HIT[item.t].r} fill="transparent" />
+                <Art shapes={art(item.t, grow)} />
+              </g>
+            );
+          })}
+        </svg>
+        {sel && tool === "place" && (
+          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-paper/95 p-1.5 shadow-lift">
+            <button type="button" onClick={() => rotate(sel.id)} className="rounded-full px-4 py-2 text-[14px] text-ink hover:bg-sand">
+              {m.rotate}
+            </button>
+            <button type="button" onClick={() => remove(sel.id)} className="rounded-full px-4 py-2 text-[14px] text-ink hover:bg-sand">
+              {m.remove}
+            </button>
+            <button type="button" onClick={() => setSelected(null)} className="rounded-full bg-ink px-4 py-2 text-[14px] text-paper">
+              {m.done}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {tool === "place" ? (
+        <div>
+          <p className="text-[13.5px] text-ink-soft">{m.placeNote}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {UNLOCKS.map(({ t, day }) => {
+              const can = open.includes(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={!can || scene.items.length >= MAX_ITEMS}
+                  onClick={() => addItem(t)}
+                  className={`flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-[13.5px] transition ${can ? "bg-paper text-ink shadow-soft hover:-translate-y-0.5" : "bg-sand/50 text-ink-faint"}`}
+                >
+                  <svg viewBox="-60 -90 120 110" className="h-8 w-8 rounded-full bg-[#efe6d6]" aria-hidden>
+                    <g transform={t === "bridge" || t === "boulder" || t === "sakura" ? "scale(0.6)" : undefined} opacity={can ? 1 : 0.35}>
+                      <Art shapes={art(t, Math.max(1, grow))} />
+                    </g>
+                  </svg>
+                  {m.items[t]}
+                  {!can && <span className="text-[11.5px]">· {m.locked(day)}</span>}
+                </button>
+              );
+            })}
+          </div>
+          {scene.items.length >= MAX_ITEMS && <p className="mt-2 text-[13px] text-ink-soft">{m.full}</p>}
+          <p className="mt-3 text-[12.5px] text-ink-faint">{m.keys}</p>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13.5px] text-ink-soft">{m.note}</p>
+          <button type="button" onClick={() => update({ ...scene, rake: [] })} className="rounded-full bg-sand/80 px-4 py-2 text-[14px] text-ink hover:bg-sand-deep">
+            {m.smooth}
+          </button>
+        </div>
+      )}
+
+      <div className="rounded-[22px] bg-paper/70 p-4 text-[13.5px] leading-snug text-ink-soft">
+        <p>{next ? m.nextIn(m.items[next.t], next.day - scene.care) : m.allOpen}</p>
+        {scene.items.some((i) => i.t === "sprout") && <p className="mt-1">{m.items.sprout}: {m.grow[grow]}</p>}
+        <p className="mt-1 text-ink-faint">{m.noLoss}</p>
+      </div>
     </div>
+  );
+}
+
+export function Art({ shapes }: { shapes: Shape[] }) {
+  return (
+    <>
+      {shapes.map((s, i) =>
+        s.k === "e" ? (
+          <ellipse key={i} cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} fill={s.fill} opacity={s.o} />
+        ) : s.k === "c" ? (
+          <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill={s.fill} opacity={s.o} />
+        ) : (
+          <path key={i} d={s.d} fill={s.fill ?? "none"} stroke={s.stroke} strokeWidth={s.w} strokeLinecap="round" opacity={s.o} />
+        ),
+      )}
+    </>
   );
 }

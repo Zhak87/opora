@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { chime } from "@/lib/chime";
-import { ResultActions } from "./ResultActions";
+import { addJournalEntry } from "@/lib/actions";
+import { StartForm } from "../StartForm";
 import { buttonStyles } from "../ui";
 import { useLocale, useMsg } from "@/i18n/client";
 import { INTL } from "@/i18n/config";
 import { letterMessages } from "@/i18n/game-letter";
+import { gamesMessages } from "@/i18n/games";
+import { usePractice } from "./PracticeFlow";
 
-// Письмо себе через год: написать, «запечатать» в конверт и сохранить в дневник.
+// Письмо себе: написать и «запечатать». Запечатанное письмо сразу сохраняется в дневник (аудит 19.11.2026:
+// раньше для этого нужно было отдельное действие). Если сохранить не вышло, текст остаётся и можно повторить.
 export function Letter() {
   const m = useMsg(letterMessages);
   const locale = useLocale();
@@ -16,6 +20,25 @@ export function Letter() {
   const [text, setText] = useState("");
   const [sealed, setSealed] = useState(false);
   const [hint, setHint] = useState(0);
+  const [save, setSave] = useState<"idle" | "saved" | "failed">("idle");
+  const [saving, start] = useTransition();
+  const { report } = usePractice();
+
+  const seal = () =>
+    start(async () => {
+      const fd = new FormData();
+      fd.set("kind", "goal");
+      fd.set("content", m.journal(new Date().toLocaleDateString(INTL[locale]), text));
+      try {
+        const r = await addJournalEntry(undefined, fd);
+        if (r && "ok" in r) {
+          setSave("saved");
+          report("Письмо себе запечатано и сохранено в дневник.");
+        } else setSave("failed");
+      } catch {
+        setSave("failed");
+      }
+    });
 
   if (sealed)
     return (
@@ -37,16 +60,24 @@ export function Letter() {
         <p className="mt-2 max-w-md text-center text-[15px] leading-relaxed text-ink-soft">
           {m.sealedBody}
         </p>
-        <div className="mt-6">
-          <ResultActions
-            journal={m.journal(new Date().toLocaleDateString(INTL[locale]), text)}
-            prompt={m.prompt(text)}
-            kind="goal"
-          />
+        <p className="mt-4 text-[14px] text-ink-soft" role="status">
+          {saving ? m.saving : save === "saved" ? `✓ ${m.savedJournal}` : save === "failed" ? m.saveFailed : ""}
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          {save === "failed" && (
+            <button type="button" onClick={seal} disabled={saving} className={buttonStyles.primary}>
+              {m.retry}
+            </button>
+          )}
+          <StartForm prompt={m.prompt(text)} className={buttonStyles.soft}>
+            {gamesMessages[locale].result.discuss}
+          </StartForm>
         </div>
-        <button onClick={() => setSealed(false)} className="mt-6 text-sm text-ink-faint hover:text-ink">
-          {m.back}
-        </button>
+        {save !== "saved" && (
+          <button onClick={() => setSealed(false)} className="mt-6 text-sm text-ink-faint hover:text-ink">
+            {m.back}
+          </button>
+        )}
       </div>
     );
 
@@ -76,6 +107,7 @@ export function Letter() {
           chime(72, 0.05);
           setTimeout(() => chime(79, 0.05), 180);
           setSealed(true);
+          seal();
         }}
         className={`${buttonStyles.primary} mt-6`}
       >
