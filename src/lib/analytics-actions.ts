@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { unsealMaterial } from "@/lib/vault";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, generateJSON } from "@/lib/ai";
@@ -65,7 +66,8 @@ export async function generateReport(_: State, formData: FormData): Promise<Stat
   const from = addDays(to, -(period - 1));
   const { data, error } = await supabase.rpc("client_ai_material", { p_client: client, p_from: from, p_to: to });
   if (error || !data) return { error: /forbidden/.test(error?.message ?? "") ? m.errors.forbidden : m.errors.generic };
-  const { scopes, data: material } = data as { scopes: string[]; data: Material };
+  const { scopes } = data as { scopes: string[]; data: Material };
+  const material = unsealMaterial(client, (data as { data: Material }).data);
   if (amount(material) < 3) return { error: m.errors.tooLittle };
 
   // Прошлая сводка даёт ИИ точку отсчёта для раздела «динамика».

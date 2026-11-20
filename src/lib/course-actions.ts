@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { unsealRows } from "@/lib/vault";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, generateJSON } from "@/lib/ai";
@@ -55,7 +56,7 @@ export async function createCourse(input: { topic?: string; goal?: string; lengt
     supabase.from("messages").select("content, created_at").eq("role", "user").order("created_at", { ascending: false }).limit(40),
     supabase.from("profiles").select("name").eq("id", user.id).single(),
   ]);
-  const talk = (msgs ?? [])
+  const talk = unsealRows(user.id, msgs)
     .reverse()
     .map((m) => `— ${m.content.slice(0, 500)}`)
     .join("\n");

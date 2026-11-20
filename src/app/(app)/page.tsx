@@ -37,6 +37,7 @@ import { isGuest } from "@/lib/trial";
 import { dreamMessages } from "@/i18n/dreams";
 import { DreamHomeLink } from "@/components/dreams/DreamJournal";
 import styles from "./Home.module.css";
+import { listConversations } from "@/lib/history-actions";
 
 export default async function HomePage() {
   const { supabase, user } = await requireUser();
@@ -48,9 +49,9 @@ export default async function HomePage() {
   const m = home[locale];
   const now = new Date();
   const today = dayKey(now, timeZone);
-  const [{ data: profile }, { data: recent }, stored, course, care, { data: checkin }, pending, program] = await Promise.all([
+  const [{ data: profile }, recent, stored, course, care, { data: checkin }, pending, program] = await Promise.all([
     supabase.from("profiles").select("name, intake").eq("id", user.id).single(),
-    supabase.from("conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(3),
+    listConversations(3),
     latestPlan(supabase),
     currentCourse(supabase),
     hasCare(supabase, user.id),

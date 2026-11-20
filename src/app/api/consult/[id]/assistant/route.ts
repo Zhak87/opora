@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/supabase/server";
+import { unsealMaterial } from "@/lib/vault";
 import { getSession, UUID_RE } from "@/lib/sessions";
 import { HOUR, tooMany } from "@/lib/rate-limit";
 import { getLocale } from "@/i18n/server";
@@ -51,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const to = new Date().toISOString().slice(0, 10);
       const from = new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10);
       const { data } = await ctx.supabase.rpc("client_ai_material", { p_client: ctx.s.client_id, p_from: from, p_to: to });
-      const msg = await prepQuestions(ctx.supabase, ctx.s, locale, (data as { data?: unknown } | null)?.data ?? null);
+      const msg = await prepQuestions(ctx.supabase, ctx.s, locale, unsealMaterial(ctx.s.client_id, (data as { data?: unknown } | null)?.data ?? null));
       return Response.json({ messages: msg ? [msg] : [] });
     }
     const text = String(body.text ?? "").trim().slice(0, 2000);

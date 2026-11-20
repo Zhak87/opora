@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { unsealRows } from "@/lib/vault";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/server";
 import { AIError, aiConfigured, generateJSON } from "@/lib/ai";
@@ -29,7 +30,7 @@ export async function createPlan(): Promise<{ ok: true } | { error: string }> {
     supabase.from("profiles").select("name").eq("id", user.id).single(),
   ]);
 
-  const talk = (msgs ?? [])
+  const talk = unsealRows(user.id, msgs)
     .reverse()
     .map((m) => `— ${m.content.slice(0, 700)}`)
     .join("\n");

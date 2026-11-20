@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/supabase/server";
+import { listConversations } from "@/lib/history-actions";
 import { getTopic } from "@/lib/topics";
 import { getLocale } from "@/i18n/server";
 import { topicsTalk } from "@/i18n/topics";
@@ -15,16 +15,7 @@ import { ArrowIcon, CompassIcon, PlusIcon, TalkIcon, TrashIcon } from "@/compone
 import styles from "./Talk.module.css";
 
 export default async function TalkPage() {
-  const { supabase } = await requireUser();
-  const [locale, timeZone, { data: conversations }] = await Promise.all([
-    getLocale(),
-    getTimeZone(),
-    supabase
-      .from("conversations")
-      .select("id, title, mode, topic, updated_at")
-      .order("updated_at", { ascending: false })
-      .limit(100),
-  ]);
+  const [locale, timeZone, conversations] = await Promise.all([getLocale(), getTimeZone(), listConversations(100)]);
   const m = topicsTalk[locale];
   const now = new Date();
   const today = dayKey(now, timeZone);

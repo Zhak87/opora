@@ -13,6 +13,7 @@ import { getLocale } from "@/i18n/server";
 import { chatMessages } from "@/i18n/chat";
 import { profileMessages } from "@/i18n/profile";
 import { removePushDevice } from "@/lib/push-device";
+import { seal, unseal } from "@/lib/vault";
 
 async function authed() {
   const { supabase, user } = await requireUser();
@@ -23,7 +24,7 @@ async function authed() {
 /* ---------- Разговоры ---------- */
 
 export async function startConversation(formData: FormData) {
-  const { supabase } = await authed();
+  const { supabase, user } = await authed();
   const locale = await getLocale();
   const t = chatMessages[locale];
   const mode = String(formData.get("mode") || "talk");
@@ -43,16 +44,16 @@ export async function startConversation(formData: FormData) {
   await track("chat_start");
 
   if (topic) {
-    await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: topic.opener });
+    await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: seal(user.id, topic.opener) });
   }
   // Практика «Мне нужно выговориться»: разговор начинается с вопроса собеседника под выбранный режим.
   const opener = String(formData.get("opener") || "");
   const openers = talkOutMessages[locale].openers;
   if (!topic && opener in openers) {
-    await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: openers[opener as keyof typeof openers] });
+    await supabase.from("messages").insert({ conversation_id: data.id, role: "assistant", content: seal(user.id, openers[opener as keyof typeof openers]) });
   }
   if (prompt) {
-    await supabase.from("messages").insert({ conversation_id: data.id, role: "user", content: prompt.slice(0, 4000) });
+    await supabase.from("messages").insert({ conversation_id: data.id, role: "user", content: seal(user.id, prompt.slice(0, 4000)) });
   }
   redirect(`/talk/${data.id}`);
 }
@@ -67,7 +68,7 @@ export async function deleteConversation(formData: FormData) {
 // Отмена отправленного сообщения: удаляем последнюю реплику человека и всё, что пришло после неё
 // (ответ собеседника). Текст возвращаем, чтобы его можно было поправить и отправить заново.
 export async function undoLastMessage(conversationId: string): Promise<{ content: string } | { error: string }> {
-  const { supabase } = await authed();
+  const { supabase, user } = await authed();
   const t = chatMessages[await getLocale()];
   if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return { error: t.undoFailed };
   const { data: last } = await supabase
@@ -96,7 +97,7 @@ export async function undoLastMessage(conversationId: string): Promise<{ content
     await supabase.from("conversations").update({ title: t.newConversation }).eq("id", conversationId).eq("mode", "talk");
   }
   revalidatePath("/talk");
-  return { content: last.content };
+  return { content: unseal(user.id, last.content) };
 }
 
 export async function deleteAllHistory() {
@@ -145,7 +146,7 @@ export async function deleteJournalEntry(formData: FormData) {
 }
 
 export async function reflectOnJournal(formData: FormData) {
-  const { supabase } = await authed();
+  const { supabase, user } = await authed();
   const locale = await getLocale();
   const t = chatMessages[locale];
   const kinds = journalKinds(locale);
@@ -185,7 +186,7 @@ export async function reflectOnJournal(formData: FormData) {
   if (error || !data) throw new Error(t.startFailed);
   await supabase
     .from("messages")
-    .insert({ conversation_id: data.id, role: "user", content: `${intro}\n\n${text}`.slice(0, 12000) });
+    .insert({ conversation_id: data.id, role: "user", content: seal(user.id, `${intro}\n\n${text}`.slice(0, 12000)) });
   redirect(`/talk/${data.id}`);
 }
 

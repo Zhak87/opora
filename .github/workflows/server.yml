@@ -8,6 +8,8 @@
 #   restart — перезапустить сайт
 #   migrate-db — перенести данные и аккаунты из облачного Supabase в свою базу (нужен секрет SUPABASE_DB_URL)
 #   anon-key — показать публичный ключ своей базы (он не секретный, его видит каждый браузер)
+#   encrypt-chats-check — сколько разговоров с ИИ ещё лежит открытым текстом (ничего не меняет)
+#   encrypt-chats — зашифровать старые разговоры с ИИ (повторный запуск ничего не меняет)
 name: Server
 
 on:
@@ -16,7 +18,7 @@ on:
       action:
         description: Что сделать
         type: choice
-        options: [status, logs, mail, voice, reload-caddy, restart, setup, migrate-db, anon-key]
+        options: [status, logs, mail, voice, reload-caddy, restart, setup, migrate-db, anon-key, encrypt-chats-check, encrypt-chats]
         default: status
 
 concurrency:
@@ -164,6 +166,13 @@ jobs:
       - name: anon-key
         if: inputs.action == 'anon-key'
         run: ssh prod 'grep "^SB_ANON_KEY=" /opt/opora/server.env'
+
+      - name: encrypt-chats
+        if: inputs.action == 'encrypt-chats' || inputs.action == 'encrypt-chats-check'
+        # Скрипт идёт в контейнер сайта через stdin: там уже есть ключ базы и CHAT_ENCRYPTION_KEY из server.env.
+        run: |
+          FLAG=$([ "${{ inputs.action }}" = encrypt-chats-check ] && echo --dry || true)
+          ssh prod "cd /opt/opora && ./dc.sh exec -T app node --input-type=module - $FLAG" < scripts/encrypt-chats.mjs
 
       - name: migrate-db
         if: inputs.action == 'migrate-db'
