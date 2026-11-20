@@ -19,7 +19,9 @@ import { needsMessages } from "@/i18n/needs";
 import { mascotMessages } from "@/i18n/mascot";
 import { isAudience } from "@/lib/needs";
 import { AUTHOR_PHONE_DISPLAY, AUTHOR_TEL_HREF, AUTHOR_WHATSAPP_HREF } from "@/lib/author";
-import { publicMetadata } from "@/lib/seo";
+import { publicMetadata, siteUrl } from "@/lib/seo";
+import { HELP_PAGES, HELP_UI } from "@/content/help";
+import { getLocale } from "@/i18n/server";
 
 const BUBBLES = [
   "left-0 top-[12%] bg-peach-soft",
@@ -44,6 +46,21 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const t = await getMsg(trialMessages);
   // Ссылка для аудитории (/welcome?for=step или share) меняет только слова на первом экране.
   const hero = isAudience(aud) ? (await getMsg(needsMessages)).audiences[aud] : m;
+  // Статьи под поисковые запросы: ссылки с главной помогают поисковику их найти и оценить.
+  const helpLang = (await getLocale()) === "kk" ? "kk" : "ru";
+  const help = HELP_PAGES.filter((p) => p.lang === helpLang);
+  // Кто мы для поисковика: название и другие написания, по которым нас ищут.
+  const orgLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Опора",
+    alternateName: ["Opora", "myopora", "myopora.kz", "Опора психолог"],
+    url: siteUrl.href,
+    logo: new URL("/icon.png", siteUrl).href,
+    email: "team@myopora.kz",
+    areaServed: { "@type": "Country", name: "Kazakhstan" },
+    sameAs: ["https://www.instagram.com/myopora.kz", "https://t.me/myopora_kz"],
+  };
   return (
     <div className="relative flex min-h-dvh flex-col">
       <Track name="landing_view" aud={isAudience(aud) ? aud : undefined} />
@@ -112,7 +129,21 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             <ButtonLink href="/pro/join" className="h-14 shrink-0 whitespace-nowrap px-8">{pro.cta}</ButtonLink>
           </div>
         </section>
+        <nav className="mt-16 w-full text-left" aria-label={HELP_UI[helpLang].all}>
+          <h2 className="font-serif text-[24px] text-ink sm:text-[28px]">{HELP_UI[helpLang].hubH1}</h2>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {help.map((p) => (
+              <li key={p.slug}>
+                <Link href={`/help/${p.slug}`} className="block h-full rounded-3xl bg-paper/80 px-5 py-4 text-[15px] font-medium text-ink shadow-soft transition hover:shadow-lift">
+                  {p.h1}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </main>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd).replace(/</g, "\\u003c") }} />
 
       <footer className="px-5 pb-8 text-center text-xs leading-relaxed text-ink-faint">
         <p>{m.footer}</p>
