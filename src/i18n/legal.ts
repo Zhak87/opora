@@ -32,7 +32,7 @@ export const legalMessages = defineMessages<{
   links: { privacy: string; terms: string };
 }>({
   ru: {
-    updated: "Редакция от 10 октября 2026 года",
+    updated: "Редакция от 16 ноября 2026 года",
     privacyTitle: "Политика конфиденциальности",
     termsTitle: "Условия использования",
     defaultOperator: "владелец сервиса «Опора»",
@@ -68,10 +68,11 @@ export const legalMessages = defineMessages<{
       {
         h: "4. Кому передаются данные и где они хранятся",
         p: [
-          "Supabase (база данных и вход в аккаунт) — серверы во Франкфурте, Германия.",
-          "Vercel (хостинг приложения) — обработка запросов во Франкфурте, Германия.",
-          "Google (Gemini API) — получает текст текущего разговора, а для голосового режима — запись речи или текст для озвучивания, чтобы сформировать ответ. Обработка может происходить за пределами Казахстана, в том числе в США.",
-          "Таким образом ваши данные передаются и хранятся за пределами Республики Казахстан. Давая согласие при регистрации, вы соглашаетесь на такую трансграничную передачу.",
+          "Где хранятся данные. Приложение, база данных и вход в аккаунт работают на собственном сервере сервиса у хостинг-провайдера hoster.kz в городе Астана, Республика Казахстан. Там же хранятся ваш аккаунт, разговоры, дневник, загруженные файлы и резервные копии. Голосовые комнаты и видеоконсультации проходят через этот же сервер.",
+          "Google (Gemini API) — получает текст текущего разговора, а для голосового режима — запись речи или текст для озвучивания, чтобы сформировать ответ. Обработка происходит за пределами Казахстана, в том числе в США. Мы используем платный тариф, по условиям которого Google не обучает свои модели на этих данных.",
+          "Cloudflare (Workers AI) — для картинок «Дневника снов» получает только обезличенное описание сцены на английском языке, без имён и текста сна. Обработка может происходить за пределами Казахстана.",
+          "Resend — отправляет письма сервиса (восстановление пароля, приглашения, письма дня) и для этого получает адрес почты и текст письма. Серверы находятся за пределами Казахстана, в том числе в США.",
+          "Таким образом ваши данные хранятся в Республике Казахстан, а за её пределы передаётся только то, что нужно перечисленным сервисам для работы: текст для ответа ИИ, описание картинки, письмо. Давая согласие при регистрации, вы соглашаетесь на такую трансграничную передачу.",
           "Мы раскрываем данные государственным органам только в случаях, прямо предусмотренных законом.",
         ],
       },
@@ -79,7 +80,7 @@ export const legalMessages = defineMessages<{
         h: "5. Как долго хранятся данные",
         p: [
           "Пока существует ваш аккаунт. Отдельный разговор или запись можно удалить в любой момент.",
-          "В «Профиле» можно удалить всю историю или весь аккаунт. Данные удаляются из рабочей базы сразу; в резервных копиях хостинга они могут оставаться ограниченное время, после чего удаляются автоматически.",
+          "В «Профиле» можно удалить всю историю или весь аккаунт. Данные удаляются из рабочей базы сразу; в резервных копиях на сервере они могут оставаться до 14 дней, после чего удаляются автоматически.",
           "Пробный доступ без регистрации: на 20 минут создаётся временный гостевой аккаунт. Разговоры и записи гостя хранятся на сервере так же, как у зарегистрированных пользователей. Если гость не создаёт аккаунт, его данные автоматически удаляются в течение суток после окончания пробного времени, а кнопка «Выйти без сохранения» удаляет их сразу.",
           "Чтобы понимать, какие разделы полезны, мы записываем факт действия (например, «открыл практику» или «начал разговор») и случайный номер браузера в куке. Тексты разговоров, дневника и комнат в эту статистику не попадают.",
         ],
@@ -160,7 +161,10 @@ export const legalMessages = defineMessages<{
       },
       {
         h: "7. Персональные данные",
-        p: ["Как мы обращаемся с вашими данными, описано в Политике конфиденциальности."],
+        p: [
+          "Ваши данные хранятся на сервере в Республике Казахстан. За пределы Казахстана передаётся только то, что нужно для ответа ИИ, картинок и писем.",
+          "Подробно, как мы обращаемся с вашими данными, описано в Политике конфиденциальности.",
+        ],
       },
       {
         h: "8. Изменения и применимое право",
@@ -174,7 +178,7 @@ export const legalMessages = defineMessages<{
       title: "Пара слов о ваших данных",
       subtitle: "Чтобы продолжить, подтвердите, пожалуйста, согласие. Это нужно один раз.",
       personalData: [
-        "Даю согласие на сбор и обработку моих персональных данных, включая тексты разговоров и дневника, и на их передачу и хранение за пределами Казахстана, как описано в ",
+        "Даю согласие на сбор и обработку моих персональных данных, включая тексты разговоров и дневника, и на передачу необходимой части данных за пределы Казахстана поставщикам ИИ и почты, как описано в ",
         "Политике конфиденциальности",
         ".",
       ],
@@ -188,7 +192,7 @@ export const legalMessages = defineMessages<{
     links: { privacy: "Конфиденциальность", terms: "Условия" },
   },
   kk: {
-    updated: "2026 жылғы 10 қазандағы редакция",
+    updated: "2026 жылғы 16 қарашадағы редакция",
     privacyTitle: "Құпиялылық саясаты",
     termsTitle: "Пайдалану шарттары",
     defaultOperator: "«Опора» сервисінің иесі",
@@ -224,10 +228,11 @@ export const legalMessages = defineMessages<{
       {
         h: "4. Деректер кімге беріледі және қайда сақталады",
         p: [
-          "Supabase (дерекқор және аккаунтқа кіру) — серверлер Германияның Франкфурт қаласында.",
-          "Vercel (қосымша хостингі) — сұраныстар Германияның Франкфурт қаласында өңделеді.",
-          "Google (Gemini API) — жауап құру үшін ағымдағы әңгіменің мәтінін, ал дауыстық режимде сөз жазбасын немесе дыбыстауға арналған мәтінді алады. Өңдеу Қазақстаннан тыс жерде, соның ішінде АҚШ-та жүргізілуі мүмкін.",
-          "Осылайша деректеріңіз Қазақстан Республикасынан тыс жерге беріледі және сонда сақталады. Тіркелу кезінде келісім бере отырып, сіз осындай трансшекаралық беруге келісесіз.",
+          "Деректер қайда сақталады. Қосымша, дерекқор және аккаунтқа кіру Қазақстан Республикасы, Астана қаласындағы hoster.kz хостинг-провайдеріндегі сервистің өз серверінде жұмыс істейді. Аккаунтыңыз, әңгімелер, күнделік, жүктелген файлдар және резервтік көшірмелер де сонда сақталады. Дауыстық бөлмелер мен бейнекеңестер де осы сервер арқылы өтеді.",
+          "Google (Gemini API) — жауап құру үшін ағымдағы әңгіменің мәтінін, ал дауыстық режимде сөз жазбасын немесе дыбыстауға арналған мәтінді алады. Өңдеу Қазақстаннан тыс жерде, соның ішінде АҚШ-та жүргізіледі. Біз ақылы тарифті пайдаланамыз: оның шарттары бойынша Google бұл деректерде өз модельдерін оқытпайды.",
+          "Cloudflare (Workers AI) — «Түс күнделігі» суреттері үшін тек ағылшын тіліндегі иесіз сахна сипаттамасын алады, есімдерсіз және түс мәтінінсіз. Өңдеу Қазақстаннан тыс жерде жүргізілуі мүмкін.",
+          "Resend — сервис хаттарын (құпиясөзді қалпына келтіру, шақырулар, күн хаттары) жібереді және ол үшін пошта мекенжайы мен хат мәтінін алады. Серверлер Қазақстаннан тыс жерде, соның ішінде АҚШ-та орналасқан.",
+          "Осылайша деректеріңіз Қазақстан Республикасында сақталады, ал оның шегінен тыс жерге тек аталған сервистердің жұмысына қажеттісі ғана беріледі: ЖИ жауабына арналған мәтін, сурет сипаттамасы, хат. Тіркелу кезінде келісім бере отырып, сіз осындай трансшекаралық беруге келісесіз.",
           "Деректерді мемлекеттік органдарға тек заңда тікелей көзделген жағдайларда ашамыз.",
         ],
       },
@@ -235,7 +240,7 @@ export const legalMessages = defineMessages<{
         h: "5. Деректер қанша уақыт сақталады",
         p: [
           "Аккаунтыңыз бар болғанша. Жеке әңгімені немесе жазбаны кез келген уақытта жоюға болады.",
-          "«Профиль» бөлімінде бүкіл тарихты немесе бүкіл аккаунтты жоюға болады. Деректер жұмыс дерекқорынан бірден жойылады; хостингтің резервтік көшірмелерінде олар шектеулі уақыт қалуы мүмкін, содан кейін автоматты түрде жойылады.",
+          "«Профиль» бөлімінде бүкіл тарихты немесе бүкіл аккаунтты жоюға болады. Деректер жұмыс дерекқорынан бірден жойылады; сервердегі резервтік көшірмелерде олар 14 күнге дейін қалуы мүмкін, содан кейін автоматты түрде жойылады.",
           "Тіркелусіз сынақ кіру: 20 минутқа уақытша қонақ аккаунты жасалады. Қонақтың әңгімелері мен жазбалары тіркелген пайдаланушылардікі сияқты серверде сақталады. Қонақ аккаунт ашпаса, оның деректері сынақ уақыты аяқталғаннан кейін бір тәулік ішінде автоматты түрде жойылады, ал «Сақтамай шығу» түймесі оларды бірден жояды.",
           "Қай бөлімдер пайдалы екенін түсіну үшін біз әрекет фактісін (мысалы, «тәжірибені ашты» немесе «әңгіме бастады») және кукидегі браузердің кездейсоқ нөмірін жазамыз. Әңгімелердің, күнделіктің және бөлмелердің мәтіні бұл статистикаға түспейді.",
         ],
@@ -314,7 +319,10 @@ export const legalMessages = defineMessages<{
       },
       {
         h: "7. Дербес деректер",
-        p: ["Деректеріңізді қалай өңдейтініміз Құпиялылық саясатында сипатталған."],
+        p: [
+          "Деректеріңіз Қазақстан Республикасындағы серверде сақталады. Қазақстаннан тыс жерге тек ЖИ жауабына, суреттерге және хаттарға қажеттісі ғана беріледі.",
+          "Деректеріңізді қалай өңдейтініміз Құпиялылық саясатында толық сипатталған.",
+        ],
       },
       {
         h: "8. Өзгерістер және қолданылатын құқық",
@@ -328,7 +336,7 @@ export const legalMessages = defineMessages<{
       title: "Деректеріңіз туралы бірер сөз",
       subtitle: "Жалғастыру үшін келісіміңізді растаңызшы. Бұл бір рет қана керек.",
       personalData: [
-        "Әңгімелер мен күнделік мәтіндерін қоса алғанда, дербес деректерімді жинауға және өңдеуге, сондай-ақ оларды Қазақстаннан тыс жерге беруге және сонда сақтауға келісім беремін; бұл ",
+        "Әңгімелер мен күнделік мәтіндерін қоса алғанда, дербес деректерімді жинауға және өңдеуге, сондай-ақ олардың қажетті бөлігін Қазақстаннан тыс жердегі ЖИ және пошта жеткізушілеріне беруге келісім беремін; бұл ",
         "Құпиялылық саясатында",
         " сипатталған.",
       ],
@@ -342,7 +350,7 @@ export const legalMessages = defineMessages<{
     links: { privacy: "Құпиялылық", terms: "Шарттар" },
   },
   en: {
-    updated: "Version of 10 October 2026",
+    updated: "Version of 16 November 2026",
     privacyTitle: "Privacy policy",
     termsTitle: "Terms of use",
     defaultOperator: "the owner of the Opora service",
@@ -378,10 +386,11 @@ export const legalMessages = defineMessages<{
       {
         h: "4. Who receives the data and where it is stored",
         p: [
-          "Supabase (database and sign-in): servers in Frankfurt, Germany.",
-          "Vercel (app hosting): requests processed in Frankfurt, Germany.",
-          "Google (Gemini API): receives the text of the current conversation and, in voice mode, your speech recording or the text to be read aloud, in order to produce a reply. Processing may take place outside Kazakhstan, including in the USA.",
-          "This means your data is transferred to and stored outside the Republic of Kazakhstan. By giving consent at sign-up you agree to this cross-border transfer.",
+          "Where data is stored: the app, the database and sign-in run on the service's own server at the hosting provider hoster.kz in Astana, Republic of Kazakhstan. Your account, conversations, journal, uploaded files and backups are stored there. Voice rooms and video consultations also go through this server.",
+          "Google (Gemini API): receives the text of the current conversation and, in voice mode, your speech recording or the text to be read aloud, in order to produce a reply. Processing takes place outside Kazakhstan, including in the USA. We use a paid tier, under whose terms Google does not train its models on this data.",
+          "Cloudflare (Workers AI): for “Dream journal” pictures, receives only an anonymised English description of the scene, without names or the text of the dream. Processing may take place outside Kazakhstan.",
+          "Resend: sends the service's emails (password reset, invitations, daily emails) and receives your email address and the email text for this. Its servers are outside Kazakhstan, including in the USA.",
+          "This means your data is stored in the Republic of Kazakhstan, and only what the services above need to work is transferred abroad: text for the AI reply, a picture description, an email. By giving consent at sign-up you agree to this cross-border transfer.",
           "We disclose data to public authorities only where the law expressly requires it.",
         ],
       },
@@ -389,7 +398,7 @@ export const legalMessages = defineMessages<{
         h: "5. How long data is kept",
         p: [
           "For as long as your account exists. You can delete any conversation or entry at any time.",
-          "In Profile you can delete all your history or your whole account. Data is removed from the live database immediately; it may remain in hosting backups for a limited time and is then deleted automatically.",
+          "In Profile you can delete all your history or your whole account. Data is removed from the live database immediately; it may remain in server backups for up to 14 days and is then deleted automatically.",
           "Trial access without signing up: a temporary guest account is created for 20 minutes. A guest's conversations and entries are stored on the server the same way as for registered users. If the guest doesn't create an account, their data is deleted automatically within a day after the trial ends, and the “Leave without saving” button deletes it at once.",
           "To understand which sections are useful, we record the fact of an action (for example, “opened a practice” or “started a conversation”) and a random browser number kept in a cookie. The text of conversations, the journal and rooms never reaches these statistics.",
         ],
@@ -466,7 +475,10 @@ export const legalMessages = defineMessages<{
       },
       {
         h: "7. Personal data",
-        p: ["How we handle your data is described in the Privacy policy."],
+        p: [
+          "Your data is stored on a server in the Republic of Kazakhstan. Only what is needed for AI replies, pictures and emails is transferred outside Kazakhstan.",
+          "How we handle your data is described in detail in the Privacy policy.",
+        ],
       },
       {
         h: "8. Changes and governing law",
@@ -480,7 +492,7 @@ export const legalMessages = defineMessages<{
       title: "A few words about your data",
       subtitle: "To continue, please confirm your consent. You only need to do this once.",
       personalData: [
-        "I consent to the collection and processing of my personal data, including the text of my conversations and journal, and to its transfer and storage outside Kazakhstan, as described in the ",
+        "I consent to the collection and processing of my personal data, including the text of my conversations and journal, and to the transfer of the necessary part of it to AI and email providers outside Kazakhstan, as described in the ",
         "Privacy policy",
         ".",
       ],
