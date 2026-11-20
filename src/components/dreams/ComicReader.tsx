@@ -10,6 +10,7 @@ import styles from "./DreamJournal.module.css";
 export type Draw = "idle" | "queued" | "drawing" | "failed";
 
 type ReaderProps = {
+  dreamId: string;
   panels: DreamPanel[];
   draw: Record<string, Draw>;
   imagesOn: boolean;
@@ -22,7 +23,7 @@ type ReaderProps = {
 };
 
 export function ComicReader({
-  panels, draw, imagesOn, canDraw, complete, updating, onComplete, onRedraw, onSkip,
+  dreamId, panels, draw, imagesOn, canDraw, complete, updating, onComplete, onRedraw, onSkip,
 }: ReaderProps) {
   const m = useMsg(dreamMessages);
   const c = m.comic;
@@ -96,6 +97,7 @@ export function ComicReader({
 
   const frame = (p: DreamPanel, i: number) => (
     <ComicFrame
+      dreamId={dreamId}
       panel={p}
       state={draw[p.id]}
       index={i}
@@ -158,8 +160,8 @@ export function ComicReader({
 }
 
 function ComicFrame({
-  panel, state, index, imagesOn, canDraw, saving, onRedraw, onSkip,
-}: Pick<ReaderProps, "imagesOn" | "canDraw" | "onRedraw" | "onSkip"> & {
+  dreamId, panel, state, index, imagesOn, canDraw, saving, onRedraw, onSkip,
+}: Pick<ReaderProps, "dreamId" | "imagesOn" | "canDraw" | "onRedraw" | "onSkip"> & {
   panel: DreamPanel;
   state: Draw;
   index: number;
@@ -186,7 +188,7 @@ function ComicFrame({
       <div className={styles.art}>
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element -- private, signed URLs stay in the browser
-          <img key={url} src={url} alt={panel.scene} onError={() => setBrokenUrl(url)} />
+          <img key={url} src={url} alt={panel.scene} onError={() => setBrokenUrl(url)} className="dream-reveal" />
         ) : (
           <div className={styles.placeholder} data-drawing={working || undefined} style={{ "--panel-mood": MOODS[panel.mood].from } as CSSProperties}>
             <SparkIcon className="size-12 text-[#f5dfa9]" />
@@ -196,8 +198,13 @@ function ComicFrame({
       </div>
       <div className="min-w-0">
         <p className={styles.quote}>{text}</p>
-        {((url && (panel.added.length > 0 || panel.softened)) || (imagesOn && !working) || state === "failed") && (
+        {(url || (imagesOn && !working) || state === "failed") && (
           <div className={styles.frameNotes}>
+            {url && (
+              <a href={`/api/dreams/${dreamId}/panels/${panel.id}?download=1`} download className={styles.frameAction}>
+                ⤓ {c.download}
+              </a>
+            )}
             {url && panel.added.length > 0 && (
               <details>
                 <summary>{c.added}</summary>

@@ -147,12 +147,33 @@ export async function listDreams(supabase: SupabaseClient): Promise<DreamCard[]>
   });
 }
 
-// Сколько кадров человек ещё может нарисовать сегодня. Гостю пробного доступа хватает на один сон.
-export const PANELS_PER_DAY = Math.max(0, Number(process.env.DREAM_PANELS_PER_DAY) || 12);
+// Дневные лимиты на человека (скользящие сутки). Разбор сна — каждый раз, когда Опи собирает
+// сценарий (новый сон или «Собрать заново»); кадр — каждая нарисованная картинка.
+// Гостю пробного доступа хватает на один сон. Сохранить сон в дневник можно без лимита.
+const num = (v: string | undefined, d: number) => Math.max(0, Number.isFinite(Number(v)) && v !== undefined && v !== "" ? Number(v) : d);
+export const PANELS_PER_DAY = num(process.env.DREAM_PANELS_PER_DAY, 12);
+export const BOARDS_PER_DAY = num(process.env.DREAM_BOARDS_PER_DAY, 5);
 export const GUEST_PANELS = 4;
+export const GUEST_BOARDS = 2;
+export const BOARD_MARK = "storyboard";
+
+export type DreamLimits = { boards: number; boardsMax: number; panels: number; panelsMax: number };
+
+export async function dreamLimits(supabase: SupabaseClient, guest: boolean): Promise<DreamLimits> {
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+  const { data } = await supabase.from("dream_generations").select("provider").gte("created_at", since).limit(500);
+  const rows = data ?? [];
+  const boardsUsed = rows.filter((r) => r.provider === BOARD_MARK).length;
+  const boardsMax = guest ? GUEST_BOARDS : BOARDS_PER_DAY;
+  const panelsMax = guest ? GUEST_PANELS : PANELS_PER_DAY;
+  return {
+    boards: Math.max(0, boardsMax - boardsUsed),
+    boardsMax,
+    panels: Math.max(0, panelsMax - (rows.length - boardsUsed)),
+    panelsMax,
+  };
+}
 
 export async function panelsLeft(supabase: SupabaseClient, guest: boolean) {
-  const since = new Date(Date.now() - 86_400_000).toISOString();
-  const { count } = await supabase.from("dream_generations").select("id", { count: "exact", head: true }).gte("created_at", since);
-  return Math.max(0, (guest ? GUEST_PANELS : PANELS_PER_DAY) - (count ?? 0));
+  return (await dreamLimits(supabase, guest)).panels;
 }

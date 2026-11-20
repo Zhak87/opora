@@ -110,3 +110,20 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { data: signed } = await supabase.storage.from(DREAM_BUCKET).createSignedUrl(path, 60 * 60 * 6);
   return Response.json({ url: signed?.signedUrl ?? null, softened, left: left - 1 });
 }
+
+// Отдаёт картинку кадра со своего адреса: для кнопки «Скачать» и для сборки всего комикса
+// в одну картинку (холсту нужен тот же источник). Права проверяет база: только свой сон.
+export async function GET(req: Request, { params }: { params: Promise<{ id: string; panel: string }> }) {
+  const { id, panel: panelId } = await params;
+  const { supabase, user } = await requireUser();
+  if (!user) return new Response(null, { status: 401 });
+  if (!UUID.test(id) || !UUID.test(panelId)) return new Response(null, { status: 404 });
+  const { data: panel } = await supabase.from("dream_panels").select("position, image_path").eq("id", panelId).eq("dream_id", id).maybeSingle();
+  if (!panel?.image_path) return new Response(null, { status: 404 });
+  const { data: file } = await supabase.storage.from(DREAM_BUCKET).download(panel.image_path);
+  if (!file) return new Response(null, { status: 404 });
+  const mime = file.type && file.type.startsWith("image/") ? file.type : "image/png";
+  const headers: Record<string, string> = { "Content-Type": mime, "Cache-Control": "private, max-age=600", "X-Content-Type-Options": "nosniff" };
+  if (new URL(req.url).searchParams.has("download")) headers["Content-Disposition"] = `attachment; filename="opora-dream-${panel.position}.${extension(mime)}"`;
+  return new Response(file, { headers });
+}

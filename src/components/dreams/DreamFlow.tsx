@@ -8,14 +8,18 @@ import { dreamMessages } from "@/i18n/dreams";
 import { buttonStyles } from "@/components/ui";
 import { CrisisHelp } from "@/components/course/CrisisHelp";
 import { PlusIcon, TrashIcon } from "@/components/icons";
-import { MAX_PANELS, NIGHT, type DreamPanel, type DreamReflection } from "@/lib/dreams";
+import { MAX_PANELS, MOODS, NIGHT, type DreamPanel, type DreamReflection } from "@/lib/dreams";
 import {
   buildReflection, buildStoryboard, deleteDream, rateSimilarity, reopenStoryboard, saveReflection, saveStoryboard, skipPanel,
 } from "@/lib/dream-actions";
 import type { Dream } from "@/lib/dream-data";
+import { composeComic, saveBlob } from "@/lib/dream-export";
+import { DreamMusic, pageTurn, panelReady } from "@/lib/dream-sounds";
 
 import { ComicReader, type Draw } from "./ComicReader";
 import styles from "./DreamJournal.module.css";
+
+const SOUND_KEY = "opora-dream-sounds";
 
 // Страница одного сна: сценарий → комикс → размышление. Каждый шаг можно поправить и вернуться назад.
 export function DreamFlow({
@@ -23,18 +27,20 @@ export function DreamFlow({
   imagesOn,
   left: leftInitial,
   failed,
+  limited,
   children,
 }: {
   dream: Dream;
   imagesOn: boolean;
   left: number;
   failed?: boolean;
+  limited?: boolean;
   children?: React.ReactNode;
 }) {
   const m = useMsg(dreamMessages);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(failed ? m.form.failed : "");
+  const [error, setError] = useState(limited ? m.limits.boardsOut : failed ? m.form.failed : "");
   const [crisis, setCrisis] = useState(false);
   const [confirm, setConfirm] = useState(false);
 
@@ -44,6 +50,7 @@ export function DreamFlow({
     const res = await buildStoryboard(dream.id);
     setBusy(false);
     if ("crisis" in res) return setCrisis(true);
+    if ("limit" in res) return setError(m.limits.boardsOut);
     if ("error" in res) return setError(m.form.failed);
     router.replace(`/dreams/${dream.id}`);
     router.refresh();
@@ -61,7 +68,9 @@ export function DreamFlow({
   return (
     <div className="space-y-10">
       {crisis && <CrisisHelp lead={m.form.crisisLead} />}
-      {error && <p role="alert" className="rounded-2xl bg-[#ffeeec] px-4 py-3 text-sm text-[#b23b33]">{error}</p>}
+      {error && (
+        <p role="alert" className={`rounded-2xl px-4 py-3 text-sm ${error === m.limits.boardsOut ? "bg-lilac-soft text-ink" : "bg-[#ffeeec] text-[#b23b33]"}`}>{error}</p>
+      )}
 
       {!crisis && stage === "draft" && (
         <section className={styles.surface}>
@@ -213,6 +222,59 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis, children }: {
   const [thinking, setThinking] = useState(false);
   const [reflectError, setReflectError] = useState(false);
   const working = useRef(false);
+  const [sounds, setSounds] = useState(true);
+  const soundsRef = useRef(true);
+  soundsRef.current = sounds;
+  const music = useRef<DreamMusic | null>(null);
+  const [musicOn, setMusicOn] = useState(false);
+  const [exporting, setExporting] = useState<"idle" | "busy" | "failed">("idle");
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SOUND_KEY) === "off") setSounds(false);
+    } catch {}
+    return () => music.current?.stop();
+  }, []);
+
+  const toggleSounds = () => {
+    const next = !sounds;
+    setSounds(next);
+    try { localStorage.setItem(SOUND_KEY, next ? "on" : "off"); } catch {}
+    if (next) panelReady();
+  };
+  const toggleMusic = () => {
+    music.current ??= new DreamMusic();
+    if (music.current.playing) music.current.stop();
+    else music.current.start();
+    setMusicOn(music.current.playing);
+  };
+
+  // Весь комикс одной картинкой: собирается в браузере из уже нарисованных кадров.
+  const downloadAll = async () => {
+    setExporting("busy");
+    try {
+      const h1 = document.querySelector("h1");
+      const blob = await composeComic({
+        title: dream.title || m.untitled,
+        date: new Intl.DateTimeFormat(document.documentElement.lang || undefined, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${dream.date}T00:00:00Z`)),
+        brand: c.brand,
+        sans: getComputedStyle(document.body).fontFamily,
+        serif: h1 ? getComputedStyle(h1).fontFamily : "serif",
+        panels: panels.map((p) => ({
+          src: p.url && !p.skipped ? `/api/dreams/${dream.id}/panels/${p.id}` : null,
+          caption: p.caption,
+          scene: p.scene,
+          from: MOODS[p.mood].from,
+          to: MOODS[p.mood].to,
+        })),
+      });
+      saveBlob(blob, `opora-dream-${dream.date}.png`);
+      if (soundsRef.current) pageTurn();
+      setExporting("idle");
+    } catch {
+      setExporting("failed");
+    }
+  };
 
   // Кадры рисуются по одному, по порядку: готовые сразу видны, ошибка в одном не мешает остальным.
   useEffect(() => {
@@ -231,6 +293,7 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis, children }: {
           const { url } = json;
           setPanels((cur) => cur.map((p) => (p.id === next.id ? { ...p, url, softened: Boolean(json.softened), status: "ready" } : p)));
           if (typeof json.left === "number") setLeft(json.left);
+          if (soundsRef.current) panelReady();
         } else if (json.error === "limit") {
           state = "idle";
           setLeft(0);
@@ -282,6 +345,7 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis, children }: {
     if ("crisis" in res) return onCrisis();
     if ("error" in res) return setReflectError(true);
     setReflection(res.reflection);
+    if (soundsRef.current) pageTurn();
   };
   const backToBoard = async () => {
     await reopenStoryboard(dream.id);
@@ -295,7 +359,36 @@ function Comic({ dream, imagesOn, left: leftInitial, onCrisis, children }: {
   return (
     <>
       <div>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleMusic}
+            aria-pressed={musicOn}
+            className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[13.5px] transition ${musicOn ? "text-paper" : "bg-paper text-ink-soft shadow-soft hover:text-ink"}`}
+            style={musicOn ? { background: NIGHT.violet } : undefined}
+          >
+            <span aria-hidden className={musicOn ? "dream-note" : ""}>♪</span> {c.music}
+          </button>
+          <button
+            type="button"
+            onClick={toggleSounds}
+            aria-pressed={sounds}
+            className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[13.5px] transition ${sounds ? "bg-lilac-soft text-lilac-deep" : "bg-paper text-ink-soft shadow-soft hover:text-ink"}`}
+          >
+            <span aria-hidden>{sounds ? "🔔" : "🔕"}</span> {c.sounds}
+          </button>
+          <button
+            type="button"
+            onClick={() => void downloadAll()}
+            disabled={exporting === "busy" || drawingNow}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-paper px-4 text-[13.5px] text-ink-soft shadow-soft transition hover:text-ink disabled:opacity-50"
+          >
+            <span aria-hidden>⤓</span> {exporting === "busy" ? c.preparing : c.downloadAll}
+          </button>
+        </div>
+        {exporting === "failed" && <p role="alert" className="mb-3 text-sm text-[#b23b33]">{c.downloadFailed}</p>}
         <ComicReader
+          dreamId={dream.id}
           panels={panels}
           draw={draw}
           imagesOn={imagesOn}

@@ -13,7 +13,7 @@ import { DreamBack } from "@/components/dreams/DreamJournal";
 import styles from "@/components/dreams/DreamJournal.module.css";
 
 // Один сон: сценарий, комикс и размышление. Виден только владельцу (проверяет база).
-export default async function DreamPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ failed?: string }> }) {
+export default async function DreamPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ failed?: string; limit?: string }> }) {
   const { id } = await params;
   const { supabase } = await requireUser();
   const dream = await loadDream(supabase, id);
@@ -23,6 +23,7 @@ export default async function DreamPage({ params, searchParams }: { params: Prom
   const { data: session } = await supabase.auth.getClaims();
   const left = await panelsLeft(supabase, isGuest(session?.claims));
   const date = new Intl.DateTimeFormat(INTL[locale], { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${dream.date}T00:00:00Z`));
+  const query = await searchParams;
   const shown = dream.status === "comic" || dream.status === "complete";
 
   return (
@@ -44,7 +45,7 @@ export default async function DreamPage({ params, searchParams }: { params: Prom
           </p>
         )}
       </header>
-      <DreamFlow key={`${shown ? "comic" : "board"}-${dream.panels.map((p) => p.id).join()}`} dream={dream} imagesOn={imageProvider() !== null} left={left} failed={(await searchParams).failed === "1"}>
+      <DreamFlow key={`${shown ? "comic" : "board"}-${dream.panels.map((p) => p.id).join()}`} dream={dream} imagesOn={imageProvider() !== null} left={left} failed={query.failed === "1"} limited={query.limit === "1"}>
         <StartForm prompt={m.reflect.talkPrompt(dream.title, dream.text.slice(0, 3000))} className={styles.secondary}>
           <TalkIcon className="h-5 w-5" /> {m.reflect.talk}
         </StartForm>
