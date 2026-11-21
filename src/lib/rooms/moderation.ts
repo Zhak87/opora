@@ -103,37 +103,45 @@ export async function moderate(roomId: string, message: { id: string; sender_id:
       .insert({ room_id: roomId, target_id: message.sender_id, message_id: message.id, reason, source: "ai" })
       .select("id, created_at")
       .single();
-    if (report) publish(roomId, "report", { id: report.id }, room.creator_id);
+    if (report && room.creator_id) publish(roomId, "report", { id: report.id }, room.creator_id);
   }
 
+  await postNote(roomId, flag === "crisis" ? "crisis" : "reminder", flag, message.id);
+}
+
+// Записка модератора в чат: напоминание о правилах или помощь при кризисе. Не чаще раза в две минуты
+// на комнату для каждого вида, чтобы не мешать разговору. true — записка опубликована.
+export async function postNote(roomId: string, kind: "crisis" | "reminder", body: string, replyTo: string) {
+  if (!adminConfigured()) return false;
+  const db = createAdminClient();
   const { data: last } = await db
     .from("room_messages")
     .select("created_at")
     .eq("room_id", roomId)
     .eq("kind", "moderator")
-    .eq("flag", flag === "crisis" ? "crisis" : "reminder")
+    .eq("flag", kind)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (last && Date.now() - new Date(last.created_at).getTime() < REMINDER_GAP_MS) return;
+  if (last && Date.now() - new Date(last.created_at).getTime() < REMINDER_GAP_MS) return false;
 
   const { data: note } = await db
     .from("room_messages")
-    .insert({ room_id: roomId, kind: "moderator", flag: flag === "crisis" ? "crisis" : "reminder", body: flag, reply_to: message.id })
+    .insert({ room_id: roomId, kind: "moderator", flag: kind, body, reply_to: replyTo })
     .select("id, created_at")
     .single();
-  if (note) {
-    const msg: RoomMessage = {
-      id: note.id,
-      sender_id: null,
-      sender_name: null,
-      kind: "moderator",
-      body: flag,
-      flag: flag === "crisis" ? "crisis" : "reminder",
-      reply_to: message.id,
-      hidden: false,
-      created_at: note.created_at,
-    };
-    publish(roomId, "message", msg);
-  }
+  if (!note) return false;
+  const msg: RoomMessage = {
+    id: note.id,
+    sender_id: null,
+    sender_name: null,
+    kind: "moderator",
+    body,
+    flag: kind,
+    reply_to: replyTo,
+    hidden: false,
+    created_at: note.created_at,
+  };
+  publish(roomId, "message", msg);
+  return true;
 }

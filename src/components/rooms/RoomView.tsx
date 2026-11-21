@@ -14,11 +14,14 @@ import {
   raiseHand,
   reportMember,
   resolveReport,
+  roomBeat,
+  chooseStarter,
   sendRoomMessage,
   setRoomMaxSpeakers,
   setRoomSpeaker,
 } from "@/lib/rooms/actions";
-import type { RoomInfo, RoomMessage, RoomPerson, RoomReport, RoomRequest } from "@/lib/rooms/types";
+import type { RoomInfo, RoomIntent, RoomMessage, RoomPerson, RoomPersona, RoomReport, RoomRequest, SampleLine } from "@/lib/rooms/types";
+import { pick, type PersonaText } from "@/lib/rooms/topics";
 import { useLocale, useMsg } from "@/i18n/client";
 import { INTL } from "@/i18n/config";
 import { fill, roomsMessages } from "@/i18n/rooms";
@@ -26,7 +29,8 @@ import { BackIcon, SendIcon, ShieldIcon, TalkIcon, UsersIcon } from "../icons";
 import { Avatar } from "../pro/bits";
 import { Orb } from "../Orb";
 import { CrisisHelp } from "../course/CrisisHelp";
-import { DotsIcon, HandIcon, HeadphonesIcon, LeaveIcon, MicIcon, MicOffIcon, ModeratorBadge, OnlineDot } from "./bits";
+import { DotsIcon, HandIcon, HeadphonesIcon, LeaveIcon, MicIcon, MicOffIcon, ModeratorBadge, OnlineDot, PersonaAvatar, VolumeIcon } from "./bits";
+import { sendEvent } from "../Track";
 import { RequestList } from "./RoomGate";
 import { useVoice } from "./useVoice";
 import { RoomDialog } from "./RoomDialog";
@@ -34,6 +38,10 @@ import s from "./Rooms.module.css";
 
 type Online = { userId: string; name: string };
 type Final = "ended" | "kicked" | null;
+export type TopicExtras = { personas: (RoomPersona & { active?: boolean })[]; samples: Record<string, SampleLine[]>; ai: "off" | "text" | "voice" };
+
+// Подтверждение присутствия: без него через ~75 секунд сервер считает, что человек ушёл.
+const BEAT_MS = 25_000;
 
 export function RoomView({
   me,
@@ -44,6 +52,7 @@ export function RoomView({
   initialRequests,
   initialReports,
   voiceReady,
+  topic,
 }: {
   me: string;
   room: RoomInfo;
@@ -53,6 +62,7 @@ export function RoomView({
   initialRequests: RoomRequest[];
   initialReports: RoomReport[];
   voiceReady: boolean;
+  topic?: TopicExtras | null;
 }) {
   const m = useMsg(roomsMessages);
   const locale = useLocale();
@@ -75,8 +85,22 @@ export function RoomView({
   const [reporting, setReporting] = useState<{ user: string; message?: string } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const area = useRef<HTMLTextAreaElement>(null);
-  const creator = room.is_creator;
+  // Модерировать может создатель комнаты, а тематическую — сотрудники «Опоры».
+  const creator = room.can_moderate ?? room.is_creator;
   const isVoice = room.format === "voice";
+  const isTopic = room.kind === "topic" && Boolean(topic);
+  const personas = topic?.personas ?? [];
+  const personaOf = (id: string | null | undefined) => personas.find((p) => p.id === id);
+  const personaName = (p: RoomPersona | undefined) => (p && pick<PersonaText>(p.content, locale)?.name) || m.moderatorTag;
+  const sample = topic ? topic.samples[locale] ?? topic.samples.ru ?? [] : [];
+  const [aiTyping, setAiTyping] = useState(false);
+  const [aiPaused, setAiPaused] = useState(false);
+  const [intent, setIntent] = useState<RoomIntent | null>(null);
+  const [showSample, setShowSample] = useState(true);
+  const [listenAi, setListenAi] = useState(false);
+  const listenRef = useRef(false);
+  const audioQueue = useRef<string[]>([]);
+  const audioPlaying = useRef<HTMLAudioElement | null>(null);
 
   const onRemoved = useCallback(() => router.refresh(), [router]);
   const voice = useVoice(room.id, onRemoved);
@@ -115,7 +139,16 @@ export function RoomView({
       else setPaused(true);
     };
     on("presence", (d) => setOnline(d as Online[]));
-    on("message", (d) => add(d as RoomMessage));
+    on("message", (d) => {
+      const msg = d as RoomMessage;
+      add(msg);
+      if (msg.kind === "ai") {
+        setAiTyping(false);
+        if (listenRef.current) enqueueAudio(msg.id);
+      }
+    });
+    on("ai_typing", (d) => setAiTyping(Boolean((d as { on?: boolean })?.on)));
+    on("ai_paused", () => setAiPaused(true));
     on("flagged", (d) => {
       const { id, flag } = d as { id: string; flag: string };
       setMessages((list) => list.map((x) => (x.id === id ? { ...x, flag } : x)));
@@ -138,7 +171,83 @@ export function RoomView({
       es.close();
     });
     return () => es.close();
-  }, [room.id, creator, add, refreshPanel, router]);
+  }, [room.id, creator, add, refreshPanel, router]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Heartbeat: сервер видит, что человек ещё здесь. Пропуски (сон вкладки, обрыв сети) — и через ~75 секунд он «уходит».
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState !== "hidden") roomBeat(room.id).catch(() => {});
+    };
+    const timer = setInterval(tick, BEAT_MS);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [room.id]);
+
+  // Пример разговора показываем развёрнутым только при первом входе в эту комнату — и прокручиваем к нему,
+  // а не в самый низ, чтобы его было видно сразу.
+  const sampleRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!isTopic) return;
+    let first = false;
+    try {
+      const key = `opora-room-sample-${room.id}`;
+      if (localStorage.getItem(key)) setShowSample(false);
+      else {
+        localStorage.setItem(key, "1");
+        first = true;
+      }
+    } catch {}
+    if (first && sampleRef.current && box.current) {
+      stick.current = false;
+      const top = sampleRef.current.getBoundingClientRect().top - box.current.getBoundingClientRect().top + box.current.scrollTop;
+      box.current.scrollTo({ top: top - 8 });
+    }
+  }, [isTopic, room.id]);
+
+  // «Слушать ИИ»: одна озвучка на реплику для всей комнаты — сервер отдаёт всем слушателям один и тот же звук.
+  function playNext() {
+    if (audioPlaying.current || !listenRef.current) return;
+    const id = audioQueue.current.shift();
+    if (!id) return;
+    const audio = new Audio(`/api/rooms/${room.id}/ai-audio?m=${id}`);
+    audioPlaying.current = audio;
+    const done = () => {
+      audioPlaying.current = null;
+      playNext();
+    };
+    audio.onended = done;
+    audio.onerror = done;
+    audio.play().catch(done);
+  }
+  function enqueueAudio(id: string) {
+    if (audioQueue.current.includes(id)) return;
+    audioQueue.current.push(id);
+    playNext();
+  }
+  function toggleListen() {
+    const next = !listenRef.current;
+    listenRef.current = next;
+    setListenAi(next);
+    if (next) sendEvent("room_listen_ai", { room: room.id });
+    else {
+      audioQueue.current = [];
+      audioPlaying.current?.pause();
+      audioPlaying.current = null;
+    }
+  }
+  useEffect(() => () => {
+    listenRef.current = false;
+    audioPlaying.current?.pause();
+  }, []);
+
+  const pickStarter = (choice: RoomIntent) => {
+    setIntent(choice);
+    chooseStarter(room.id, choice).catch(() => {});
+    if (choice !== "listen") area.current?.focus();
+  };
 
   const leaveVoice = voice.leave;
   useEffect(() => {
@@ -168,7 +277,7 @@ export function RoomView({
     if (!body || pending || paused) return;
     setSendError("");
     start(async () => {
-      const res = await sendRoomMessage(room.id, body).catch(() => ({ message: undefined, error: "failed" }));
+      const res = await sendRoomMessage(room.id, body, intent ?? undefined).catch(() => ({ message: undefined, error: "failed" }));
       if (res.message) {
         add(res.message);
         setText((draft) => draft.trim() === body ? "" : draft);
@@ -281,6 +390,26 @@ export function RoomView({
           </li>
         </ul>
       </div>
+      {isTopic && personas.length > 0 && (
+        <div>
+          <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-ink-soft">{m.companionsTitle} · {personas.filter((p) => p.active !== false).length}</p>
+          <ul className="space-y-0.5">
+            {personas.filter((p) => p.active !== false).map((p) => {
+              const t = pick<PersonaText>(p.content, locale);
+              return (
+                <li key={p.id} className={s.personRow}>
+                  <PersonaAvatar name={t?.name ?? "И"} size={34} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-[14.5px] text-ink">{t?.name} <span className={s.aiTag}>{m.moderatorTag}</span></span>
+                    <span className="block text-[12px] leading-snug text-ink-soft">{t?.style}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 px-2 text-[12px] leading-snug text-ink-soft">{m.companionsNote}</p>
+        </div>
+      )}
       {isVoice ? (
         <>
           <div>
@@ -380,7 +509,7 @@ export function RoomView({
           <p className="mt-1.5 text-xs text-ink-soft">{m.fSpeakersHint}</p>
         </section>
       )}
-      <button
+      {room.is_creator && room.kind !== "topic" && <button
         type="button"
         disabled={pending}
         onClick={() => setConfirmation({
@@ -392,7 +521,7 @@ export function RoomView({
         className={s.danger}
       >
         {m.end}
-      </button>
+      </button>}
     </div>
   );
 
@@ -497,6 +626,22 @@ export function RoomView({
   /* ---------- Чат ---------- */
 
   const renderMessage = (x: RoomMessage, i: number) => {
+    if (x.kind === "ai") {
+      const persona = personaOf(x.persona_id);
+      const name = personaName(persona);
+      return (
+        <li key={x.id} className="flex gap-2.5 pt-2.5">
+          <span className="w-8 shrink-0"><PersonaAvatar name={name} size={32} /></span>
+          <div className="flex min-w-0 max-w-[82%] flex-col items-start sm:max-w-[70%]">
+            <p className={s.author}>{name} <span className={s.aiTag}>{m.moderatorTag}</span></p>
+            <div className={s.bubble} data-ai>
+              <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{x.body}</p>
+              <time dateTime={x.created_at}>{time(x.created_at)}</time>
+            </div>
+          </div>
+        </li>
+      );
+    }
     if (x.kind === "moderator") {
       return (
         <li key={x.id} className="flex gap-3 py-1.5">
@@ -589,11 +734,16 @@ export function RoomView({
         <div className={s.roomHeading}>
           <h1>{room.title}</h1>
           <div className={s.meta}>
-            <span><OnlineDot active={online.length > 0} /> {fill(m.online, { n: online.length })}</span>
-            <span>{m.format[room.format]}</span>
+            <span><OnlineDot active={online.length > 0} /> {isTopic ? fill(m.peopleNow, { n: online.length }) : fill(m.online, { n: online.length })}</span>
+            {isTopic ? <span>{fill(m.aiCount, { n: personas.filter((p) => p.active !== false).length })} <span className={s.aiTag}>{m.moderatorTag}</span></span> : <span>{m.format[room.format]}</span>}
           </div>
         </div>
         <div className={s.toolbar}>
+          {isTopic && topic?.ai === "voice" && (
+            <button type="button" className={s.iconButton} onClick={toggleListen} aria-pressed={listenAi} title={listenAi ? m.listenAiStop : m.listenAiHint}>
+              <VolumeIcon /> <span className={s.toolbarLabel}>{listenAi ? m.listenAiStop : m.listenAi}</span>
+            </button>
+          )}
           <button type="button" className={`${s.iconButton} ${s.peopleButton}`} onClick={() => setSheet("people")} aria-haspopup="dialog" aria-label={m.peopleTitle} title={m.peopleTitle}>
             <UsersIcon /> <span>{online.length}</span>
           </button>
@@ -618,8 +768,12 @@ export function RoomView({
         <main className={s.chatPanel} aria-labelledby="room-chat-title">
           <header className={s.chatHeader}>
             <h2 id="room-chat-title"><TalkIcon /> {m.chat}</h2>
-            {room.description && <details><summary>{m.details}</summary><p>{room.description}</p></details>}
+            {isTopic ? (
+              <details><summary>{m.whoSees}</summary><p>{m.whoSeesText}</p></details>
+            ) : room.description && <details><summary>{m.details}</summary><p>{room.description}</p></details>}
           </header>
+          {isTopic && listenAi && <p role="status" className={s.chatNotice}><VolumeIcon className="inline h-4 w-4" /> {m.listenAiHint}</p>}
+          {isTopic && (aiPaused || topic?.ai === "off") && <p role="status" className={s.chatNotice}>{aiPaused ? m.aiPaused : m.aiOff}</p>}
           {paused && <p role="status" className={s.chatNotice}>{m.chatPaused}</p>}
           {notice && !sheet && <p role="status" className={s.chatNotice}>{notice}</p>}
           <div
@@ -632,10 +786,50 @@ export function RoomView({
               stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
             }}
           >
+            {isTopic && sample.length > 0 && (
+              <section ref={sampleRef} className={s.sample} aria-label={m.sampleTitle}>
+                <button type="button" className={s.sampleHead} aria-expanded={showSample} onClick={() => setShowSample((v) => !v)}>
+                  <span className={s.sampleBadge}>{m.sampleTitle}</span>
+                  <span>{showSample ? m.sampleHide : m.sampleShow}</span>
+                </button>
+                {showSample && (
+                  <>
+                    <p className={s.sampleNote}>{m.sampleNote}</p>
+                    <ul className="space-y-2">
+                      {sample.map((line, i) => {
+                        const persona = personas.find((p) => p.slug === line.who);
+                        return (
+                          <li key={i} className={s.sampleLine} data-example={!persona || undefined}>
+                            {persona ? <PersonaAvatar name={personaName(persona)} size={26} /> : <span className={s.sampleDot} aria-hidden />}
+                            <div>
+                              <p className={s.sampleWho}>{persona ? <>{personaName(persona)} <span className={s.aiTag}>{m.moderatorTag}</span></> : m.sampleExample}</p>
+                              <p>{line.text}</p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
+              </section>
+            )}
             <ul>{messages.map(renderMessage)}</ul>
-            {!messages.some((message) => message.kind === "user") && <p className={s.emptyChat}>{m.emptyChat}</p>}
+            {aiTyping && <p className={s.typing} role="status"><span className={s.typingDots} aria-hidden><i /><i /><i /></span> {m.aiTyping}</p>}
+            {!isTopic && !messages.some((message) => message.kind === "user") && <p className={s.emptyChat}>{m.emptyChat}</p>}
           </div>
           <div className={s.composer}>
+            {isTopic && !messages.some((x) => x.kind === "user" && x.sender_id === me) && (
+              <div className={s.starters}>
+                <p>{intent ? (intent === "vent" ? m.starterVentHint : intent === "advice" ? m.starterAdviceHint : m.starterListenHint) : m.startersTitle}</p>
+                <div role="group" aria-label={m.startersTitle}>
+                  {(["vent", "advice", "listen"] as const).map((choice) => (
+                    <button key={choice} type="button" aria-pressed={intent === choice} onClick={() => pickStarter(choice)} className={s.starter}>
+                      {choice === "vent" ? m.starterVent : choice === "advice" ? m.starterAdvice : m.starterListen}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {sendError && <p role="alert" className={s.error}>{sendError}</p>}
             <form onSubmit={(e) => { e.preventDefault(); send(); }}>
               <textarea

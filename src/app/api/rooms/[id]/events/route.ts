@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/supabase/server";
 import { join, leave, presence } from "@/lib/rooms/hub";
 import { eventStream } from "@/lib/rooms/sse";
 import { UUID } from "@/lib/rooms/types";
+// Подключает ИИ-движок к входам и выходам людей (приглашение, отмена очередей при уходе последнего).
+import "@/lib/rooms/companions";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -7,7 +7,7 @@ type Once = "always" | "session" | "day";
 // Отправить событие аналитики со страницы. Тексты и личные данные не передаются: только название.
 export function sendEvent(
   name: string,
-  props: { game?: string; step?: string; need?: string; aud?: string; before?: number; after?: number; useful?: number; sec?: number; done?: 0 | 1 } = {},
+  props: { room?: string; game?: string; step?: string; need?: string; aud?: string; before?: number; after?: number; useful?: number; sec?: number; done?: 0 | 1 } = {},
 ) {
   try {
     fetch("/api/t", {
@@ -31,9 +31,9 @@ function firstTime(key: string, once: Once) {
 }
 
 // Невидимая отметка «человек открыл этот экран». once: раз за вкладку, раз в день или каждый раз.
-export function Track({ name, once = "session", game, aud }: { name: string; once?: Once; game?: string; aud?: string }) {
+export function Track({ name, once = "session", game, aud, room }: { name: string; once?: Once; game?: string; aud?: string; room?: string }) {
   useEffect(() => {
-    if (firstTime(`opora-ev-${name}-${game ?? ""}${aud ?? ""}`, once)) sendEvent(name, { game, aud });
-  }, [name, once, game, aud]);
+    if (firstTime(`opora-ev-${name}-${game ?? ""}${aud ?? ""}${room ?? ""}`, once)) sendEvent(name, { game, aud, room });
+  }, [name, once, game, aud, room]);
   return null;
 }

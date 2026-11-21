@@ -1,6 +1,8 @@
 // Общие типы комнат: их используют и сервер, и браузер.
 
 export type RoomFormat = "chat" | "voice";
+// user — комната участника, topic — постоянная тематическая комната «Опоры» с ИИ-собеседниками.
+export type RoomKind = "user" | "topic";
 export type RoomAccess = "open" | "request";
 export type RequestStatus = "pending" | "approved" | "declined";
 export type AccessState =
@@ -43,19 +45,42 @@ export type RoomInfo = {
   my_muted: boolean;
   request_status: RequestStatus | null;
   pending_requests: number;
+  kind?: RoomKind;
+  slug?: string | null;
+  content?: unknown;
+  can_moderate?: boolean;
 };
 
 export type RoomMessage = {
   id: string;
   sender_id: string | null;
   sender_name: string | null;
-  kind: "user" | "moderator";
+  kind: "user" | "moderator" | "ai";
   body: string;
   flag: string | null;
   reply_to: string | null;
   hidden: boolean;
   created_at: string;
+  // у ответа ИИ-собеседника — кто из персонажей ответил
+  persona_id?: string | null;
 };
+
+// ИИ-собеседник тематической комнаты (всегда с меткой «ИИ»).
+export type RoomPersona = { id: string; slug: string; voice: string; content: unknown; sort: number };
+export type SampleLine = { who: string; text: string };
+
+// Карточка тематической комнаты в каталоге.
+export type TopicCard = {
+  id: string;
+  slug: string;
+  format: RoomFormat;
+  content: unknown;
+  personas: RoomPersona[];
+};
+
+// С чего человек начинает разговор: кнопки при входе. Передаются ИИ вместе с первым сообщением.
+export type RoomIntent = "vent" | "advice" | "listen";
+
 
 export type RoomPerson = {
   user_id: string;

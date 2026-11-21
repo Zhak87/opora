@@ -152,6 +152,10 @@ const ACTIONS: Record<string, [Kind, Fn]> = {
   joinVoice: ["args", rooms.joinVoice],
   loadPanel: ["args", rooms.loadPanel],
   loadMessages: ["args", rooms.loadMessages],
+  roomBeat: ["args", rooms.roomBeat],
+  chooseStarter: ["args", rooms.chooseStarter],
+  loadTopics: ["args", rooms.loadTopics],
+  loadTopicRoom: ["args", rooms.loadTopicRoom],
 
   joinConsult: ["args", consult.joinConsult],
   consultState: ["args", consult.consultState],
