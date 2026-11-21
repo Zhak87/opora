@@ -1,7 +1,8 @@
 import { Track } from "@/components/Track";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
-import { people, reportList, requestList, roomInfo, roomMessages } from "@/lib/rooms/data";
+import { people, reportList, requestList, roomInfo, roomMessages, topicExtras } from "@/lib/rooms/data";
+import { aiMode } from "@/lib/rooms/companions";
 import { voiceConfigured } from "@/lib/rooms/voice";
 import { UUID, type AccessState } from "@/lib/rooms/types";
 import { getTimeZone } from "@/lib/tz";
@@ -27,16 +28,18 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
     return <RoomGate room={info} state={state} tz={tz} requests={requests} />;
   }
 
-  const [messages, list, requests, reports] = await Promise.all([
+  const moderator = info.can_moderate ?? info.is_creator;
+  const [messages, list, requests, reports, extras] = await Promise.all([
     roomMessages(supabase, id),
     people(supabase, id),
     info.is_creator ? requestList(supabase, id) : Promise.resolve([]),
-    info.is_creator ? reportList(supabase, id) : Promise.resolve([]),
+    moderator ? reportList(supabase, id) : Promise.resolve([]),
+    info.kind === "topic" ? topicExtras(supabase, id) : Promise.resolve(null),
   ]);
 
   return (
     <>
-    <Track name="room_join" />
+    <Track name="room_join" room={id} />
     <RoomView
       me={user!.id}
       room={info}
@@ -46,6 +49,7 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
       initialRequests={requests}
       initialReports={reports}
       voiceReady={voiceConfigured()}
+      topic={extras ? { ...extras, ai: aiMode() } : null}
     />
     </>
   );

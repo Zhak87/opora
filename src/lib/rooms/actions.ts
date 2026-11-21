@@ -9,9 +9,13 @@ import { zonedToUtc } from "@/lib/time";
 import { getTimeZone } from "@/lib/tz";
 import { catalogChanged, disconnect, publish } from "./hub";
 import { moderate } from "./moderation";
+import { aiMode, onHumanMessage, setIntent } from "./companions";
+import { beat } from "./hub";
+import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { closeVoice, removeFromVoice, setVoicePermission, voiceConfigured, voiceToken, voiceUrl } from "./voice";
-import { people, reportList, requestList, roomMessages } from "./data";
-import { UUID, type RoomMessage } from "./types";
+import { people, reportList, requestList, roomMessages, topicExtras, topics } from "./data";
+import { onlineCounts } from "./hub";
+import { UUID, type RoomIntent, type RoomMessage } from "./types";
 
 // Действия в комнатах. Все права проверяет база (supabase/migrations/0012_rooms.sql),
 // здесь — только разбор ввода и рассылка живых событий участникам.
@@ -52,7 +56,7 @@ export async function createRoom(_: Result | undefined, form: FormData): Promise
   redirect(`/rooms/${id}`);
 }
 
-export async function sendRoomMessage(roomId: string, body: string): Promise<{ message?: RoomMessage; error?: string }> {
+export async function sendRoomMessage(roomId: string, body: string, intent?: RoomIntent): Promise<{ message?: RoomMessage; error?: string }> {
   const { supabase, user } = await requireUser();
   const text = body.trim().slice(0, 2000);
   if (!user || !UUID.test(roomId) || !text) return { error: "failed" };
@@ -71,8 +75,22 @@ export async function sendRoomMessage(roomId: string, body: string): Promise<{ m
     created_at: new Date().toISOString(),
   };
   publish(roomId, "message", message);
+  if (intent === "vent" || intent === "advice") setIntent(roomId, user.id, intent);
+  // ИИ-собеседники отвечают живым событием: отправитель их не ждёт.
+  onHumanMessage(roomId, { id: message.id, userId: user.id, body: text });
   // Модератор проверяет сообщение уже после ответа: отправитель не ждёт ИИ.
-  after(() => moderate(roomId, { id: message.id, sender_id: user.id, body: text }).catch((e) => console.error("rooms moderate:", e)));
+  after(async () => {
+    await moderate(roomId, { id: message.id, sender_id: user.id, body: text }).catch((e) => console.error("rooms moderate:", e));
+    // Аналитика: первое сообщение человека в этой комнате.
+    if (adminConfigured()) {
+      const { count } = await createAdminClient()
+        .from("room_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("room_id", roomId)
+        .eq("sender_id", user.id);
+      if (count === 1) await track("room_first_message", { room: roomId });
+    }
+  });
   return { message };
 }
 
@@ -188,7 +206,7 @@ export async function reportMember(roomId: string, targetId: string, reason: str
   });
   if (error) return { error: code(error.message) };
   const { data: room } = await supabase.from("rooms").select("creator_id").eq("id", roomId).maybeSingle();
-  if (room) publish(roomId, "reports", null, room.creator_id);
+  if (room?.creator_id) publish(roomId, "reports", null, room.creator_id);
   return { ok: true };
 }
 
@@ -228,4 +246,35 @@ export async function loadMessages(roomId: string) {
   const { supabase } = await requireUser();
   if (!UUID.test(roomId)) return [];
   return roomMessages(supabase, roomId);
+}
+
+// Подтверждение присутствия раз в 25 секунд. false — сервер человека в комнате не видит, нужно переподключиться.
+export async function roomBeat(roomId: string): Promise<{ ok: boolean }> {
+  const { user } = await requireUser();
+  if (!user || !UUID.test(roomId)) return { ok: false };
+  return { ok: beat(roomId, user.id) };
+}
+
+// Кнопки начала: «Хочу выговориться», «Можно совет?», «Пока просто послушаю». ИИ это ничего не стоит:
+// выбор просто запоминается и учитывается в ответе на следующее сообщение человека.
+export async function chooseStarter(roomId: string, intent: RoomIntent): Promise<{ ok?: true }> {
+  const { user } = await requireUser();
+  if (!user || !UUID.test(roomId) || !["vent", "advice", "listen"].includes(intent)) return {};
+  setIntent(roomId, user.id, intent);
+  await track("room_starter", { room: roomId, intent });
+  return { ok: true };
+}
+
+// Тематические комнаты для каталога мобильного приложения (сайт читает их на сервере страницы).
+export async function loadTopics() {
+  const { supabase, user } = await requireUser();
+  if (!user) return { topics: [], counts: {}, ai: "off" as const };
+  return { topics: await topics(supabase), counts: onlineCounts(), ai: aiMode() };
+}
+
+// Персонажи, пример разговора и режим ИИ для экрана тематической комнаты в приложении.
+export async function loadTopicRoom(roomId: string) {
+  const { supabase, user } = await requireUser();
+  if (!user || !UUID.test(roomId)) return { personas: [], samples: {}, ai: "off" as const };
+  return { ...(await topicExtras(supabase, roomId)), ai: aiMode() };
 }

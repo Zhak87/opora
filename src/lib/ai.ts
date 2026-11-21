@@ -507,3 +507,57 @@ export async function transcribe(audio: Uint8Array, mime: string, signal?: Abort
   }
   throw last ?? new AIError(500, "STT: no models");
 }
+
+/* ---------- Короткие ответы в комнатах ---------- */
+
+export type Usage = { text: string; inputTokens: number; outputTokens: number; model: string };
+
+// Один короткий ответ JSON для ИИ-собеседников комнат: дешёвая модель, жёсткий потолок длины ответа,
+// без «размышлений» (они оплачиваются как ответ). Возвращает и фактический расход токенов.
+export async function generateShort(opts: Options & { model?: string; signal?: AbortSignal }): Promise<Usage> {
+  const provider = process.env.AI_PROVIDER ?? "gemini";
+  const approx = (s: string) => Math.ceil(s.length / 3.5);
+  if (provider === "openai") {
+    const text = await completeOpenAI(opts);
+    return { text, inputTokens: approx(opts.system + opts.messages.map((m) => m.content).join("")), outputTokens: approx(text), model: "openai" };
+  }
+  const model = opts.model || process.env.ROOMS_AI_MODEL || "gemini-flash-lite-latest";
+  let last: AIError | null = null;
+  for (const thinking of thinkingOptions(model)) {
+    const res = await fetch(`${geminiBase()}/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: opts.system }] },
+        contents: opts.messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+        safetySettings: SAFETY,
+        generationConfig: {
+          temperature: opts.temperature ?? 0.7,
+          maxOutputTokens: opts.maxTokens ?? 220,
+          responseMimeType: "application/json",
+          ...(thinking ? { thinkingConfig: thinking } : {}),
+        },
+      }),
+      signal: AbortSignal.any([opts.signal ?? new AbortController().signal, AbortSignal.timeout(20_000)]),
+    });
+    const raw = await res.text();
+    if (res.ok) {
+      thinkingChoice.set(model, thinking);
+      const json = JSON.parse(raw);
+      const parts = json?.candidates?.[0]?.content?.parts ?? [];
+      const text = parts.map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? "")).join("");
+      const u = json?.usageMetadata ?? {};
+      return {
+        text,
+        inputTokens: Number(u.promptTokenCount) || approx(opts.system),
+        // размышления оплачиваются как ответ
+        outputTokens: (Number(u.candidatesTokenCount) || approx(text)) + (Number(u.thoughtsTokenCount) || 0),
+        model,
+      };
+    }
+    last = new AIError(res.status, `Gemini ${model} ${res.status}: ${raw.slice(0, 200)}`);
+    // Модель не приняла настройку размышлений — пробуем следующую; иначе выходим.
+    if (!(res.status === 400 && /think/i.test(raw))) break;
+  }
+  throw last ?? new AIError(500, "Gemini: no answer");
+}
