@@ -12,7 +12,8 @@ import { addJournalEntry } from "@/lib/actions";
 import { savePracticeRun } from "@/lib/practice-actions";
 import { looksLikeCrisis } from "@/lib/crisis";
 import { chime } from "@/lib/chime";
-import { nextGames, type Game } from "@/lib/games";
+import { kindHref, nextGames, type Game } from "@/lib/games";
+import { KindBadge } from "./KindBadge";
 import { DEFAULT_VOICE, type VoiceSettings } from "@/lib/voices";
 import { setPracticeSettings, usePracticeSettings } from "@/lib/practice-settings-client";
 import { useLocale } from "@/i18n/client";
@@ -533,6 +534,9 @@ function Reflect({
                 className={`group flex items-center gap-3 rounded-[22px] ${toneBg[g.tone]} p-4 transition hover:-translate-y-0.5 hover:shadow-lift`}
               >
                 <span className="min-w-0 flex-1">
+                  <span className="mb-1.5 block">
+                    <KindBadge kind={g.kind} label={playMessages[locale].page.badge[g.kind]} light />
+                  </span>
                   <span className="block text-[15px] font-medium text-ink">{g.title}</span>
                   <span className="block text-[13px] leading-snug text-ink-soft">{g.hint}</span>
                 </span>
@@ -553,8 +557,8 @@ function Reflect({
           <button type="button" onClick={onAgain} className={`${buttonStyles.ghost} w-full sm:w-auto`}>
             {f.again}
           </button>
-          <Link href="/play" onClick={send} className={`${buttonStyles.ghost} w-full sm:w-auto`}>
-            {f.all}
+          <Link href={kindHref(game.kind)} onClick={send} className={`${buttonStyles.ghost} w-full sm:w-auto`}>
+            {game.kind === "game" ? p.allGames : p.allPractices}
           </Link>
         </div>
       </div>

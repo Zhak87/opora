@@ -8,6 +8,8 @@ import { ArrowIcon } from "../icons";
 import { toneBg } from "../ui";
 import { gameHref, getGames } from "@/lib/games";
 import { chime } from "@/lib/chime";
+import { playMessages } from "@/i18n/play";
+import { KindBadge } from "./KindBadge";
 
 const FEELINGS: Feeling[] = ["anxious", "sad", "lonely", "calm", "lost", "grow"];
 const TINT: Record<Feeling, string> = {
@@ -56,6 +58,11 @@ export function FeelingPicker() {
                 className={`group flex flex-col justify-between gap-3 rounded-[24px] ${toneBg[g.tone]} p-4 transition hover:-translate-y-0.5 hover:shadow-lift sm:min-h-[150px]`}
               >
                 <span>
+                  {g.place === "play" && (
+                    <span className="mb-2 block">
+                      <KindBadge kind={g.kind} label={playMessages[locale].page.badge[g.kind]} light />
+                    </span>
+                  )}
                   <span className="block text-[15.5px] font-medium text-ink">{g.title}</span>
                   <span className="mt-1.5 block text-[13.5px] leading-snug text-ink-soft">
                     <span className="text-ink-faint">{m.page.why}: </span>

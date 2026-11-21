@@ -18,7 +18,17 @@ export type Game = {
   place: Place;
   // Свободный формат: нет обязательного результата, есть отдельное «закончить сессию».
   free?: boolean;
+  // Чем формат является для человека: игра (живая сцена с выбором и результатом) или практика (короткое упражнение).
+  kind: Kind;
 };
+
+// Игры: сцены, где выбираешь, строишь и пробуешь по-разному. Практики: упражнения на пару минут для состояния.
+export type Kind = "game" | "practice";
+export const KINDS: Kind[] = ["game", "practice"];
+// Вкладки /play?tab=games|practices.
+export const KIND_TAB: Record<Kind, string> = { game: "games", practice: "practices" };
+export const tabKind = (tab: string | null | undefined): Kind => (tab === "practices" ? "practice" : "game");
+export const kindHref = (kind: Kind) => `/play?tab=${KIND_TAB[kind]}`;
 
 export type Place = "play" | "inside" | "journal" | "day" | "planning" | "profile" | "explore" | "chat";
 
@@ -27,26 +37,26 @@ export const CATEGORIES: Category[] = ["calm", "self", "relations", "confidence"
 // Восемь форматов основного каталога (аудит 19.11.2026) и то, что переехало в другие разделы.
 // Записи и история переехавших практик остаются в базе под прежними названиями (practice_runs.game).
 const BASE: Omit<Game, "title" | "hint" | "why" | "how">[] = [
-  { slug: "boundaries", group: "relations", tone: "blue", minutes: "4–6", flagship: true, isNew: true, place: "play" },
-  { slug: "garden", group: "calm", tone: "green", minutes: "2–10", isNew: true, place: "play", free: true },
-  { slug: "thought-jar", group: "calm", tone: "beige", minutes: "3–5", isNew: true, place: "play" },
-  { slug: "breath", group: "calm", tone: "blue", minutes: "1–4", place: "play", free: true },
-  { slug: "grounding", group: "calm", tone: "green", minutes: "2–3", place: "play" },
-  { slug: "light", group: "calm", tone: "lavender", minutes: "2–5", place: "play", free: true },
-  { slug: "empty-bowl", group: "calm", tone: "lavender", minutes: "3–7", place: "play" },
-  { slug: "emotion", group: "self", tone: "lavender", minutes: "1–3", place: "play" },
-  { slug: "bubbles", group: "calm", tone: "blue", minutes: "1–2", place: "inside" },
-  { slug: "what-if", group: "self", tone: "beige", minutes: "5–7", place: "journal" },
-  { slug: "letter", group: "self", tone: "blue", minutes: "5–10", place: "journal" },
-  { slug: "unsaid", group: "relations", tone: "beige", minutes: "5–10", place: "journal" },
-  { slug: "wins", group: "confidence", tone: "beige", minutes: "2–3", place: "day" },
-  { slug: "jar", group: "confidence", tone: "beige", minutes: "2–3", place: "day" },
-  { slug: "strengths", group: "confidence", tone: "green", minutes: "5–7", place: "profile" },
-  { slug: "wheel", group: "path", tone: "green", minutes: "5–7", place: "planning" },
-  { slug: "values", group: "path", tone: "lavender", minutes: "5–7", place: "planning" },
-  { slug: "one-step", group: "path", tone: "blue", minutes: "3–5", place: "planning" },
-  { slug: "mirror", group: "self", tone: "lavender", minutes: "10–15", place: "explore" },
-  { slug: "talk-out", group: "heard", tone: "lavender", minutes: "5–15", place: "chat" },
+  { slug: "boundaries", group: "relations", tone: "blue", minutes: "4–6", flagship: true, isNew: true, place: "play", kind: "game" },
+  { slug: "garden", group: "calm", tone: "green", minutes: "2–10", isNew: true, place: "play", free: true, kind: "game" },
+  { slug: "thought-jar", group: "calm", tone: "beige", minutes: "3–5", isNew: true, place: "play", kind: "game" },
+  { slug: "breath", group: "calm", tone: "blue", minutes: "1–4", place: "play", free: true, kind: "practice" },
+  { slug: "grounding", group: "calm", tone: "green", minutes: "2–3", place: "play", kind: "practice" },
+  { slug: "light", group: "calm", tone: "lavender", minutes: "2–5", place: "play", free: true, kind: "game" },
+  { slug: "empty-bowl", group: "calm", tone: "lavender", minutes: "3–7", place: "play", kind: "practice" },
+  { slug: "emotion", group: "self", tone: "lavender", minutes: "1–3", place: "play", kind: "practice" },
+  { slug: "bubbles", group: "calm", tone: "blue", minutes: "1–2", place: "inside", kind: "practice" },
+  { slug: "what-if", group: "self", tone: "beige", minutes: "5–7", place: "journal", kind: "practice" },
+  { slug: "letter", group: "self", tone: "blue", minutes: "5–10", place: "journal", kind: "practice" },
+  { slug: "unsaid", group: "relations", tone: "beige", minutes: "5–10", place: "journal", kind: "practice" },
+  { slug: "wins", group: "confidence", tone: "beige", minutes: "2–3", place: "day", kind: "practice" },
+  { slug: "jar", group: "confidence", tone: "beige", minutes: "2–3", place: "day", kind: "practice" },
+  { slug: "strengths", group: "confidence", tone: "green", minutes: "5–7", place: "profile", kind: "practice" },
+  { slug: "wheel", group: "path", tone: "green", minutes: "5–7", place: "planning", kind: "practice" },
+  { slug: "values", group: "path", tone: "lavender", minutes: "5–7", place: "planning", kind: "practice" },
+  { slug: "one-step", group: "path", tone: "blue", minutes: "3–5", place: "planning", kind: "practice" },
+  { slug: "mirror", group: "self", tone: "lavender", minutes: "10–15", place: "explore", kind: "practice" },
+  { slug: "talk-out", group: "heard", tone: "lavender", minutes: "5–15", place: "chat", kind: "practice" },
 ];
 
 export const GAME_SLUGS = BASE.map((g) => g.slug);
@@ -58,6 +68,13 @@ export const getGames = (locale: Locale): Game[] =>
 
 // Только основной каталог игр.
 export const getCatalog = (locale: Locale): Game[] => getGames(locale).filter((g) => g.place === "play");
+
+// Порядок внутри вкладок: игры от главной к спокойным, практики от самой короткой к длинной.
+const ORDER: GameSlug[] = ["boundaries", "garden", "thought-jar", "light", "emotion", "breath", "grounding", "empty-bowl"];
+export const getByKind = (locale: Locale, kind: Kind): Game[] =>
+  getCatalog(locale)
+    .filter((g) => g.kind === kind)
+    .sort((a, b) => ORDER.indexOf(a.slug) - ORDER.indexOf(b.slug));
 
 // Русский список — для кода, которому язык не важен.
 export const GAMES: Game[] = getGames("ru");

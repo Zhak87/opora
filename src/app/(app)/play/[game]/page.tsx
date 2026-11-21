@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getGame, movedHref } from "@/lib/games";
+import { getGame, kindHref, movedHref } from "@/lib/games";
+import { playMessages } from "@/i18n/play";
 import { PracticeFlow } from "@/components/games/PracticeFlow";
 import { BackIcon } from "@/components/icons";
 import { BreathWave } from "@/components/games/BreathWave";
@@ -14,7 +15,6 @@ import { EmotionName } from "@/components/games/EmotionName";
 import { requireUser } from "@/lib/supabase/server";
 import { normalizeVoice } from "@/lib/voices";
 import { getLocale, getMsg } from "@/i18n/server";
-import { gamesMessages } from "@/i18n/games";
 
 const COMPONENTS: Record<string, React.ComponentType> = {
   boundaries: Boundaries,
@@ -40,11 +40,12 @@ export default async function GamePage({ params }: { params: Promise<{ game: str
   if (!meta || !Component) notFound();
   const { supabase, user } = await requireUser();
   const { data: profile } = user ? await supabase.from("profiles").select("voice").eq("id", user.id).maybeSingle() : { data: null };
-  const m = await getMsg(gamesMessages);
+  const p = await getMsg(playMessages);
   return (
     <>
-      <Link href="/play" className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
-        <BackIcon className="h-4 w-4" /> {m.shell.back}
+      {/* «Назад» ведёт в ту вкладку, откуда пришли: игры или практики. */}
+      <Link href={kindHref(meta.kind)} className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
+        <BackIcon className="h-4 w-4" /> {p.page.tabs[meta.kind].label}
       </Link>
       <PracticeFlow game={meta} voice={normalizeVoice(profile?.voice)} ownFinish={OWN_FINISH.has(game)}>
         <Component />
