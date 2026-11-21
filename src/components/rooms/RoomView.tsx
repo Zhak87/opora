@@ -272,12 +272,16 @@ export function RoomView({
   const hands = peopleList.filter((p) => p.hand && !p.banned);
   const openCases = reports.length + requests.filter((r) => r.status === "pending").length + hands.length;
 
+  // Защита от двойной отправки: Enter дважды или Enter и кнопка успевают сработать до того, как обновится pending.
+  const sending = useRef(false);
   const send = () => {
     const body = text.trim();
-    if (!body || pending || paused) return;
+    if (!body || pending || paused || sending.current) return;
+    sending.current = true;
     setSendError("");
     start(async () => {
       const res = await sendRoomMessage(room.id, body, intent ?? undefined).catch(() => ({ message: undefined, error: "failed" }));
+      sending.current = false;
       if (res.message) {
         add(res.message);
         setText((draft) => draft.trim() === body ? "" : draft);

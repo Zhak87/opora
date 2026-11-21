@@ -56,10 +56,33 @@ export async function createRoom(_: Result | undefined, form: FormData): Promise
   redirect(`/rooms/${id}`);
 }
 
+// Повтор того же сообщения тем же человеком за несколько секунд (двойное нажатие, повтор запроса при плохой сети)
+// не создаёт второе сообщение: возвращается первое.
+const recentSends = ((globalThis as unknown as { __oporaRoomSends?: Map<string, { body: string; at: number; job: Promise<{ message?: RoomMessage; error?: string }> }> }).__oporaRoomSends ??= new Map());
+const RESEND_MS = 8000;
+
 export async function sendRoomMessage(roomId: string, body: string, intent?: RoomIntent): Promise<{ message?: RoomMessage; error?: string }> {
   const { supabase, user } = await requireUser();
   const text = body.trim().slice(0, 2000);
   if (!user || !UUID.test(roomId) || !text) return { error: "failed" };
+  const key = `${roomId}:${user.id}`;
+  const prev = recentSends.get(key);
+  if (prev && prev.body === text && Date.now() - prev.at < RESEND_MS) return prev.job;
+  const job = sendOnce(supabase, user, roomId, text, intent);
+  recentSends.set(key, { body: text, at: Date.now(), job });
+  if (recentSends.size > 5000) recentSends.delete(recentSends.keys().next().value!);
+  const res = await job;
+  if (!res.message) recentSends.delete(key);
+  return res;
+}
+
+async function sendOnce(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  user: NonNullable<Awaited<ReturnType<typeof requireUser>>["user"]>,
+  roomId: string,
+  text: string,
+  intent?: RoomIntent,
+): Promise<{ message?: RoomMessage; error?: string }> {
   const { data: id, error } = await supabase.rpc("send_room_message", { p_room: roomId, p_body: text });
   if (error || !id) return { error: code(error?.message) };
   const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).maybeSingle();

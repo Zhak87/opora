@@ -9,7 +9,9 @@ import type { RoomIntent, RoomMessage } from "./types";
 // ИИ-собеседники тематических комнат. Вся логика и все деньги — здесь, на сервере, одна на всех посетителей:
 //  • в комнате нет людей — нет ни генерации, ни озвучки; открытие каталога ИИ не запускает;
 //  • вход человека — не больше одной короткой реплики-приглашения (переподключение — не вход);
-//  • дальше ИИ отвечает только на сообщения людей, а если люди говорят между собой — уступает им;
+//  • дальше ИИ отвечает на сообщения людей, а если люди говорят между собой — уступает им;
+//  • пока человек молча слушает, собеседники коротко разговаривают между собой: несколько серий по 3 реплики,
+//    одна генерация на серию; человек написал — беседа сразу уступает ему; ушёл — всё отменяется;
 //  • одна генерация и одна озвучка на реплику для всей комнаты, сколько бы людей ни слушало;
 //  • перед каждым запросом атомарно резервируется бюджет (budget.ts); исчерпан — ИИ молчит, чат людей работает;
 //  • ушёл последний человек — очереди генерации и озвучки отменяются.
@@ -46,6 +48,14 @@ const GREET_ROOM_GAP_MS = 10 * 60 * 1000;
 const GREET_USER_GAP_MS = 3 * 60 * 60 * 1000;
 // Люди говорят между собой, если за 4 минуты писали двое и больше.
 const PEOPLE_TALK_MS = 4 * 60 * 1000;
+// Беседа собеседников между собой, пока люди молча слушают (ROOMS_AI_BANTER=off — выключить).
+const BANTER = process.env.ROOMS_AI_BANTER !== "off";
+// Сколько тишины после последней реплики, прежде чем собеседники заговорят между собой.
+const BANTER_IDLE_MS = num("ROOMS_AI_BANTER_IDLE_MS", 20_000);
+// Пауза между сериями и число серий подряд, пока человек молчит (потом — тишина до нового сообщения или входа).
+const BANTER_GAP_MS = num("ROOMS_AI_BANTER_GAP_MS", 35_000);
+const BANTER_ROUNDS = num("ROOMS_AI_BANTER_ROUNDS", 3);
+const BANTER_LINES = 3;
 // Озвучиваем только свежие реплики: старые никто уже не ждёт.
 const AUDIO_FRESH_MS = 15 * 60 * 1000;
 
@@ -66,6 +76,10 @@ type State = {
   audio: Map<string, Promise<Uint8Array | null>>;
   crisisUntil: number;
   pausedNotice: boolean;
+  banterTimer?: ReturnType<typeof setTimeout>;
+  banterRounds: number;
+  // Растёт с каждым сообщением человека: начатая беседа ИИ видит, что пора уступить.
+  epoch: number;
   stats: Stats;
 };
 
@@ -112,6 +126,8 @@ function state(roomId: string): State {
       audio: new Map(),
       crisisUntil: 0,
       pausedNotice: false,
+      banterRounds: 0,
+      epoch: 0,
       stats: { people: new Set(), humanMessages: 0, aiReplies: 0, tokens: 0, tts: 0, cost: 0 },
     };
     G.rooms.set(roomId, s);
@@ -154,6 +170,7 @@ setHooks({
     if (!s) return;
     G.rooms.delete(roomId);
     clearTimeout(s.timer);
+    clearTimeout(s.banterTimer);
     s.controller.abort();
     s.audio.clear();
     endSession(s).catch((e) => console.error("rooms session:", (e as Error).message));
@@ -161,12 +178,25 @@ setHooks({
   joined: (roomId, userId, first) => {
     const s = state(roomId);
     s.stats.people.add(userId);
-    if (first) greet(roomId, userId).catch((e) => console.error("rooms greet:", (e as Error).message));
+    if (!first) return;
+    s.banterRounds = 0;
+    greet(roomId, userId)
+      .catch((e) => console.error("rooms greet:", (e as Error).message))
+      .finally(() => {
+        const st = G.rooms.get(roomId);
+        if (st) scheduleBanter(roomId, st, BANTER_IDLE_MS);
+      });
   },
 });
 
 export function setIntent(roomId: string, userId: string, intent: RoomIntent) {
   G.intents.set(`${roomId}:${userId}`, { intent, at: Date.now() });
+  // «Пока просто послушаю» — собеседники начинают разговор между собой почти сразу.
+  const s = G.rooms.get(roomId);
+  if (intent === "listen" && s) {
+    s.banterRounds = 0;
+    scheduleBanter(roomId, s, 4000);
+  }
 }
 
 function intentOf(roomId: string, userId: string): RoomIntent | null {
@@ -205,23 +235,27 @@ function transcript(rows: Row[], m: Meta) {
   return { text: lines.join("\n"), label: (userId: string) => `Участник ${ids.indexOf(userId) + 1}` };
 }
 
-function system(m: Meta, crisis: boolean) {
+function system(m: Meta, crisis: boolean, banter = false) {
   return `Ты пишешь реплики ИИ-собеседников в общей комнате взаимной поддержки приложения «Опора». Тема комнаты: «${m.title}». ${m.description}
 В комнате общаются реальные люди. Собеседники ниже — ИИ, в интерфейсе у них всегда метка «ИИ». Они не люди и не психологи.
 ${m.personas.map((p) => `- ${p.slug}: ${p.name}. ${p.manner}`).join("\n")}
 Правила:
-- Отвечай на конкретное последнее сообщение участника, по смыслу и с учётом сказанного раньше. Не здоровайся повторно и не повторяй уже сказанное.
-- Обычно отвечает один собеседник. Второй — только если добавляет что-то действительно другое. Не больше двух реплик, собеседники не спорят и не разговаривают друг с другом.
-- Коротко: 1–3 предложения, до 300 символов на реплику. Без списков, заголовков и эмодзи.
+${banter
+  ? `- Сейчас люди молча читают, и собеседники разговаривают между собой на тему комнаты: каждая реплика отвечает на предыдущую, по очереди разными собеседниками, живо и по-разному (свой характер у каждого). Можно опираться на то, что раньше сказал участник, но не пересказывай его слова и не обращайся к нему с вопросами.
+- Говорите об общих мыслях, наблюдениях, маленьких практиках и о том, что многие в такой ситуации чувствуют. Не повторяйте уже сказанное в разговоре и не здоровайтесь.
+- Коротко: 1–2 предложения, до 220 символов на реплику. Без списков, заголовков и эмодзи.`
+  : `- Отвечай на конкретное последнее сообщение участника, по смыслу и с учётом сказанного раньше. Не здоровайся повторно и не повторяй уже сказанное.
+- Обычно отвечает один собеседник. Второй — только если добавляет что-то действительно другое. Не больше двух реплик, собеседники не спорят.
+- Коротко: 1–3 предложения, до 300 символов на реплику. Без списков, заголовков и эмодзи.`}
 - Не каждое сообщение требует совета: иногда важнее показать, что человека услышали. Совет — один маленький шаг и только если его просят или он уместен.
 - Не ставь диагнозов, не называй расстройств, не советуй лекарства и лечение. Не выдавай себя за психолога или человека. Не выдумывай свой опыт, истории и травмы.
 - Не расспрашивай о чувствительном: здоровье, адрес, телефон, суммы денег, имена близких. Если человек делится этим сам — не повторяй.
 - Если в комнате пишут несколько людей, обращайся к автору последнего сообщения и можешь бережно пригласить остальных.
-- Пиши на языке последнего сообщения участника (русский, казахский или английский).
+- Пиши на языке последнего сообщения участника (русский, казахский или английский); если участники ещё не писали — по-русски.
 ${crisis ? "- ВАЖНО: недавно в комнате прозвучала угроза жизни. Один собеседник, очень бережно: безопасность важнее всего, предложи прямо сейчас связаться с близким человеком или с бесплатной линией помощи (её номер уже показан в комнате), спроси, есть ли рядом кто-то. Ничего не обсуждай про способы и не задавай уточняющих вопросов о намерениях.\n" : ""}Ответ — строго JSON: {"replies":[{"persona":"<id собеседника>","text":"<реплика>"}]}`;
 }
 
-function parseReplies(text: string, m: Meta) {
+function parseReplies(text: string, m: Meta, banter = false) {
   try {
     const clean = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
     const json = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1)) as { replies?: { persona?: string; text?: string }[] };
@@ -229,9 +263,11 @@ function parseReplies(text: string, m: Meta) {
     for (const r of json.replies ?? []) {
       const persona = m.personas.find((p) => p.slug === r.persona) ?? (out.length ? null : m.personas[0]);
       const body = String(r.text ?? "").replace(/\s+/g, " ").trim().slice(0, REPLY_CHARS);
-      if (!persona || !body || out.some((o) => o.persona.id === persona.id)) continue;
+      // В ответе человеку — разные собеседники; в беседе между собой — по очереди, без двух реплик подряд от одного.
+      if (!persona || !body) continue;
+      if (banter ? out.at(-1)?.persona.id === persona.id : out.some((o) => o.persona.id === persona.id)) continue;
       out.push({ persona, text: body });
-      if (out.length === 2) break;
+      if (out.length === (banter ? BANTER_LINES : 2)) break;
     }
     return out;
   } catch {
@@ -241,9 +277,9 @@ function parseReplies(text: string, m: Meta) {
 
 /* ---------- Один запрос к ИИ под бюджетом ---------- */
 
-async function generate(roomId: string, s: State, m: Meta, userId: string | null, prompt: string, crisis = false) {
+async function generate(roomId: string, s: State, m: Meta, userId: string | null, prompt: string, crisis = false, banter = false) {
   if (G.active >= MAX_PARALLEL) return null;
-  const sys = system(m, crisis);
+  const sys = system(m, crisis, banter);
   const estIn = Math.ceil((sys.length + prompt.length) / 3.2);
   const estimate: Spend = { tokens: estIn + MAX_OUTPUT_TOKENS, tts_sec: 0, replies: 1, cost_micro: textCost(estIn, MAX_OUTPUT_TOKENS) };
   const client = db();
@@ -266,7 +302,7 @@ async function generate(roomId: string, s: State, m: Meta, userId: string | null
       temperature: 0.7,
       signal: s.controller.signal,
     });
-    const replies = parseReplies(res.text, m);
+    const replies = parseReplies(res.text, m, banter);
     used = { tokens: res.inputTokens + res.outputTokens, tts_sec: 0, replies: replies.length, cost_micro: textCost(res.inputTokens, res.outputTokens) };
     return replies;
   } catch (e) {
@@ -366,6 +402,10 @@ export function onHumanMessage(roomId: string, msg: Pending) {
     s.crisisUntil = Date.now() + 15 * 60 * 1000;
     postNote(roomId, "crisis", "crisis", msg.id).catch(() => {});
   }
+  // Человек заговорил — беседа собеседников между собой уступает ему.
+  s.epoch++;
+  s.banterRounds = 0;
+  clearTimeout(s.banterTimer);
   s.pending = msg;
   clearTimeout(s.timer);
   s.timer = setTimeout(() => reply(roomId).catch((e) => console.error("rooms reply:", (e as Error).message)), DEBOUNCE_MS);
@@ -397,6 +437,13 @@ async function reply(roomId: string) {
     return;
   }
   const lower = msg.body.toLowerCase();
+  // «Пообщайтесь между собой» — вместо ответа собеседники сразу начинают беседу друг с другом.
+  if (BANTER && m.personas.length >= 2 && /(сами|между собой|друг с другом|өзара|each other)/u.test(lower) && /(общ|говор|болтай|сөйлес|talk|chat)/u.test(lower)) {
+    s.answered.add(msg.id);
+    s.banterRounds = 0;
+    scheduleBanter(roomId, s, 3000);
+    return;
+  }
   const mentioned = m.personas.find((p) => p.names.some((n) => new RegExp(`(^|[^\\p{L}])${n.toLowerCase()}([^\\p{L}]|$)`, "u").test(lower)));
   const askedAi = mentioned || /(^|[^\p{L}])(ии|ai|бот)([^\p{L}]|$)/iu.test(lower);
   const since = Date.now() - PEOPLE_TALK_MS;
@@ -420,6 +467,52 @@ async function reply(roomId: string) {
   } finally {
     s.busy = false;
   }
+  // Человек замолчал после ответа — через паузу собеседники продолжат тему между собой.
+  scheduleBanter(roomId, s, BANTER_IDLE_MS);
+}
+
+/* ---------- Беседа собеседников между собой, пока люди слушают ---------- */
+
+function scheduleBanter(roomId: string, s: State, delay: number) {
+  if (!BANTER || aiMode() === "off" || s.banterRounds >= BANTER_ROUNDS || G.rooms.get(roomId) !== s) return;
+  clearTimeout(s.banterTimer);
+  const epoch = s.epoch;
+  s.banterTimer = setTimeout(() => banter(roomId, s, epoch).catch((e) => console.error("rooms banter:", (e as Error).message)), delay);
+}
+
+async function banter(roomId: string, s: State, epoch: number) {
+  // Беседа идёт, только пока в комнате есть живой человек и он молчит.
+  const live = () => G.rooms.get(roomId) === s && s.epoch === epoch && !s.controller.signal.aborted && humans(roomId) > 0;
+  const waiting = s.pending && !s.answered.has(s.pending.id);
+  if (!live() || s.busy || waiting || Date.now() < s.crisisUntil || s.banterRounds >= BANTER_ROUNDS || !canSpeak(s)) return;
+  const m = await meta(roomId);
+  if (!m || m.kind !== "topic" || m.personas.length < 2) return;
+  const rows = await recentMessages(roomId);
+  const since = Date.now() - PEOPLE_TALK_MS;
+  const talkers = new Set(rows.filter((r) => r.kind === "user" && new Date(r.created_at).getTime() > since).map((r) => r.sender_id));
+  // Люди разговаривают между собой — собеседники им не мешают.
+  if (talkers.size >= 2 || !live()) return;
+  s.busy = true;
+  s.banterRounds++;
+  try {
+    const t = transcript(rows, m);
+    const prompt = `${t.text ? `Разговор в комнате (последнее — внизу):\n${t.text}\n\n` : ""}Люди в комнате сейчас молча читают. Продолжите разговор собеседников между собой: ${BANTER_LINES} короткие реплики по очереди, каждая отвечает на предыдущую. Развивайте тему комнаты или то, о чём говорили раньше, ничего не повторяя. Последняя реплика может оставить место для участника, но без прямых вопросов к нему.`;
+    const lines = await generate(roomId, s, m, null, prompt, false, true);
+    if (!lines?.length) return;
+    for (const [i, line] of lines.entries()) {
+      if (i > 0) {
+        // Реплики приходят по одной, как в живом чате: «печатает…», затем сообщение.
+        publish(roomId, "ai_typing", { on: true });
+        await new Promise((r) => setTimeout(r, Math.min(9000, 2500 + line.text.length * 35)));
+        publish(roomId, "ai_typing", { on: false });
+      }
+      if (!live()) return;
+      await post(roomId, s, [line], null);
+    }
+  } finally {
+    s.busy = false;
+  }
+  if (live()) scheduleBanter(roomId, s, BANTER_GAP_MS);
 }
 
 /* ---------- «Слушать ИИ»: одна озвучка реплики на всю комнату ---------- */
