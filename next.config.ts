@@ -13,8 +13,12 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
+// Номер сборки: по нему открытая страница узнаёт, что сайт обновился (src/lib/fresh.ts).
+const buildId = process.env.BUILD_ID || Date.now().toString(36);
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: { NEXT_PUBLIC_BUILD_ID: buildId },
   // Для своего сервера: сборка складывает всё нужное для запуска в .next/standalone (см. Dockerfile).
   output: "standalone",
   experimental: {
