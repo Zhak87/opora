@@ -33,6 +33,7 @@ import { DotsIcon, HandIcon, HeadphonesIcon, LeaveIcon, MicIcon, MicOffIcon, Mod
 import { sendEvent } from "../Track";
 import { RequestList } from "./RoomGate";
 import { useVoice } from "./useVoice";
+import { reloadIfStale } from "@/lib/fresh";
 import { RoomDialog } from "./RoomDialog";
 import s from "./Rooms.module.css";
 
@@ -85,6 +86,24 @@ export function RoomView({
   const [reporting, setReporting] = useState<{ user: string; message?: string } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const area = useRef<HTMLTextAreaElement>(null);
+  // Сайт обновился, пока комната была открыта: перезагружаем страницу, недописанное сообщение сохраняем.
+  const draftKey = `opora-room-draft:${room.id}`;
+  const textRef = useRef(text);
+  textRef.current = text;
+  const stale = useCallback(() => reloadIfStale(() => {
+    try {
+      if (textRef.current.trim()) sessionStorage.setItem(draftKey, textRef.current);
+    } catch {}
+  }), [draftKey]);
+  useEffect(() => {
+    try {
+      const draft = sessionStorage.getItem(draftKey);
+      if (draft) {
+        sessionStorage.removeItem(draftKey);
+        setText(draft);
+      }
+    } catch {}
+  }, [draftKey]);
   // Модерировать может создатель комнаты, а тематическую — сотрудники «Опоры».
   const creator = room.can_moderate ?? room.is_creator;
   const isVoice = room.format === "voice";
@@ -127,6 +146,8 @@ export function RoomView({
       setPaused(false);
       // После обрыва подтягиваем то, что могли пропустить.
       if (wasError) {
+        // Обрыв мог быть из-за выкладки новой версии сайта.
+        stale();
         loadMessages(room.id).then((list) => list.length && setMessages(list)).catch(() => {});
         refreshPanel().catch(() => {});
       }
@@ -134,6 +155,8 @@ export function RoomView({
     };
     es.onerror = () => {
       wasError = true;
+      // Обрыв живых событий чаще всего значит перезапуск сервера при выкладке: через пару секунд сверяем версию.
+      setTimeout(() => stale(), 4000);
       // Сервер закрыл вход (комната завершена, человек удалён): страница покажет, что случилось.
       if (es.readyState === EventSource.CLOSED) router.refresh();
       else setPaused(true);
@@ -176,7 +199,7 @@ export function RoomView({
   // Heartbeat: сервер видит, что человек ещё здесь. Пропуски (сон вкладки, обрыв сети) — и через ~75 секунд он «уходит».
   useEffect(() => {
     const tick = () => {
-      if (document.visibilityState !== "hidden") roomBeat(room.id).catch(() => {});
+      if (document.visibilityState !== "hidden") roomBeat(room.id).catch(() => stale());
     };
     const timer = setInterval(tick, BEAT_MS);
     document.addEventListener("visibilitychange", tick);
@@ -184,7 +207,7 @@ export function RoomView({
       clearInterval(timer);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [room.id]);
+  }, [room.id, stale]);
 
   // Пример разговора показываем развёрнутым только при первом входе в эту комнату — и прокручиваем к нему,
   // а не в самый низ, чтобы его было видно сразу.
@@ -282,6 +305,7 @@ export function RoomView({
     start(async () => {
       const res = await sendRoomMessage(room.id, body, intent ?? undefined).catch(() => ({ message: undefined, error: "failed" }));
       sending.current = false;
+      if (!res.message && res.error === "failed" && (await stale())) return;
       if (res.message) {
         add(res.message);
         setText((draft) => draft.trim() === body ? "" : draft);
@@ -296,7 +320,7 @@ export function RoomView({
   const act = (fn: () => Promise<{ error?: string }>, after?: () => void) =>
     start(async () => {
       setNotice("");
-      const res = await fn().catch(() => ({ error: "failed" }));
+      const res = await fn().catch(async () => ((await stale()) ? {} : { error: "failed" }));
       if (res.error) setNotice(m.errors[res.error as keyof typeof m.errors] ?? m.errors.failed);
       else after?.();
     });
